@@ -1,7 +1,9 @@
 %% get the data first;
 addpath('/Users/onat/Documents/Code/Matlab/oop/')
 clear all;
-fix = Fixmat(Project.subjects_1500,[2 3 4]);
+load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
+subjects = intersect(Project.subjects_1500,find(ETmask(:,1)==1));
+fix             = Fixmat(subjects,[2 3 4]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%MEGA SUBJECT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -66,8 +68,37 @@ end
 % is not done individually.
 % compute single subject correlation matrices
 clear all;
-fix             = Fixmat(Project.subjects_1500,[2 3 4]);
-%% plot and save single subject fixations maps
+load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
+subjects = intersect(Project.subjects_1500,find(ETmask(:,1)==1));
+fix             = Fixmat(subjects,[2 3 4]);
+
+%% plot and save single subject fixations maps UNCORRECTED
+tsub = length(unique(fix.subject));
+for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
+    fix.kernel_fwhm = k;
+    covmat          = nan(16,16,tsub);
+    cormat          = nan(16,16,tsub);
+    subc            = 0;
+    for subject = unique(fix.subject);
+        subc = subc + 1;
+        %creaete the query cell
+        v = [];
+        c = 0;
+        for ph = [2 4]
+            for cond = -135:45:180
+                c    = c+1;
+                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
+            end
+        end
+        % plot and save fixation maps
+        fix.getmaps(v{:});
+        fix.plot
+        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/uncorrected/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/uncorrected/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+        close all
+    end
+end
+%% plot and save single subject fixations maps, BASELINE CORRECTED
 tsub = length(unique(fix.subject));
 for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
     fix.kernel_fwhm = k;    
@@ -89,7 +120,36 @@ for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
         fix.getmaps(v{:});
         fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
         fix.plot
-        SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+    end
+end
+
+%% plot and save single subject fixations maps, BASELINE CORRECTED
+tsub = length(unique(fix.subject));
+for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
+    fix.kernel_fwhm = k;    
+    covmat          = nan(16,16,tsub);
+    cormat          = nan(16,16,tsub);
+    subc            = 0;
+    for subject = unique(fix.subject);
+        subc = subc + 1;
+        %creaete the query cell
+        v = [];
+        c = 0;
+        for ph = [2 4]
+            for cond = -135:45:180
+                c    = c+1;
+                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
+            end
+        end        
+        % plot and save fixation maps
+        fix.getmaps(v{:});
+        fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
+        fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+        fix.plot
+        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
     end
 end
 %% compute single subject maps and similarity matrices, and finally average them across subjects.
@@ -165,4 +225,54 @@ d.x  = repmat(-135:45:180,10,1);
 for n = 1:10
 d.y(n,:)  = make_gaussian_fmri_zeromean(-135:45:180,randsample(linspace(10,100,10),1),randsample(linspace(20,150,10),1));
 end
+
+
+%%good subject? bad subject?
+load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
+subjects = intersect(Project.subjects_1500,find((ETmask(:,1)==1)));
+g = Group(subjects);
+fix             = Fixmat(subjects,[2 3 4]);
+
+subject_alpha=[];
+for i = 1:length(g.ids)
+subject_alpha = [subject_alpha; mean(g.pmf.params1(:,1,i),1)];
+end
+med = median(subject_alpha);
+good = find(subject_alpha>=med);
+bad  = find(subject_alpha<med);
+
+
+
+%GOOOD vs BAD
+tsub = length(unique(fix.subject));
+k = 20;
+    fix.kernel_fwhm = k;
+    covmat          = nan(16,16,tsub);
+    cormat          = nan(16,16,tsub);
+    subc            = 0;
+    %create the query cell
+    v = [];
+    c = 0;
+    for subject = {good bad};
+        subc = subc + 1;
+        
+        for ph = [2 4]
+            
+            for cond = -135:45:180
+                c    = c+1;
+                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject{1}};
+            end
+        end
+    end
+    % plot and save fixation maps
+    fix.getmaps(v{:});
+    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
+    %fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+
+fix.plot
+%SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+
+
+
 
