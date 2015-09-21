@@ -226,24 +226,22 @@ for n = 1:10
 d.y(n,:)  = make_gaussian_fmri_zeromean(-135:45:180,randsample(linspace(10,100,10),1),randsample(linspace(20,150,10),1));
 end
 
-
+%%
 %%good subject? bad subject?
 load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
-subjects = intersect(Project.subjects_1500,find((ETmask(:,1)==1)));
+subjects = intersect(Project.subjects_600,find((ETmask(:,1)==1)));
 g = Group(subjects);
 fix             = Fixmat(subjects,[2 3 4]);
-
+%GOOOD vs BAD
 subject_alpha=[];
 for i = 1:length(g.ids)
-subject_alpha = [subject_alpha; mean(g.pmf.params1(:,1,i),1)];
+    subject_alpha = [subject_alpha; mean(g.pmf.params1(:,1,i),1)];
 end
 med = median(subject_alpha);
-good = find(subject_alpha>=med);
-bad  = find(subject_alpha<med);
+bad = g.ids(find(subject_alpha>=med));
+good  = g.ids(find(subject_alpha<med));
 
-
-
-%GOOOD vs BAD
+%%
 tsub = length(unique(fix.subject));
 k = 20;
     fix.kernel_fwhm = k;
@@ -253,26 +251,44 @@ k = 20;
     %create the query cell
     v = [];
     c = 0;
-    for subject = {good bad};
-        subc = subc + 1;
-        
+    for subjects = {good bad}
         for ph = [2 4]
-            
             for cond = -135:45:180
                 c    = c+1;
-                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject{1}};
+                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subjects{1}};
             end
         end
     end
     % plot and save fixation maps
     fix.getmaps(v{:});
-    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
+    %%
+    %for one group only
+    %fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
     %fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
-
-fix.plot
+   
+    %%
+    %%Good - Bad:
+    %first Baseline correction, but within Group
+    fix.maps(:,:,1:16)             = fix.maps(:,:,1:16)    - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for group_baseline
+    fix.maps(:,:,17:32)            = fix.maps(:,:,17:32)   - repmat(mean(fix.maps(:,:,17:24),3),[1 1 16]);%correct for group_baseline
+    %Mean Testphase correction (within group)
+    fix.maps(:,:,9:16) = fix.maps(:,:,9:16) - repmat(mean(fix.maps(:,:,9:16),3),[1 1 8]);
+    fix.maps(:,:,25:32) = fix.maps(:,:,25:32) - repmat(mean(fix.maps(:,:,25:32),3),[1 1 8]);
+    %take the diff (Good - Bad)
+    fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
+    fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
+    fix.plot
+    t=supertitle('Good - Bad Base&Mean corrected (1500ms)',1);
+    set(t,'FontSize',14)
+  %% 
 %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+saveas(gcf,'C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/good_vs_bad/within_group_corrected/1500_Good-Bad_k20_baseANDmeancorr.png');
 
 
+%%
+%%%improvement
+%what is subject's improvement? For CSP? or mean(CSP/CSN)?
+
+saveas(gcf,'C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/improvement_CSP/within_group_corrected/improved_k20_uncorrected.png');
 
 
