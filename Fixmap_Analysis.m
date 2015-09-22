@@ -196,30 +196,53 @@ for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
         SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/SingleFixations/baselinecorrection/Corrmats_Scale_%04.4g_Fix_%02d.png',k,nfix));
     end
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Find tuned pixels
-fix = Fixmat(Project.subjects_1500,[2 3 4]);
-%%
-x = -135:45:180;
-v = [];
-c = 0;
-for ph = [2 4]
-    for cond = -135:45:180
-        c    = c+1;
-        v{c} = {'phase', ph, 'deltacsp' cond};
+fix         = Fixmat(Project.subjects_1500,[2 3 4]);
+fix.unitize = 0;
+%% collect fixations
+maps        = [];
+for subject =unique(fix.subject)
+    v = [];
+    c = 0;
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject', subject};
+        end
     end
+    fix.getmaps(v{:});
+%     fix.maps = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);
+    dummy    = fix.vectorize_maps;
+    dummy(:,1:8) = [];
+    dummy    = demean(dummy')';
+    maps     = cat(3,maps,dummy);
 end
-fix.kernel_fwhm = 20;
-fix.maptype     = 'bin';
-fix.getmaps(v{:});
-fix.maps             = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average                    
-%%
-maps = fix.vectorize_maps;
-i    = find(sum(diff(maps,1,2),2) ~= 0)
-d.y  = maps(i,9:16);
-d.x  = repmat(-135:45:180,size(d.y,1),1);
-t    = Tuning(d);
+data.x             = repmat(-135:45:180,[size(maps,1),1,size(maps,3)]);
+data.y             = maps;
+t                  = Tuning(data);
 t.SingleSubjectFit(3);
+%%
+t   = [];
+c   = 0;
+for fwhm = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20)
+    c = c+1;
+    fix.kernel_fwhm      = fwhm;
+    fix.maptype          = 'conv';
+    fix.getmaps(v{:});
+    fix.maps             = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
+    %
+    maps                 = fix.vectorize_maps;
+    d.y                  = maps(:,9:16);
+    d.y                  = d.y - repmat(mean(d.y,2),[1 8]);
+    d.x                  = repmat(x,size(d.y,1),1);
+    t{c}         = Tuning(d);
+    t{c}.SingleSubjectFit(3);
+end
 %%
 d.x  = repmat(-135:45:180,10,1);
 for n = 1:10
