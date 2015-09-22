@@ -1,9 +1,11 @@
 %% get the data first;
 addpath('/Users/onat/Documents/Code/Matlab/oop/')
 clear all;
-load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
-subjects = intersect(Project.subjects_1500,find(ETmask(:,1)==1));
-fix             = Fixmat(subjects,[2 3 4]);
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,1));
+subjects        = intersect(subjects,Project.subjects_1500);
+fix             = Fixmat(Project.subjects_1500,[2 3 4]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%MEGA SUBJECT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
