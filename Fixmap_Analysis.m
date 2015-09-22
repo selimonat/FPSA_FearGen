@@ -5,7 +5,7 @@ p               = Project;
 mask            = p.getMask('ET');
 subjects        = find(mask(:,1));
 subjects        = intersect(subjects,Project.subjects_1500);
-fix             = Fixmat(Project.subjects_1500,[2 3 4]);
+fix             = Fixmat(subjects,[2 3 4]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%MEGA SUBJECT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -24,20 +24,20 @@ end
 for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
     fix.kernel_fwhm = k;
     fix.getmaps(v{:});
-    fix.maps             = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-    fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    
+    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline    
+%     fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
     fix.plot;
     supertitle(mat2str(k),1);
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/600/baselineANDMeancorrection/Maps_Scale_%04.4g.png',k));    
+    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/Maps_Scale_%04.4g.png',k));    
     out= fix.corr;
-    imagesc(out(9:end,9:16));colorbar
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/600/baselineANDMeancorrection/CorrMat_Scale_%04.4g.png',k));
+    figure(1000);clf
+    imagesc(out);colorbar
+    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/CorrMat_Scale_%04.4g.png',k));
     title(mat2str(k));        
 end
 %% For a given fwhm, compute fixmaps and cormat for different fixation indices.
-fix = Fixmat(Project.subjects_1500,[2 3 4]);
-%%
-fix.kernel_fwhm = 20;
+fix.kernel_fwhm = 25;
 for nfix = [1 2 3 4 5 6];%there are about 200 7th fixations (not enough)
     %creaete the query cell
     v = [];
@@ -45,20 +45,23 @@ for nfix = [1 2 3 4 5 6];%there are about 200 7th fixations (not enough)
     for ph = [2 4]
         for cond = -135:45:180
             c = c+1;
-            v{c} = {'phase', ph, 'deltacsp' cond 'fix' nfix};
+            v{c} = {'phase', ph, 'deltacsp' cond 'fix' nfix(:)};
         end
     end
     % plot and save fixation maps       
     fix.getmaps(v{:});
     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-    fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+%     fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
     fix.plot;
     supertitle(mat2str(k),1);
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/1500/SingleFixations/baselineANDMeancorrection/Maps_nFix_%02d.png',nfix));
-    out= fix.corr;
-    imagesc(out(9:end,9:16));colorbar
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/1500/SingleFixations/baselineANDMeancorrection/Corrmat_nFix_%02d.png',nfix));
+%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Maps_nFix_%02d.png',nfix(1),nfix(2)));
+    out = fix.corr;
+    figure(10001);
+    imagesc(out(9:end,9:16));colorbar    
+%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Corrmat_nFix_%02d.png',nfix(1),nfix(2)));
     title([mat2str(fix.kernel_fwhm) '-' mat2str(nfix)] );
+    figure(10002)
+    bla(nfix,:) = out(12,9:end);
 end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,91 +72,34 @@ end
 % All the above is done by considering all subjects as one single megasubject i.e. the analysis
 % is not done individually.
 % compute single subject correlation matrices
-clear all;
-load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
-subjects = intersect(Project.subjects_1500,find(ETmask(:,1)==1));
-fix             = Fixmat(subjects,[2 3 4]);
-
-%% plot and save single subject fixations maps UNCORRECTED
+%% plot and save single subject fixations maps
 tsub = length(unique(fix.subject));
-for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
-    fix.kernel_fwhm = k;
-    covmat          = nan(16,16,tsub);
-    cormat          = nan(16,16,tsub);
-    subc            = 0;
-    for subject = unique(fix.subject);
-        subc = subc + 1;
-        %creaete the query cell
-        v = [];
-        c = 0;
-        for ph = [2 4]
-            for cond = -135:45:180
-                c    = c+1;
-                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
-            end
+out  = [];
+% for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
+fix.kernel_fwhm = 25;
+cormat          = nan(16,16,tsub);
+subc            = 0;
+for subject = unique(fix.subject);
+    subc = subc + 1;
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
         end
-        % plot and save fixation maps
-        fix.getmaps(v{:});
-        fix.plot
-        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/uncorrected/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/uncorrected/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-        close all
     end
+    % plot and save fixation maps
+    fix.getmaps(v{:});
+    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline
+    %         fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    %         fix.plot
+    %         SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+    %         saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
+    cormat(:,:,subc) = fix.corr;
 end
-%% plot and save single subject fixations maps, BASELINE CORRECTED
-tsub = length(unique(fix.subject));
-for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
-    fix.kernel_fwhm = k;    
-    covmat          = nan(16,16,tsub);
-    cormat          = nan(16,16,tsub);
-    subc            = 0;
-    for subject = unique(fix.subject);
-        subc = subc + 1;
-        %creaete the query cell
-        v = [];
-        c = 0;
-        for ph = [2 4]
-            for cond = -135:45:180
-                c    = c+1;
-                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
-            end
-        end        
-        % plot and save fixation maps
-        fix.getmaps(v{:});
-        fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-        fix.plot
-        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    end
-end
-
-%% plot and save single subject fixations maps, BASELINE CORRECTED
-tsub = length(unique(fix.subject));
-for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
-    fix.kernel_fwhm = k;    
-    covmat          = nan(16,16,tsub);
-    cormat          = nan(16,16,tsub);
-    subc            = 0;
-    for subject = unique(fix.subject);
-        subc = subc + 1;
-        %creaete the query cell
-        v = [];
-        c = 0;
-        for ph = [2 4]
-            for cond = -135:45:180
-                c    = c+1;
-                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
-            end
-        end        
-        % plot and save fixation maps
-        fix.getmaps(v{:});
-        fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-        fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
-        fix.plot
-        %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-        saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    end
-end
+% end
 %% compute single subject maps and similarity matrices, and finally average them across subjects.
 figure(10);set(gcf,'position',[440    52   932   746]);clf
 tsub = length(unique(fix.subject));
@@ -252,9 +198,14 @@ d.y(n,:)  = make_gaussian_fmri_zeromean(-135:45:180,randsample(linspace(10,100,1
 end
 
 %%
-%%good subject? bad subject?
-load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
-subjects = intersect(Project.subjects_600,find((ETmask(:,1)==1)));
+%%good subject? bad subject? %regarding Discrimination Task Fixations
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,1));
+subjects        = intersect(subjects,Project.subjects_1500);
+fix             = Fixmat(subjects,[1 5]);
+
+subjects = intersect(Project.subjects_1500,find((ETmask(:,1)==1)));
 g = Group(subjects);
 fix             = Fixmat(subjects,[2 3 4]);
 %GOOOD vs BAD
@@ -397,4 +348,76 @@ fix.plot
 t=supertitle('Improved - Non-Improved Base&Mean corrected (1500ms)',1);
 set(t,'FontSize',14)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Discrimination Task
+%% get the data for discrimination task
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,2));%second column: discrimination phase
+subjects        = intersect(subjects,Project.subjects_1500);
+fix             = Fixmat(subjects,[1 5]);
+%% get the query to compare CS+ vs .CS?
+fix.kernel_fwhm = 20;
+%create the query cell
+v = [];
+c = 0;
+for ph = [1 5]%before and after
+    for cond = [0,18000]%CS+ and CS?
+        c    = c+1;
+        v{c} = {'phase', ph, 'deltacsp' cond };
+    end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+fix.plot;
+%% Median split according to discrimination threshold
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,2));%second column: discrimination phase
+subjects        = intersect(subjects,Project.subjects_1500);
+g               = Group(subjects');
+subject_alpha=[];
+for i = 1:length(g.ids)
+    subject_alpha = [subject_alpha; mean(g.pmf.params1(1:4,1,i),1)];
+end
+med   = median(subject_alpha);
+bad   = g.ids(find(subject_alpha>=med));
+good  = g.ids(find(subject_alpha<med));
+%% 
+%create the query cell
+v = [];
+c = 0;
+for subjects = {good bad}    
+        for cond = [0,18000]
+            c    = c+1;
+            v{c} = {'phase', [1 5], 'deltacsp' cond 'subject' subjects{1}};
+        end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+fix.plot
+%% high improvers vs. low improvers.
 
+alpha_csp_impr = squeeze(g.pmf.params1(1,1,:) - g.pmf.params1(3,1,:));
+csp_improvers = g.ids(find(alpha_csp_impr>median(alpha_csp_impr)));
+csp_nonimpr   = g.ids(find(alpha_csp_impr<=median(alpha_csp_impr)));
+%% 
+%create the query cell
+v = [];
+c = 0;
+
+    for phase = [1 5]
+        for cond = [0,18000]
+            c    = c+1;
+            v{c} = {'phase', phase, 'deltacsp' cond 'subject' csp_improvers};
+        end
+    end
+
+% plot and save fixation maps
+fix.getmaps(v{:});
+fix.plot
