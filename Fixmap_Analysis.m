@@ -278,7 +278,7 @@ k = 20;
     fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
     fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
     fix.plot
-    t=supertitle('Good - Bad Base&Mean corrected (1500ms)',1);
+    t=supertitle('Good - Bad Base&Mean corrected (600ms)',1);
     set(t,'FontSize',14)
   %% 
 %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
@@ -288,7 +288,88 @@ saveas(gcf,'C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/
 %%
 %%%improvement
 %what is subject's improvement? For CSP? or mean(CSP/CSN)?
+%%CSP
+load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
+subjects = intersect(Project.subjects_600,find((ETmask(:,1)==1)));
+g = Group(subjects);
+fix             = Fixmat(subjects,[2 3 4]);
+
+alpha_csp_impr = squeeze(g.pmf.params1(1,1,:) - g.pmf.params1(3,1,:));
+csp_improvers = g.ids(find(alpha_csp_impr>median(alpha_csp_impr)));
+csp_nonimpr   = g.ids(find(alpha_csp_impr<=median(alpha_csp_impr)));
+
+k = 20;
+fix.kernel_fwhm = k;
+%create the query cell
+v = [];
+c = 0;
+for subjects = {csp_improvers csp_nonimpr}
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subjects{1}};
+        end
+    end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+uncorr=fix.maps;%save it to have it for inbetween saving steps
+%%
+%first Baseline correction, but within Group
+fix.maps(:,:,1:16)             = fix.maps(:,:,1:16)    - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for group_baseline
+fix.maps(:,:,17:32)            = fix.maps(:,:,17:32)   - repmat(mean(fix.maps(:,:,17:24),3),[1 1 16]);%correct for group_baseline
+%Mean Testphase correction (within group)
+fix.maps(:,:,9:16) = fix.maps(:,:,9:16) - repmat(mean(fix.maps(:,:,9:16),3),[1 1 8]);
+fix.maps(:,:,25:32) = fix.maps(:,:,25:32) - repmat(mean(fix.maps(:,:,25:32),3),[1 1 8]);
+%take the diff (Improved - Non-Improved)
+fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
+fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
+fix.plot
+t=supertitle('Improved - Non-Improved Base&Mean corrected (600ms)',1);
+set(t,'FontSize',14)
 
 saveas(gcf,'C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/improvement_CSP/within_group_corrected/improved_k20_uncorrected.png');
+
+%%
+%Improvement concerning both CSP and CSN (their mean)
+load(sprintf('%smidlevel%ssubjmasks%sETmask.mat',Project.path_project,filesep,filesep));
+subjects = intersect(Project.subjects_1500,find((ETmask(:,1)==1)));
+g = Group(subjects);
+fix             = Fixmat(subjects,[2 3 4]);
+
+alpha_both_impr = squeeze(mean(g.pmf.params1(1:2,1,:)) - mean(g.pmf.params1(3:4,1,:)));
+csp_improvers = g.ids(find(alpha_both_impr>median(alpha_both_impr)));
+csp_nonimpr   = g.ids(find(alpha_both_impr<=median(alpha_both_impr)));
+%%
+
+k = 20;
+fix.kernel_fwhm = k;
+%create the query cell
+v = [];
+c = 0;
+for subjects = {csp_improvers csp_nonimpr}
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subjects{1}};
+        end
+    end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+uncorr=fix.maps;%save it to have it for inbetween saving steps
+
+%first Baseline correction, but within Group
+fix.maps(:,:,1:16)             = fix.maps(:,:,1:16)    - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for group_baseline
+fix.maps(:,:,17:32)            = fix.maps(:,:,17:32)   - repmat(mean(fix.maps(:,:,17:24),3),[1 1 16]);%correct for group_baseline
+%Mean Testphase correction (within group)
+fix.maps(:,:,9:16) = fix.maps(:,:,9:16) - repmat(mean(fix.maps(:,:,9:16),3),[1 1 8]);
+fix.maps(:,:,25:32) = fix.maps(:,:,25:32) - repmat(mean(fix.maps(:,:,25:32),3),[1 1 8]);
+%take the diff (Improved - Non-Improved)
+fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
+fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
+fix.plot
+t=supertitle('Improved - Non-Improved Base&Mean corrected (1500ms)',1);
+set(t,'FontSize',14)
 
 
