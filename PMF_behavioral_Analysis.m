@@ -2,12 +2,22 @@
 
 %%1500ms
 
-g = Group(intersect(Project.subjects_1500,find(sum(PMFmask,2)==4))); %use only these people that have data for all 4 PMFs
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = find(sum(mask,2)==4);%%use only these people that have data for all 4 PMFs
+subjects        = intersect(subjects,Project.subjects_1500);
+g = Group(subjects); 
 n = length(g.ids);
 
 %600ms
-g = Group(intersect(Project.subjects_600,find(sum(PMFmask,2)==4))); 
+clear all
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = find(sum(mask,2)==4);%%use only these people that have data for all 4 PMFs
+subjects        = intersect(subjects,Project.subjects_600);
+g = Group(subjects); 
 n = length(g.ids);
+
 
 
 %%compute mean/std
@@ -26,7 +36,7 @@ lambda.std=std(squeeze(g.pmf.params1(:,4,:)),0,2);
 lambda.sem=beta.std/sqrt(n);
 
 
-%% Scatterplot and TTEST
+%% Scatterplot
 fig1=figure;
 subplot(2,2,1)%CS+ alpha
 plot(squeeze(g.pmf.params1(1,1,:)),squeeze(g.pmf.params1(3,1,:)),'ro','MarkerFaceColor','r');
@@ -70,12 +80,35 @@ plot(log10(beta.mean(2)),log10(beta.mean(4)),'k+','MarkerSize',10)
 
 t=supertitle('Alpha and Beta before and after aversive learning (600ms)',1);
 set(t,'FontSize',14)
+%%
+%%ttests
+[h,p_cspAlpha,ci]=ttest(squeeze(g.pmf.params1(1,1,:)),squeeze(g.pmf.params1(3,1,:)))%CS+ alpha before/after p<0.001***
+[h,p_csnAlpha,ci]=ttest(squeeze(g.pmf.params1(2,1,:)),squeeze(g.pmf.params1(4,1,:)))%CS- alpha before/after p =0.11
+[h,p_cspBeta,ci]=ttest(squeeze(g.pmf.params1(1,2,:)),squeeze(g.pmf.params1(3,2,:)))%CS+ beta before/after  p =0.36
+[h,p_csnBeta,ci]=ttest(squeeze(g.pmf.params1(2,2,:)),squeeze(g.pmf.params1(4,2,:)))%CS- beta before/after  p =0.53
 
-[h,p,ci]=ttest(squeeze(g.pmf.params1(1,1,:)),squeeze(g.pmf.params1(3,1,:)))%CS+ alpha before/after p<0.001***
-[h,p,ci]=ttest(squeeze(g.pmf.params1(2,1,:)),squeeze(g.pmf.params1(4,1,:)))%CS- alpha before/after p =0.11
-[h,p,ci]=ttest(squeeze(g.pmf.params1(1,2,:)),squeeze(g.pmf.params1(3,2,:)))%CS+ beta before/after  p =0.36
-[h,p,ci]=ttest(squeeze(g.pmf.params1(2,2,:)),squeeze(g.pmf.params1(4,2,:)))%CS- beta before/after  p =0.53
+%%
+%bar plots for means
 
-%%Median Split
+%%1500ms
+
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = find(sum(mask,2)==4);%%use only these people that have data for all 4 PMFs
+subjects        = intersect(subjects,Project.subjects_1500);
+g1 = Group(subjects); 
+n1 = length(g1.ids);
+
+%600ms
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = find(sum(mask,2)==4);%%use only these people that have data for all 4 PMFs
+subjects        = intersect(subjects,Project.subjects_600);
+g2 = Group(subjects); 
+n2 = length(g2.ids);
+
+g1.plotPMFbars
+g2.plotPMFbars
+
 
 
