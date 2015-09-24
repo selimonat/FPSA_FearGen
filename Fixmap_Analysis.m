@@ -347,6 +347,19 @@ fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
 fix.plot
 t=supertitle('Improved - Non-Improved Base&Mean corrected (1500ms)',1);
 set(t,'FontSize',14)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% show fixations for different phases
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_600);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+fix             = Fixmat(subjects,[1 2 3 4 5]);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -357,9 +370,13 @@ set(t,'FontSize',14)
 %Discrimination Task
 %% get the data for discrimination task
 p               = Project;
-mask            = p.getMask('ET');
-subjects        = find(mask(:,2));%second column: discrimination phase
-subjects        = intersect(subjects,Project.subjects_1500);
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_600);
+fix             = Fixmat(subjects,[1 5]);
+%% get the data for discrimination task
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
 fix             = Fixmat(subjects,[1 5]);
 %% get the query to compare CS+ vs .CS?
 fix.kernel_fwhm = 20;
@@ -374,50 +391,133 @@ for ph = [1 5]%before and after
 end
 % plot and save fixation maps
 fix.getmaps(v{:});
-fix.plot;
+dummy = fix.maps;
+%fix.plot;
+m = mean(dummy(:,1:2),2);
+%r= corrcoef(dummy-repmat(m,[1 4])
 %% Median split according to discrimination threshold
 p               = Project;
-mask            = p.getMask('ET');
-subjects        = find(mask(:,2));%second column: discrimination phase
-subjects        = intersect(subjects,Project.subjects_1500);
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),subjects);
+fix             = Fixmat(subjects,[1 5]);
 g               = Group(subjects');
 subject_alpha=[];
 for i = 1:length(g.ids)
-    subject_alpha = [subject_alpha; mean(g.pmf.params1(1:4,1,i),1)];
+    subject_alpha = [subject_alpha; mean(g.pmf.params1(1:2,1,i),1) mean(g.pmf.params1(3:4,1,i),1)];
 end
-med   = median(subject_alpha);
-bad   = g.ids(find(subject_alpha>=med));
-good  = g.ids(find(subject_alpha<med));
+
+med_before   = median(subject_alpha(:,1));
+bad_before   = g.ids(find(subject_alpha(:,1)>=med_before));
+good_before  = g.ids(find(subject_alpha(:,1)<med_before));
+med_after    = median(subject_alpha(:,2));
+bad_after    = g.ids(find(subject_alpha(:,2)>=med_after));
+good_after   = g.ids(find(subject_alpha(:,2)<med_after));
+
+
+mean_goodbefore=mean(subject_alpha(ismember(g.ids,good_before),1))
+mean_badbefore=mean(subject_alpha(ismember(g.ids,bad_before),1))
+mean_goodafter=mean(subject_alpha(ismember(g.ids,good_before),2))
+mean_badafter=mean(subject_alpha(ismember(g.ids,bad_before),2))
+%% 
+% %create the query cell
+% v = [];
+% c = 0;
+% for subjects = {good bad}    
+%         for cond = [0,18000]
+%             c    = c+1;
+%             v{c} = {'phase', [1 5], 'deltacsp' cond 'subject' subjects{1}};
+%         end
+% end
+% % plot and save fixation maps
+% fix.getmaps(v{:});
+% fix.plot
+%% where do good vs bad discriminators look? (independent from condition)
+%GOOD Discrimination BEFORE
+%create the query cell
+v = [];
+c = 0;
+for subjects = {good_before bad_before}
+    c    = c+1;
+    v{c} = {'phase',1, 'deltacsp' [0,18000] 'subject' subjects{1}};
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+%% where do good vs bad discriminators look? (independent from condition)
+%GOOD Discrimination AFTER
+%create the query cell
+v = [];
+c = 0;
+for subjects = {good_after bad_after}
+    c    = c+1;
+    v{c} = {'phase',5, 'deltacsp' [0,18000] 'subject' subjects{1}};
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+
+%% 
+%CS+ vs CS_ after
+%create the query cell
+v = [];
+c = 0;
+for subjects = {good_after bad_after}
+    for phase = [1 5]
+        for cond = [0 18000]
+            c    = c+1;
+            v{c} = {'phase',phase, 'deltacsp' cond 'subject' subjects{1}};
+        end
+    end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+uncorr=fix.maps;
+bcorr = cat(3,[uncorr(:,:,3:4)-repmat(mean(uncorr(:,:,1:2),3),[1 1 2])],[uncorr(:,:,7:8)-repmat(mean(uncorr(:,:,5:6),3),[1 1 2])]);%correct for individual_baseline (which is own CSPandCSN mean in phase1);
+%% high improvers vs. low improvers.
+%mean improvement in both CSP and CSN
+alpha_impr = squeeze(mean(g.pmf.params1(1:2,1,:)) - mean(g.pmf.params1(3:4,1,:)));
+improvers = g.ids(find(alpha_impr>median(alpha_impr)));
+nonimpr   = g.ids(find(alpha_impr<=median(alpha_impr)));
+
+mean_improvers=mean(alpha_impr(ismember(g.ids,improvers)));
+mean_nonimpr=mean(alpha_impr(ismember(g.ids,nonimpr)));
 %% 
 %create the query cell
 v = [];
 c = 0;
-for subjects = {good bad}    
-        for cond = [0,18000]
-            c    = c+1;
-            v{c} = {'phase', [1 5], 'deltacsp' cond 'subject' subjects{1}};
-        end
+for subjects = {improvers nonimpr}
+    for phase = [1 5]
+        c    = c+1;
+        v{c} = {'phase', phase, 'deltacsp' [0, 18000] 'subject' subjects{1}};
+    end
 end
+
 % plot and save fixation maps
 fix.getmaps(v{:});
-fix.plot
-%% high improvers vs. low improvers.
+fix.maps = fix.maps(:,:,[2,4]) - repmat(mean(fix.maps(:,:,[1,3]),3),[1 1 2]);
 
+%%
+%improvement in CSP only
 alpha_csp_impr = squeeze(g.pmf.params1(1,1,:) - g.pmf.params1(3,1,:));
 csp_improvers = g.ids(find(alpha_csp_impr>median(alpha_csp_impr)));
 csp_nonimpr   = g.ids(find(alpha_csp_impr<=median(alpha_csp_impr)));
-%% 
-%create the query cell
-v = [];
-c = 0;
 
-    for phase = [1 5]
-        for cond = [0,18000]
-            c    = c+1;
-            v{c} = {'phase', phase, 'deltacsp' cond 'subject' csp_improvers};
-        end
-    end
+%%
+%show 5 phases next to each other
+%% get the data for discrimination task
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+fixd            = Fixmat(subjects,[1 5]);
+fixfg           = Fixmat(subjects,[2 3 4]);
 
-% plot and save fixation maps
-fix.getmaps(v{:});
-fix.plot
+fixd.getmaps({'phase',1,'deltacsp',[0,18000]},{'phase',5,'deltacsp',[0,18000]});
+fixfg.getmaps({'phase',2,'deltacsp',[0,180]},{'phase',3,'deltacsp',[0,180]},{'phase',4,'deltacsp',[0,180]});
+discr   = fixd.maps;
+feargen = fixfg.maps;
+raw     = cat(3,feargen,discr);
+blank   = mean(raw,3);
+corr    = raw - repmat(blank, [ 1 1 5]);
+
