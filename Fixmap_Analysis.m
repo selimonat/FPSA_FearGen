@@ -520,4 +520,93 @@ feargen = fixfg.maps;
 raw     = cat(3,feargen,discr);
 blank   = mean(raw,3);
 corr    = raw - repmat(blank, [ 1 1 5]);
+%%
+clear all;
+p         = Project;
+rate_mask = find(p.getMask('RATE'));
+pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
+subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_1500);
+g         = Group(subs);
+g.getSI(3);
+[mat labels] = g.parameterMat;
+%%
+pmf          = [mean(mean(mat(:,[1 2]))) mean(mean(mat(:,[5 6])))];
+ratings      = [mean(mean(mat(:,[end-2:end-1])))];
+x = linspace(0,180,10000);
+plot(x,1-PAL_Weibull(pmf,x),'r')
+hold on;plot(x,make_gaussian1d(x,1,ratings,0),'g--');
 
+%%
+[mat labels] =g.parameterMat;
+[cmat mask] = CorrelationMatrix(mat,10000,0.01,'bootci');
+set(gca,'yticklabel',labels,'ytick',1:length(labels));
+%%
+
+
+%%
+p=Project;
+pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
+subs      = intersect(pmf_mask,Project.subjects_1500);
+subs      = intersect(subs,find(p.getMask('ET_discr')));
+g         = Group(subs);
+g.getSI(3);
+[mat labels] =g.parameterMat;
+
+fix = Fixmat(subs,[1 5]);
+
+
+%% fixation maps for CSP improvers
+med = median(mat(:,9));
+good_imp = g.ids(find(mat(:, 9) > med));
+bad_imp  = g.ids(find(mat(:,9) <= med));
+
+% create the query cell
+v = [];
+c = 0;
+for subjects = {good_imp bad_imp} 
+        c    = c+1;
+        v{c} = {'phase', [5], 'deltacsp' [0] 'subject' subjects{1}};
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+fix.plot
+fix.maps = -diff(fix.maps,1,3);
+fix.plot
+% create the query cell
+v = [];
+c = 0;
+for sub = subs' 
+    for phase = [1]
+        c    = c+1;
+        v{c} = {'phase', phase, 'deltacsp' [0 18000] 'subject' sub  };
+    end
+end
+
+fix.getmaps(v{:});
+% fix.maps = fix.maps(:,:,26:50);
+m  = fix.vectorize_maps;
+
+for i = 1:size(m,1)
+   r(i)=corr2(m(i,:)',median(mat(:,[1 3]),2));
+end
+
+fix.maps = reshape(r,[500 500]);
+fix.plot;
+
+%% fixations per pixel, correlation with delta alpha
+med = median(mean(mat(:,[1 3]),2));
+good_imp = g.ids(find(mean(mat(:,[1 3]),2) < med));
+bad_imp  = g.ids(find(mean(mat(:,[1 3]),2) >= med));
+
+v = [];
+c = 0;
+for sub = {good_imp bad_imp}
+    for phase = [1]
+        c    = c+1;
+        v{c} = {'phase', phase, 'deltacsp' [0 18000] 'subject' sub{1}};
+    end
+end
+
+fix.getmaps(v{:});
+fix.maps=-diff(fix.maps,1,3);
+fix.plot
