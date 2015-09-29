@@ -525,7 +525,7 @@ clear all;
 p         = Project;
 rate_mask = find(p.getMask('RATE'));
 pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
-subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_1500);
+subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_600);
 g         = Group(subs);
 g.getSI(3);
 [mat labels] = g.parameterMat;
@@ -546,7 +546,7 @@ set(gca,'yticklabel',labels,'ytick',1:length(labels));
 %%
 p=Project;
 pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
-subs      = intersect(pmf_mask,Project.subjects_1500);
+subs      = intersect(pmf_mask,Project.subjects_600);
 subs      = intersect(subs,find(p.getMask('ET_discr')));
 g         = Group(subs);
 g.getSI(3);
@@ -610,3 +610,4 @@ end
 fix.getmaps(v{:});
 fix.maps=-diff(fix.maps,1,3);
 fix.plot
+
