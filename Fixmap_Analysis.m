@@ -149,53 +149,262 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Find tuned pixels
-fix         = Fixmat(Project.subjects_1500,[2 3 4]);
-fix.unitize = 0;
-%% collect fixations
-maps        = [];
-for subject =unique(fix.subject)
-    v = [];
-    c = 0;
-    for ph = [2 4]
-        for cond = -135:45:180
-            c    = c+1;
-            v{c} = {'phase', ph, 'deltacsp' cond 'subject', subject};
-        end
+%% COMPARE FIXATION PATTERNS ACROSS THE 5 PHASES
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,1));
+subjects        = intersect(subjects,Project.subjects_1500);
+fix             = Fixmat(subjects,[1 2 3 4 5]);
+% PLOT FIXMAPS for different phases
+v = [];
+c = 0;
+for ph = [1 2 3 4 5]    
+        c = c+1;
+        v{c} = {'phase', ph};    
+end
+fix.getmaps(v{:})
+fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+fix.plot;
+
+%% compare MEGA subject -> unitizing vs. Unitized Single subjects' average
+maps = [];
+for subs = unique(fix.subject);    
+    subs
+    v    = [];
+    c    = 0;
+    for ph = [1 2 3 4 5]
+        c    = c+1;
+        v{c} = {'phase', ph , 'deltacsp' [0 180 18000] 'subject' subs};
     end
     fix.getmaps(v{:});
-%     fix.maps = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);
-    dummy    = fix.vectorize_maps;
-    dummy(:,1:8) = [];
-    dummy    = demean(dummy')';
-    maps     = cat(3,maps,dummy);
+    maps = cat(4, maps, fix.maps - repmat(mean(fix.maps,3),[1 1 size(fix.maps,3)]));    
 end
-data.x             = repmat(-135:45:180,[size(maps,1),1,size(maps,3)]);
-data.y             = maps;
-t                  = Tuning(data);
-t.SingleSubjectFit(3);
+%% Plot simple fixation counts for CS+ and CS? and for different phases.
+p               = Project;
+mask            = p.getMask('ET');
+subjects        = find(mask(:,1));
+subjects        = intersect(subjects,Project.subjects_1500);
+M = [];S = [];
+for np = 1:5
+    fix             = Fixmat(subjects,np);
+    [c i ]          = fix.histogram;
+    close all;
+    M(1,np)           = mean(squeeze(c(:,ismember(i,[0]),:)));
+    M(2,np)           = mean(squeeze(c(:,ismember(i,[180 18000]),:)));
+    S(1,np)           =  std(squeeze(c(:,ismember(i,[0]),:))./sqrt(28));    
+    S(2,np)           =  std(squeeze(c(:,ismember(i,[180 18000]),:))./sqrt(28));
+end
+%
+errorbar(M(1,:),S(1,:),'bo-','linewidth',3);
+hold on
+errorbar(M(2,:),S(2,:),'ro-','linewidth',3);
+hold off;
+box off
+set(gca,'xtick',1:5,'xticklabel',{'Disc1' 'B' 'C' 'T' 'Disc2'});ylabel('Fix Count');
+grid on;
+xlim([.5 5.5]);
+legend({'CS+' 'CS?'});legend boxoff
+SaveFigure(sprintf('/Users/onat/Desktop/FixCount1500.png'));
+%% Plot the discrimination thresholds as a scatterhist
+p        = Project;
+mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
+subjects = intersect(Project.subjects_1500,mask);
+g1500    = Group(subjects);
+subjects = intersect(Project.subjects_600,mask);
+g600    = Group(subjects);
+%
+clf;figure(1)
+dummy = g1500;
+scatterhist(dummy.pmf.csp_before_alpha,dummy.pmf.csp_after_alpha,'nbins',15);
+axis square;
+xlim([0 100]);ylim([0 100])
+DrawIdentityLine(gca);
+xlabel('before');ylabel('after');title('1500ms');
+SaveFigure(sprintf('/Users/onat/Desktop/1500.png'),'-r250');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Compare fixation maps for GOOD vs. BAD discriminators during Discr-1
+p        = Project;
+mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
+subjects = intersect(Project.subjects_600,mask);%subjects
+fix      = Fixmat(subjects,1);
+g        = Group(subjects);%get the data for these subjects
+param    = g.pmf.csn_before_alpha + g.pmf.csp_before_alpha;%the parameter of interest
+i        = param < median(param);%median
+%
+c = 0;v = [];
+for subs = {subjects(i) subjects(~i)}%good and then bad
+    c       = c+1;
+    v{c}    = {'phase', 1 , 'deltacsp' [0 18000] 'subject' subs{1} 'fix' 3};
+end
+%
+fix.kernel_fwhm = 35;
+fix.getmaps(v{:});
+% fix.plot('log');
+%
+fix.maps = -diff(fix.maps,1,3);%bad - good.
+fix.plot('linear');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Compare fixation counts for both the good and bad discriminators
+[c index ]      = fix.histogram;
+close all;
+subs            = {subjects(i) subjects(~i)}; %good and then bad
+m               = [mean(c(ismember(index.sub,subs{1}),index.cond == 0)) mean(c(ismember(index.sub,subs{2}),index.cond == 0))];
+s               = [std(c(ismember(index.sub,subs{1}),index.cond == 0))./sqrt(length(subs{1})) std(c(ismember(index.sub,subs{2}),index.cond == 0))./sqrt(length(subs{2}))];
+errorbar(m,s);
+set(gca,'xtick',[1 2],'xticklabel',{'Good' 'Bad'});ylabel('fixation count');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Let's do the same as before, but first colloect individual subject fixation maps and then median split the fixation maps
+p        = Project;
+mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
+subjects = intersect(Project.subjects_1500,mask);%subjects
+fix      = Fixmat(subjects,1);
+g        = Group(subjects);%get the data for these subjects
+param    = (g.pmf.csp_before_alpha + g.pmf.csn_before_alpha)./2;%the parameter of interest
+i        = param < median(param);%median
+%
+c = 0;v = [];
+for subs = subjects(:)'%good and then bad
+    c       = c+1;
+    v{c}    = {'phase', 1 , 'deltacsp' [0 18000] 'subject' subs};
+end
+fix.kernel_fwhm = 35;
+fix.getmaps(v{:});
+fix.maps        = cat(3,mean(fix.maps(:,:,i),3),mean(fix.maps(:,:,~i),3));
+
+fix.plot('log');
+%
+fix.maps = -diff(fix.maps,1,3);%bad - good.
+fix.plot('linear');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Compute correlation between fixation counts and discrimination threshold.
+p        = Project;
+mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
+subjects = intersect(Project.subjects_600,mask);%subjects
+fix      = Fixmat(subjects,1);
+%
+g        = Group(subjects);%get the data for these subjects
+param    = -(g.pmf.csp_before_alpha(:) + g.pmf.csn_before_alpha(:));%the parameter of interest
+%
+c = 0;v = [];
+for subs = subjects(:)'%good and then bad
+    c       = c+1;
+    v{c}    = {'phase', 1 , 'deltacsp' [0 18000] 'subject' subs};
+end
+fix.unitize     = 1;
+fix.kernel_fwhm = 35;
+fix.getmaps(v{:});
+M = fix.vectorize_maps';
+for i = 1:size(M,2)
+    if sum(abs(M(:,i))) ~= 0
+        r(i) = corr2(M(:,i),param);
+    else
+        r(i) = 0;
+    end
+end
+fix.maps = reshape(r,size(fix.maps,1),size(fix.maps,2));
+fix.plot
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% PLOT FIXMAPS for different phases broken down to CS+ and CS?
+p        = Project;
+mask     = find(p.getMask('ET_feargen'));
+subjects = intersect(Project.subjects_1500,mask);%subjects
+fix      = Fixmat(subjects,[2 3 4]);
+fix.unitize = 1;
 %%
-t   = [];
-c   = 0;
-for fwhm = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20)
-    c = c+1;
-    fix.kernel_fwhm      = fwhm;
-    fix.maptype          = 'conv';
-    fix.getmaps(v{:});
-    fix.maps             = fix.maps - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-    %
-    maps                 = fix.vectorize_maps;
-    d.y                  = maps(:,9:16);
-    d.y                  = d.y - repmat(mean(d.y,2),[1 8]);
-    d.x                  = repmat(x,size(d.y,1),1);
-    t{c}         = Tuning(d);
-    t{c}.SingleSubjectFit(3);
+v     = [];
+c     = 0;
+v     = {'phase', 2 , 'deltacsp' [0 180]}
+fix.kernel_fwhm = 35;
+fix.getmaps(v)
+blank = fix.maps;
+v     = {{'phase', 4 , 'deltacsp' 0} {'phase', 4 , 'deltacsp' 180}};
+fix.getmaps(v{:})
+fix.maps = fix.maps - repmat(blank,[1 1 2]);;
+% fix.maps = -diff(fix.maps,1,3)
+fix.plot;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Which parts of the fixation map predict an increased generalization.
+p           = Project;
+mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
+subjects    = intersect(Project.subjects_600,mask);%subjects
+g           = Group(subjects);%get the data for these subjects
+g.getSI(3);
+fix         = Fixmat(subjects,[2 3 4]);
+fix.unitize = 1;
+[M i]       = g.parameterMat;
+param       = M(:,end);%sharpening index
+i           = param > median(param);%median
+%
+c = 0;
+v = [];
+for subs = {subjects(i) subjects(~i)}%good and then bad
+    c       = c+1;
+    v{c}    = {'phase', 4 , 'deltacsp' [0] 'subject' subs{1}};
 end
-%%
-d.x  = repmat(-135:45:180,10,1);
-for n = 1:10
-d.y(n,:)  = make_gaussian_fmri_zeromean(-135:45:180,randsample(linspace(10,100,10),1),randsample(linspace(20,150,10),1));
-end
+%
+fix.kernel_fwhm = 35;
+fix.getmaps(v{:});
+fix.plot;
+% fix.maps = -diff(fix.maps,1,3);fix.plot;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+
+
+
+
+
 
 %%
 %%good subject? bad subject? %regarding Discrimination Task Fixations
