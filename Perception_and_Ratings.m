@@ -48,8 +48,39 @@ alpha_incr=[];
 for i=1:length(g2.tunings{4}.singlesubject)
 alpha_incr = [alpha_incr; ((g2.pmf.params1(1,1,i)-g2.pmf.params1(3,1,i))-(g2.pmf.params1(2,1,i)-g2.pmf.params1(4,1,i)))];
 end
-%%
-g = 
+
+
+%% look at perception and ratings  - %do good discriminators generalize less?
+clear all;
+p         = Project;
+rate_mask = find(p.getMask('RATE'));
+pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
+subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_1500);
+g         = Group(subs);
+g.getSI(3);
+[mat labels] = g.parameterMat;
+
+
+med  = median(mean(mat(:,[1 2 3 4]),2));
+
+good = g.ids(find(mean(mat(:,[1 2 3 4]),2) < med));
+bad  = g.ids(find(mean(mat(:,[1 2 3 4]),2) >= med));
+alpha_good = mean(mean(mat(ismember(g.ids,good),[1 2 3 4]),2));
+alpha_bad  = mean(mean(mat(ismember(g.ids,bad),[1 2 3 4]),2));
+
+sigma_cond_good = mat(ismember(g.ids,good),12);
+sigma_cond_bad  = mat(ismember(g.ids,bad),12);
+sigma_test_good = mat(ismember(g.ids,good),12);
+sigma_test_bad  = mat(ismember(g.ids,bad),12);
+SI_good         = mat(ismember(g.ids,good),end);
+SI_bad          = mat(ismember(g.ids,bad),end);
+
+[H,P,CI,STATS] = ttest(sigma_cond_good,sigma_cond_bad)
+[H,P,CI,STATS] = ttest(sigma_test_good,sigma_test_bad)
+[H,P,CI,STATS] = ttest(SI_good,SI_bad)
+%nope.
+
+%% do sharp people improve more?
 
 
 
