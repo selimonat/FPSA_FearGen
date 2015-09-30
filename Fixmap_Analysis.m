@@ -205,6 +205,37 @@ grid on;
 xlim([.5 5.5]);
 legend({'CS+' 'CS?'});legend boxoff
 SaveFigure(sprintf('/Users/onat/Desktop/FixCount1500.png'));
+%% Plot simple fixation counts for 1st vs 2nd face of a trial in the discrimination task
+clear all
+p               = Project;
+mask            = p.getMask('ET_Discr');
+subjects        = find(mask);
+subjects        = intersect(subjects,Project.subjects_1500);
+M = [];S = [];
+%cut out the odd (2nd facec of trial) Trials
+first  = [1:2:400]';
+second = [2:2:400]';
+for np=[1 5]
+    cc = 0;
+    for fs = {first second};
+        fix             = Fixmat(subjects,np);
+        cc=cc+1;
+        v = {'trialid' fs{1}};
+        fix.UpdateSelection(v{:})
+        fix.ApplySelection
+        [c i]          = fix.histogram;
+        close all;
+        M(cc,np)           = mean(nanmean(c,2));%mean across cond and subjects
+        S(cc,np)           = mean(nanstd(c,0,2))/length(unique(fix.subject));
+    end
+end
+%
+figure
+errorbar([1 2],M(1,[1 5]),S(1,[1 5]),'bo-','linewidth',3);
+hold on;
+errorbar([1.2 2.2],M(2,[1 5]),S(2,[1 5]),'ro-','linewidth',3)
+set(gca,'xtick',[1.1,2.1],'xticklabel',{'Disc1' 'Disc2'});ylabel('Fix Count');
+legend('1st Face','2nd Face')
 %% Plot the discrimination thresholds as a scatterhist
 p        = Project;
 mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
@@ -734,7 +765,7 @@ clear all;
 p         = Project;
 rate_mask = find(p.getMask('RATE'));
 pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
-subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_600);
+subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_1500);
 g         = Group(subs);
 g.getSI(3);
 [mat labels] = g.parameterMat;
@@ -755,7 +786,7 @@ set(gca,'yticklabel',labels,'ytick',1:length(labels));
 %%
 p=Project;
 pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
-subs      = intersect(pmf_mask,Project.subjects_600);
+subs      = intersect(pmf_mask,Project.subjects_1500);
 subs      = intersect(subs,find(p.getMask('ET_discr')));
 g         = Group(subs);
 g.getSI(3);
@@ -819,4 +850,3 @@ end
 fix.getmaps(v{:});
 fix.maps=-diff(fix.maps,1,3);
 fix.plot
-
