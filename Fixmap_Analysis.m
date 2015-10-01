@@ -400,17 +400,56 @@ fix.kernel_fwhm = 35;
 fix.getmaps(v{:});
 fix.plot;
 % fix.maps = -diff(fix.maps,1,3);fix.plot;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Find Gaussian Tuned locations
+p           = Project;
+mask        = find(p.getMask('ET_feargen'));
+subjects    = intersect(Project.subjects_1500,mask);%subjects
+fix         = Fixmat(subjects,[2 4]);
+%%
+c           = 0;
+v           = [];
+for nph = 4
+    for cond = -135:45:180;%good and then bad
+        c    = c+1;
+        v{c} = {'phase', nph , 'deltacsp' cond};
+    end
+end
+fix.maptype = 'bin';
+fix.binsize = 15;
+fix.unitize = 0;
+fix.getmaps(v{:});
+M           = fix.vectorize_maps;
+
+x = -135:45:180;
+for npix = 1:size(M,1)
+    y = M(npix,:);
+    if sum(y) > .005
+        try
+            dummy   = FitGauss(x,y,3);
+            Amplitude(npix) = dummy.Est(1);
+            pval(npix)      = dummy.pval;
+        catch
+            Amplitude(npix) = NaN;
+            pval(npix)      = NaN;
+        end
+    else
+        Amplitude(npix) = NaN;
+        pval(npix)      = NaN;
+    end
+end
+fix.maps = reshape(pval,33,33);
+fix.plot;
 
 
 
 
 
-
-
-
-
-
-
+    
 
 
 
@@ -425,18 +464,6 @@ fix.plot;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
-
-
-
-
-
-
-
 %%
 %%good subject? bad subject? %regarding Discrimination Task Fixations
 p               = Project;
