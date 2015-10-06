@@ -7,7 +7,7 @@ subjects        = intersect(find(mask),subjects);
 g               = Group(subjects);
 
 
-phase=1;
+phase    =  1;
 fix = Fixmat(subjects,phase);
 v=[];
 c=0;
@@ -17,8 +17,9 @@ for sub = subjects'
 end
 
 %%
-fix.maptype = 'conv';
-% fix.binsize = 15;
+fix.maptype     = 'conv';
+% fix.binsize   = 15;
+kernel_fwhm         = Fixmat.PixelPerDegree*.8;
 fix.getmaps(v{:});
 fix.maps = imresize(fix.maps,[50 50]);   %if conv, make it less data
 %show subjects' personal fixation maps
@@ -79,6 +80,7 @@ end
 %%
 fix.maptype = 'conv';
 % fix.binsize = 15;
+fix.kernel_fwhm = 65;
 fix.getmaps(v{:});
 fix.maps = imresize(fix.maps,[50 50]);   %if conv, make it less data
 %show subjects' personal fixation maps
@@ -90,11 +92,11 @@ fprintf('starting eigenvector computation\n')
 fprintf('done\n')
 close all
 plot(diag(dv((480-size(fix.maps,1)):end,(480-size(fix.maps,1)):end)),'bo-')
-dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-')
+dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 50]);
 %mostly the last 5 are most telling, so only take 5 best
 eigen = fliplr(e);
 %plot them on faces (best eigenvector first)
-num = 10;
+num = 6;
 fix.maps = reshape(eigen(:,1:num),[size(fix.maps,1),size(fix.maps,1),num]);
 fix.plot
 %% compute loadings of subject on eigenvectors
@@ -106,7 +108,7 @@ subj_load(ss,:) = subject_maps(:,s)'*eigen(:,1:num);
 end
 close all
 %exemplary plotting some loadings
-for i=1:5;subplot(1,5,i);bar(subj_load(i,:));xlim([0 num+1]);title(sprintf('subject %d',5+i));end
+for i=1:5;subplot(1,5,i);bar(subj_load(i,:));xlim([0 num+1]);title(sprintf('sub%d',5+i));end
 
 %take initial discrimination threshold, correlate it with these loadings
 initial_alpha = mean([g.pmf.csp_before_alpha,g.pmf.csn_before_alpha],2);
