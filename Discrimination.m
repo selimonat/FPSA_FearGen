@@ -45,12 +45,12 @@ end
 clear all
 p               = Project;
 mask            = p.getMask('ET_Discr');
-subjects        = intersect(find(mask),Project.subjects_600);
+subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('PMF');
 subjects        = intersect(find(mask),subjects);
 g               = Group(subjects);
 
-phase=5;
+phase=1;
 fix = Fixmat(subjects,phase);
 
 v = [];
@@ -78,6 +78,8 @@ for i = 1:length(subjects)
     csp_wrong   = intersect(csp_interval_trials,csp_wrong);
     csn_correct = intersect(csn_interval_trials,csn_correct);
     csn_wrong   = intersect(csn_interval_trials,csn_wrong);
+    
+    
     %sanity check
     if  ~isempty(intersect(csp_correct,csp_wrong))
         fprintf('something wrong in the trial computation')
@@ -89,7 +91,10 @@ for i = 1:length(subjects)
     correct_csn = sort([csn_correct*2 csn_correct*2-1])';
     wrong_csn   = sort([csn_wrong*2 csn_wrong*2-1])';
     
-    for trialid = {correct_csn wrong_csn}
+    correct =[csp_correct csn_correct];
+    wrong   =[csp_wrong csn_wrong];
+    
+    for trialid = {correct wrong}
         c    = c+1;
         v{c} = {'subject' sub 'trialid' trialid{1}};
     end
