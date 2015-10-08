@@ -1,3 +1,24 @@
+%% general stats
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),Project.subjects_600);
+mask            = p.getMask('RATE');
+subjects        = intersect(find(mask),subjects);
+g               = Group(subjects);
+g.getSI(3)
+
+[mat labels] = g.parameterMat;
+
+SI_norm =mean(g.sigma_cond-g.sigma_test)./mean(g.sigma_cond);
+
+%plot something for that
+means  = [mean(mean(mat(:,1:4),2)),mean(mat(:,end-2)),mean(mat(:,end-1))];
+errors = [std(mean(mat(:,1:4),2)),std(mat(:,end-2)),std(mat(:,end-1))]/sqrt(length(subjects));
+[hbarr errbar]=barwitherr(errors,means);
+ylim([0 65])
+set(errbar,'LineWidth',2)
+axis off
+
 %% model Ratings as Gaussian
 
 %%1500ms
@@ -80,7 +101,6 @@ SI_bad          = mat(ismember(g.ids,bad),end);
 [H,P,CI,STATS] = ttest(SI_good,SI_bad)
 %nope.
 
-%% do sharp people improve more?
 
 
 
