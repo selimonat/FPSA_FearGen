@@ -1,3 +1,18 @@
+%% who is improving (improvement for CSP, both etc)
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),Project.subjects_1500);
+g               = Group(subjects);
+
+[mat labels] = g.parameterMat;
+
+%correlation of initial alpha (csp and csn) with...
+[r,p]=corr(mean(mat(:,[1 3]),2),mat(:,9)) %csp improvement
+[r,p]=corr(mean(mat(:,[1 3]),2),mat(:,10)) %csn improvement
+[r,p]=corr(mean(mat(:,[1 3]),2),mat(:,11)) %incremental improvement (cspimpr - csnimpr)
+%if you want to plot it...
+plot(mean(mat(:,[1 3]),2),mat(:,11),'o','Color',[0.5 0 0.5],'LineWidth',2);ls=lsline;set(ls,'LineWidth',2);
+
 %% discrimination only
 p               = Project;
 mask            = p.getMask('ET_Discr');
