@@ -258,8 +258,8 @@ SaveFigure(sprintf('/Users/onat/Desktop/1500.png'),'-r250');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Compare fixation maps for GOOD vs. BAD discriminators during Discr-1
 p        = Project;
-mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
-subjects = intersect(Project.subjects_600,mask);%subjects
+mask     = find(p.getMask('ET_Discr').*prod(p.getMask('PMF'),2));
+subjects = intersect(Project.subjects_1500,mask);%subjects
 fix      = Fixmat(subjects,1);
 g        = Group(subjects);%get the data for these subjects
 param    = g.pmf.csn_before_alpha + g.pmf.csp_before_alpha;%the parameter of interest
@@ -282,8 +282,17 @@ fix.plot('linear');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Compare fixation counts for both the good and bad discriminators
+%% Fixation Counts and behavior
 [c index ]      = fix.histogram;
+%simple correlations
+[mat labels] = g.parameterMat
+%SI
+[r p] = corr(nanmean(c,2),mat(:,end))
+plot(nanmean(c,2),mat(:,end),'bo','MarkerFaceColor','b','LineWidth',2);ls=lsline;set(ls,'LineWidth',2)
+%threshold
+[r p] = corr(nanmean(c,2),mean(mat(:,1:4),2))
+plot(nanmean(c,2),mean(mat(:,1:4),2),'bo','MarkerFaceColor','b','LineWidth',2);ls=lsline;set(ls,'LineWidth',2)
+%%
 close all;
 subs            = {subjects(i) subjects(~i)}; %good and then bad
 m               = [mean(c(ismember(index.sub,subs{1}),index.cond == 0)) mean(c(ismember(index.sub,subs{2}),index.cond == 0))];
