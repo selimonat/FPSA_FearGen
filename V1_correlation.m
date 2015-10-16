@@ -4,7 +4,7 @@
 clear all
 p               = Project;
 mask            = p.getMask('ET_feargen');
-subjects        = intersect(find(mask),Project.subjects_600);
+subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('RATE');
 subjects        = intersect(find(mask),subjects);
 g = Group(subjects);
@@ -37,7 +37,8 @@ end
 
 %% prepare different V1 models
 %get fixations
-clear all;r=[];rr=[];
+clear all
+r=[];rr=[];
 p               = Project;
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),Project.subjects_1500);
@@ -48,7 +49,7 @@ fix4            = Fixmat(subjects,4);
 fix2            = Fixmat(subjects,2);
 g.getSI(3);%get the sharpening index
 %
-f0              = '~/Google Drive/EthnoMaster/data/midlevel/V1/modV1/';%f0 needs the path of the images
+f0              = 'C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\V1\modV1\';%f0 needs the path of the images
 %f is the output of CalibrateFace_V1Model and will lead to V1.mats
 path2v1         = CalibrateFace_V1Model(f0);%generate V1 activity maps
 dummy           = dir([path2v1 '*.mat']);
@@ -84,10 +85,10 @@ for smooth = 15;%this loops through different smoothings (fwhm_kernel for fixmat
                 keyboard
             end
             v1diff                   = abs(zscore(im(:,:,i) - im(:,:,j)));
-            rr(subc,cc,smoothcount)  = v1diff(:)'*fix4.vectorize_maps;
+            rr(subc,cc,smoothcount)  = v1diff(:)'*fix4.vectorize_maps;%testphase correlation
             %% get control map from phase 2 and compute control correlation
             fix2.getmaps(v);                        
-            rrc(subc,cc,smoothcount) = v1diff(:)'*fix2.vectorize_maps;            
+            rrc(subc,cc,smoothcount) = v1diff(:)'*fix2.vectorize_maps;  %baseline correlation          
         end
     end
     r(1,smoothcount) = corr2(nanmean(rr(:,:,smoothcount),2),g.SI);%for one V1/smoothing combination
