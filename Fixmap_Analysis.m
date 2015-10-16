@@ -777,6 +777,23 @@ fix.maps = fix.maps(:,:,[2,4]) - repmat(mean(fix.maps(:,:,[1,3]),3),[1 1 2]);
 alpha_csp_impr = squeeze(g.pmf.params1(1,1,:) - g.pmf.params1(3,1,:));
 csp_improvers = g.ids(find(alpha_csp_impr>median(alpha_csp_impr)));
 csp_nonimpr   = g.ids(find(alpha_csp_impr<=median(alpha_csp_impr)));
+%% high guessing rate vs low guessing rate
+for i = 1:length(g.ids)
+    guess(i) = mean(g.subject{i}.pmf.params1(:,3));
+end
+med = median(guess);
+high_guess = g.ids(find(guess>med))';
+low_guess  = g.ids(find(guess<=med))';
+%create the query cell
+v = [];
+c = 0;
+for subjects = {high_guess low_guess}
+        c    = c+1;
+        v{c} = {'subject' subjects{1}};
+        v{c}
+end
+fix.getmaps(v{:});
+fix.plot
 
 %%
 %show 5 phases next to each other
