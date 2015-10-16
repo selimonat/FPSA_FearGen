@@ -119,11 +119,37 @@ for nf1 = 1:length(subjects)
     end
 end
 imagesc(ed)
-mds = mdscale(ed,2,'criterion','metricstress');
+% mds = mdscale(ed,2,'criterion','metricstress');
+mds = cmdscale(ed);
 
 figure;plot(mds(:,1),mds(:,2),'o','MarkerFaceColor','b')
 text(mds(:,1)+0.1e-4,mds(:,2),num2str(g.ids),'fontsize',10)
 
+%% correlates of mds (color scaling)
+[mat labels]= g.parameterMat;
+%%choose what should be displayed by color gradient
+val = Scale(mean(mat(:,1:4),2));%mean alpha
+val = Scale(mean(mat(:,5:8),2));%mean beta
+val = Scale(mat(:,9));%csp improvement
+val = Scale(mat(:,11));%csp (-csn, i.e. corrected) improvement
+val = Scale(mat(:,12));%fwhm rating cond
+val = Scale(mat(:,13));%fwhm rating test
+val = Scale(g.SI);
+for i = 1:length(subjects)
+    guess(i)= mean(g.subject{i}.pmf.params1(:,3));
+end
+val = Scale(guess);
+
+%% plot
+figure;
+for i = 1:length(mds)
+plot(mds(i,1),mds(i,2),'o','MarkerEdgeColor',[val(i) 0 1-val(i)],'MarkerFaceColor',[val(i) 0 1-val(i)],'MarkerSize',10)
+hold on;
+% text(mds(:,1)+0.1e-4,mds(:,2),num2str(g.ids),'fontsize',10)
+end
+t = title('Rating Test (red = wide)');set(t,'FontSize',14);
+xlabel('dim 1');ylabel('dim 2');
+print -dbitmap;
 %% exemplary subjects vs group for phase 1 - 5
 v=[];
 c=0;
