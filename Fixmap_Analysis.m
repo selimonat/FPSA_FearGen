@@ -236,6 +236,16 @@ hold on;
 errorbar([1.2 2.2],M(2,[1 5]),S(2,[1 5]),'ro-','linewidth',3)
 set(gca,'xtick',[1.1,2.1],'xticklabel',{'Disc1' 'Disc2'});ylabel('Fix Count');
 legend('1st Face','2nd Face')
+%% plot corresponding fixmaps for first vs second face in discrimination
+fix = Fixmat(g.ids,[1 5]);
+c=0;
+v=[];
+for fs = {first second};
+        c=c+1;
+        v{c} = {'trialid' fs{1}};
+end
+fix.getmaps(v{:});
+fix.plot
 %% Plot the discrimination thresholds as a scatterhist
 p        = Project;
 mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
@@ -363,6 +373,36 @@ fix.plot
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Get fixation counts, as well as mean duration for subject (like Kanan et al, 2015)
+load('C:/Users/onat/Google Drive/EthnoMaster/data/midlevel/singletrialfixmaps/labels1500.mat')
+fixnum_m = NaN(length(unique(labels.sub)),5);
+fixnum_sd = NaN(length(unique(labels.sub)),5);
+fixdur_m = NaN(length(unique(labels.sub)),5);
+fixdur_sd = NaN(length(unique(labels.sub)),5);
+cc=0;
+for ns=unique(labels.sub)
+    cc=cc+1;
+    for phase = 1:5
+        fix            = Fixmat(ns,phase);
+        [c i]          = fix.histogram;
+        close all;
+        fixnum_m(cc,phase)        = mean(c);%mean fix per phase
+        fixnum_sd(cc,phase)       = std(c);%std fix per phase
+        fixdur_m(cc,phase)        = mean(fix.stop-fix.start);%mean fix per phase
+        fixdur_sd(cc,phase)       = std(double(fix.stop-fix.start));%std fix per phase
+    end
+end
+%
+errorbar(M(1,:),S(1,:),'bo-','linewidth',3);
+hold on
+errorbar(M(2,:),S(2,:),'ro-','linewidth',3);
+hold off;
+box off
+set(gca,'xtick',1:5,'xticklabel',{'Disc1' 'B' 'C' 'T' 'Disc2'});ylabel('Fix Count');
+grid on;
+xlim([.5 5.5]);
+legend({'CS+' 'CS?'});legend boxoff
+SaveFigure(sprintf('/Users/onat/Desktop/FixCount1500.png'));
 %% PLOT FIXMAPS for different phases broken down to CS+ and CS?
 p        = Project;
 mask     = find(p.getMask('ET_feargen'));
@@ -902,4 +942,22 @@ end
 
 fix.getmaps(v{:});
 fix.maps=-diff(fix.maps,1,3);
+fix.plot
+%% subject fixation maps
+v = [];
+c = 0;
+for sub = g.ids'
+        c    = c+1;
+        v{c} = {'subject' sub};
+end
+fix.getmaps(v{:});
+fix.plot
+%% phase fixation maps
+v = [];
+c = 0;
+for ph = 1:5
+        c    = c+1;
+        v{c} = {'phase' ph 'subject' 6};
+end
+fix.getmaps(v{:});
 fix.plot
