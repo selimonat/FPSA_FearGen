@@ -169,10 +169,6 @@ mask            = p.getMask('ET_Discr');
 subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),subjects);
-mask            = p.getMask('PMF');
-subjects        = intersect(find(sum(mask,2)==4),subjects);
-mask            = p.getMask('RATE');
-subjects        = intersect(find(mask),subjects);
 g               = Group(subjects);
 
 phase = [1 2 3 4 5];
@@ -235,5 +231,34 @@ for i = 1:length(phases)
     phasecor(cc) = mean(squareform(corrmat(start:start+(length(subjects)-1),start:start+(length(subjects)-1))-1)+1);
     start,start+(length(subjects)-1)
 end
+%% very simple subject vs phase correlation
+v=[];
+c=0;
+for ph = phase
+    c=c+1;
+    v{c} = {'phase' ph};
+end
+fix.getmaps(v{:});
+%cocktail blank
+%fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 size(fix.maps,3)]);
+fix.maps = imresize(fix.maps,[50 50]); 
+phase_maps = fix.vectorize_maps;
+corrmat = corr(phase_maps);
+corrmat(corrmat==1)=0;
+mean(squareform(corrmat))
 
+v=[];
+c=0;
+for sub = g.ids'
+    c=c+1;
+    v{c} = {'subject' sub};
+end
+fix.getmaps(v{:});
+%cocktail blank
+%fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 size(fix.maps,3)]);
+fix.maps = imresize(fix.maps,[50 50]); 
+subj_maps = fix.vectorize_maps;
+corrmat = corr(subj_maps);
+corrmat(corrmat==1)=0;
+mean(squareform(corrmat))
 
