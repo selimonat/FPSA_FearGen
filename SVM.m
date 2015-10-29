@@ -107,9 +107,11 @@ for s1 = unique(labels.easy_sub);
         end
     end
 end
-%%
-errRate = sum(Y(P.test)~= C)/P.TestSize  %correct classification rate
-conMat = confusionmat(Y(P.test),C) %one-vs-one confusion matrix
+conMat = confusionmat(Real,Classified);
+conMat = conMat./repmat(sum(conMat,2),1,28);
+subplot(1,2,1);imagesc(conMat);colorbar;axis image
+subplot(1,2,2);imagesc(triu(conMat,1));colorbar;axis image
+%
 %% train phase classification
 p1 = 1;
 p2 = 2;
