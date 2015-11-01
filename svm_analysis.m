@@ -27,7 +27,7 @@ r=0; %so far no randomization implemented
 nbootstrap    = 2;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
-nsub          = length(ids);nsub=5;;
+nsub          = length(ids);
 numtrials     = [400 120 124 240 400];
 phases        = 1:5;
 start_time    = [];
@@ -208,44 +208,44 @@ elseif analysis_type == 6
                     result(:,:,n,sub,pc) = confusionmat(Real,Classified);
                 else
                     result(:,:,n,sub,pc) = NaN;
-                end                
+                end
             end
         end
     end
 end
-    
-    save(fullfile(savepath,'result.mat'),'result')
-    
+
+save(fullfile(savepath,'result.mat'),'result')
+
     function Classify
-    model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
-    [predicted_label]               = svmpredict(Y(P.test), X(P.test,:), model);
-    Classified                      = [Classified; predicted_label];
-    Real                            = [Real;Y(P.test)];
+        model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
+        [predicted_label]               = svmpredict(Y(P.test), X(P.test,:), model);
+        Classified                      = [Classified; predicted_label];
+        Real                            = [Real;Y(P.test)];
     end
     function Init
-    Classified = uint8([]);
-    Real       = uint8([]);
-    start_time = tic;
+        Classified = uint8([]);
+        Real       = uint8([]);
+        start_time = tic;
     end
     function PrepareSavePath
-    savepath      = fullfile(path,[name_analysis '_rand' num2str(r),filesep]);
-    if exist(savepath) == 0;mkdir(savepath);end
-    fprintf('Created save path: %s\n',savepath);
+        savepath      = fullfile(path,[name_analysis '_rand' num2str(r),filesep]);
+        if exist(savepath) == 0;mkdir(savepath);end
+        fprintf('Created save path: %s\n',savepath);
     end
-    
+
     function [path] = setPath
-    if ispc || ismac
-        [~,version] = GetGit(fileparts(which(mfilename)));
-        path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
-        mkdir(path)
-        addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
-    elseif isunix
-        [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
-        path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
-        mkdir(path)
-        addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
+        if ispc || ismac
+            [~,version] = GetGit(fileparts(which(mfilename)));
+            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
+            mkdir(path)
+            addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
+        elseif isunix
+            [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
+            path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
+            mkdir(path)
+            addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
+        end
     end
-    end
-    
+
 end
 
