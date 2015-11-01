@@ -24,13 +24,13 @@ path = setPath;
 
 r=0; %so far no randomization implemented
 
-nbootstrap    = 2;
+nbootstrap    = 100;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
 numtrials     = [400 120 124 240 400];
 phases        = 1:5;
-start_time    = [];
+start_time    = [];%init variables here so that they are global
 savepath      = [];
 
 if analysis_type == 1
