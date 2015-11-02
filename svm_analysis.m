@@ -158,7 +158,7 @@ elseif analysis_type == 5
         ind = labels.phase == ph;
         for sub = 1:nsub
             ind  = logical(ismember(labels.easy_sub,sub).*ind);
-            for n = 1:nbootstrap
+            
                 Init;
                 ind                 = labels.phase == ph;
                 select              = logical(ismember(labels.pos,[0 1]).*ind);
@@ -168,8 +168,8 @@ elseif analysis_type == 5
                 tic
                 Classify;
                 fprintf('Analysis: %s, Run %d, %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,1,0,toc,toc(start_time)/60);
-                result(:,:,n,sub,pc)    = confusionmat(Real,Classified);
-            end
+                result(:,:,1,sub,pc)    = confusionmat(Real,Classified);
+            
         end
     end
     
