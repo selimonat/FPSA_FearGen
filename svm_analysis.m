@@ -159,16 +159,16 @@ elseif analysis_type == 5
         for sub = 1:nsub
             ind  = logical(ismember(labels.easy_sub,sub).*ind);
             
-                Init;
-                ind                 = labels.phase == ph;
-                select              = logical(ismember(labels.pos,[0 1]).*ind);
-                Y                   = labels.pos(select)';
-                X                   = data(select,:);
-                P                   = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                tic
-                Classify;
-                fprintf('Analysis: %s, Run %d, %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,1,1,0,toc,toc(start_time)/60);
-                result(:,:,1,sub,pc)    = confusionmat(Real,Classified);
+            Init;
+            ind                 = labels.phase == ph;
+            select              = logical(ismember(labels.pos,[0 1]).*ind);
+            Y                   = labels.pos(select)';
+            X                   = data(select,:);
+            P                   = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+            tic
+            Classify;
+            fprintf('Analysis: %s, Run %d, %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,1,1,0,toc,toc(start_time)/60);
+            result(:,:,1,sub,pc)    = confusionmat(Real,Classified);
             
         end
     end
