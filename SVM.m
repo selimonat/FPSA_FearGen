@@ -398,3 +398,52 @@ end
         end
     end
 end
+%% reorder labels for classifying SI types of observers, alphas etc
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+g               = Group(subjects);
+g.getSI(3);
+[mat,tag] = g.parameterMat;
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\labels.mat')
+%%
+SI1 = find(g.SI<prctile(g.SI,33));                         %first third
+SI2 = find(g.SI>prctile(g.SI,33) & g.SI<prctile(g.SI,66)); %second third
+SI3 = find(g.SI>prctile(g.SI,66));                         %third third
+
+labels.SI = nan(1,length(labels.easy_sub));
+labels.SI(ismember(labels.easy_sub,SI1))     = 1;
+labels.SI(ismember(labels.easy_sub,SI2))     = 2;
+labels.SI(ismember(labels.easy_sub,SI3))     = 3;
+%%
+alpha_ave = mean(mat(:,1:4),2);
+alpha_ave1 = find(alpha_ave<prctile(alpha_ave,33));
+alpha_ave2= find(alpha_ave>prctile(alpha_ave,33)&alpha_ave<prctile(alpha_ave,66));
+alpha_ave3 = find(alpha_ave>prctile(alpha_ave,66));
+
+labels.alpha_ave = nan(1,length(labels.easy_sub));
+labels.alpha_ave(ismember(labels.easy_sub,alpha_ave1))  = 1;
+labels.alpha_ave(ismember(labels.easy_sub,alpha_ave2))  = 2;
+labels.alpha_ave(ismember(labels.easy_sub,alpha_ave3))  = 3;
+%%
+alpha_bef = mean(mat(:,[1 3]),2);
+alpha_bef1 = find(alpha_bef<prctile(alpha_bef,33));
+alpha_bef2= find(alpha_bef>prctile(alpha_bef,33)&alpha_bef<prctile(alpha_bef,66));
+alpha_bef3 = find(alpha_bef>prctile(alpha_bef,66));
+
+labels.alpha_bef = nan(1,length(labels.easy_sub));
+labels.alpha_bef(ismember(labels.easy_sub,alpha_bef1))  = 1;
+labels.alpha_bef(ismember(labels.easy_sub,alpha_bef2))  = 2;
+labels.alpha_bef(ismember(labels.easy_sub,alpha_bef3))  = 3;
+%%
+alpha_aft = mean(mat(:,[2 4]),2);
+alpha_aft1 = find(alpha_aft<prctile(alpha_aft,33));
+alpha_aft2= find(alpha_aft>prctile(alpha_aft,33)&alpha_aft<prctile(alpha_aft,66));
+alpha_aft3 = find(alpha_aft>prctile(alpha_aft,66));
+
+labels.alpha_aft = nan(1,length(labels.easy_sub));
+labels.alpha_aft(ismember(labels.easy_sub,alpha_aft1))  = 1;
+labels.alpha_aft(ismember(labels.easy_sub,alpha_aft2))  = 2;
+labels.alpha_aft(ismember(labels.easy_sub,alpha_aft3))  = 3;
