@@ -111,33 +111,7 @@ elseif analysis_type == 3
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
     end
-elseif analysis_type == 3
-    name_analysis = 'subjects_by_alpha_aft'; %classify subjects, collapse phases
-    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
-    PrepareSavePath;
-    
-    ind = labels.phase == 5;
-    result        = [];
-    for n = 1:nbootstrap
-        Init;
-        for c1 = unique(labels.alpha_aft)
-            for c2 = unique(labels.alpha_aft)
-                if c1 < c2;
-                    select    = logical(ismember(labels.alpha_aft,[c1 c2]).*ind);
-                    Y                               = labels.alpha_aft(select)';
-                    X                               = data(select,:);
-                    P                               = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                    %
-                    tic
-                    Classify;
-                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
-                end
-            end
-        end
-        fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
-    end
-elseif analysis_type == 3
+elseif analysis_type == 4
     name_analysis = 'subjects_by_alpha_aft'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
