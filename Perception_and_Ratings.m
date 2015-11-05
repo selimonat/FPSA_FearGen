@@ -101,7 +101,9 @@ SI_bad          = mat(ismember(g.ids,bad),end);
 [H,P,CI,STATS] = ttest(SI_good,SI_bad)
 %nope.
 
+%% anova SI to alpha
+classes   = unique([labels.easy_sub' labels.SI'],'rows');classes = classes(:,2);
 
-
-
+[p,tbl,stats] = anova1(alpha_ave,classes)
+figure;boxplot(impr,classes)
 
