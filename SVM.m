@@ -398,16 +398,100 @@ end
         end
     end
 end
-%% reorder labels for classifying SI types of observers, alphas etc
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% classifying SI types of observers, alphas etc
 p               = Project;
 mask            = p.getMask('ET_discr');
 subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),subjects);
+mask            = p.getMask('RATE');
+subjects        = intersect(find(mask),subjects);
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),subjects);
 g               = Group(subjects);
 g.getSI(3);
 [mat,tag] = g.parameterMat;
-load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\labels.mat')
+
+%prepare fixmaps
+phases = 1:5;
+fix = Fixmat(subjects,phases);
+%% collect single trials
+scale            = .1;%use .1 to have the typical 2500 pixel maps
+final_size       = prod(fix.rect(end-1:end).*scale);
+trialnumber      = [400 120 124 240 400];
+ttrial           = length(subjects)*sum(trialnumber(phases));
+datamatrix       = NaN(final_size,ttrial);
+labels.sub       = NaN(1,ttrial);
+labels.phase     = NaN(1,ttrial);
+labels.trial     = NaN(1,ttrial);
+labels.cond      = NaN(1,ttrial);
+labels.pos       = NaN(1,ttrial);
+v = [];
+c=0;
+for sub = g.ids'
+    for ph = phases
+        for tr = 1:max(fix.trialid(fix.phase == ph))
+            v = {'subject' sub, 'phase' ph 'trialid' tr};
+            fprintf('subject %d phase %d trial %d\n',sub,ph,tr);
+            fix.getmaps(v);
+            if ~any(isnan(fix.maps(:)))                
+                c                   = c+1;
+                %scale it if necessary
+                if scale ~= 1
+                    fix.maps        = imresize(fix.maps,scale,'method','bilinear');
+                end                                
+                datamatrix(:,c)     = fix.vectorize_maps;
+                labels.sub(c)       = sub;
+                labels.phase(c)     = ph;
+                labels.trial(c)     = tr;
+                labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                if ismember(ph,[1 5])
+                    labels.pos(c)   = mod(tr,2);%1 is 1st, 0 is 2nd
+                else
+                    labels.pos(c)   = NaN;
+                end
+            end
+        end
+    end
+end
+
+%cut the nans
+todelete = isnan(sum(datamatrix));
+fprintf('Will delete %g trials...\n',sum(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+
+c = 0;
+for l = unique(labels.sub)
+    c = c + 1;
+    labels.easy_sub(labels.sub == l) = c;
+end
+
+% save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/datamatrix.mat','datamatrix');
+% save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/labels.mat','labels');
+%% PCA
+%compute eigenvectors
+fprintf('starting covariance computation\n')
+covmat=cov(datamatrix');
+fprintf('done\n')
+fprintf('starting eigenvector computation\n')
+[e dv] = eig(covmat);
+fprintf('done\n')
+dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
+eigen = fliplr(e);
+% n where explained variance is > 95%
+num = 136;
+%collect loadings of every trial
+trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
+
 %%
 SI1 = find(g.SI<prctile(g.SI,33));                         %first third
 SI2 = find(g.SI>prctile(g.SI,33) & g.SI<prctile(g.SI,66)); %second third
@@ -417,6 +501,12 @@ labels.SI = nan(1,length(labels.easy_sub));
 labels.SI(ismember(labels.easy_sub,SI1))     = 1;
 labels.SI(ismember(labels.easy_sub,SI2))     = 2;
 labels.SI(ismember(labels.easy_sub,SI3))     = 3;
+
+a =unique([labels.sub' labels.SI'],'rows');
+boxplot(g.SI,a(:,2))
+t = title('Classes SI');set(t,'FontSize',14);
+ylabel('SI')
+xlabel('Classes')
 %%
 alpha_ave = mean(mat(:,1:4),2);
 alpha_ave1 = find(alpha_ave<prctile(alpha_ave,33));
@@ -447,3 +537,13 @@ labels.alpha_aft = nan(1,length(labels.easy_sub));
 labels.alpha_aft(ismember(labels.easy_sub,alpha_aft1))  = 1;
 labels.alpha_aft(ismember(labels.easy_sub,alpha_aft2))  = 2;
 labels.alpha_aft(ismember(labels.easy_sub,alpha_aft3))  = 3;
+%%
+impr = alpha_bef - alpha_aft;
+impr1 = find(impr<prctile(impr,33));
+impr2 = find(impr>prctile(impr,33)&impr<prctile(impr,66));
+impr3 = find(impr>prctile(impr,66));
+
+labels.impr = nan(1,length(labels.easy_sub));
+labels.impr(ismember(labels.easy_sub,impr1))  = 1;
+labels.impr(ismember(labels.easy_sub,impr2))  = 2;
+labels.impr(ismember(labels.easy_sub,impr3))  = 3;
