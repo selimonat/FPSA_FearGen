@@ -75,6 +75,7 @@ end
  save(fullfile(savepath,'labels.mat'),'labels')
 %% 
 %% feargen 
+clear all
 p               = Project;
 allsubs = sort ([Project.subjects_1500 Project.subjects_600]);
 mask            = p.getMask('ET_feargen');
