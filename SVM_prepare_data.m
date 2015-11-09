@@ -70,9 +70,7 @@ for l = unique(labels.sub)
     labels.easy_sub(labels.sub == l) = c;
 end
 
- path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','allsubs','phase1');
- save(fullfile(savepath,'datamatrix.mat'),'datamatrix')
- save(fullfile(savepath,'labels.mat'),'labels')
+save ~/Desktop/phase1.mat datamatrix labels
 %% 
 %% feargen 
 clear all
@@ -147,6 +145,5 @@ for l = unique(labels.sub)
     labels.easy_sub(labels.sub == l) = c;
 end
 
- path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','allsubs','phase1');
- save(fullfile(savepath,'datamatrix.mat'),'datamatrix')
- save(fullfile(savepath,'labels.mat'),'labels')
+
+save ~/Desktop/phase4.mat datamatrix labels
