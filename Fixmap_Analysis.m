@@ -344,7 +344,7 @@ fix.plot('linear');
 %% Compute correlation between fixation counts and discrimination threshold.
 p        = Project;
 mask     = find(p.getMask('ET_feargen').*prod(p.getMask('PMF'),2));
-subjects = intersect(Project.subjects_600,mask);%subjects
+subjects = intersect([Project.subjects_1500],mask);%subjects
 fix      = Fixmat(subjects,1);
 %
 g        = Group(subjects);%get the data for these subjects
@@ -354,6 +354,36 @@ c = 0;v = [];
 for subs = subjects(:)'%good and then bad
     c       = c+1;
     v{c}    = {'phase', 1 , 'deltacsp' [0 18000] 'subject' subs};
+end
+fix.unitize     = 1;
+fix.kernel_fwhm = 35;
+fix.getmaps(v{:});
+M = fix.vectorize_maps';
+for i = 1:size(M,2)
+    if sum(abs(M(:,i))) ~= 0
+        r(i) = corr2(M(:,i),param);
+    else
+        r(i) = 0;
+    end
+end
+fix.maps = reshape(r,size(fix.maps,1),size(fix.maps,2));
+fix.plot
+%% Compute correlation between fixation counts and generalization width.
+p        = Project;
+mask     = find(p.getMask('ET_feargen').*prod(p.getMask('RATE'),2));
+subjects = intersect([Project.subjects_1500],mask);%subjects
+fix      = Fixmat(subjects,4);
+%
+g        = Group(subjects);%get the data for these subjects
+g.getSI(3);
+[M i]       = g.parameterMat;
+%%
+param       = M(:,end);%sharpening index
+%
+c = 0;v = [];
+for subs = subjects(:)'%good and then bad
+    c       = c+1;
+    v{c}    = {'phase', 4  'subject' subs 'deltacsp' 0};
 end
 fix.unitize     = 1;
 fix.kernel_fwhm = 35;
@@ -426,10 +456,10 @@ fix.plot;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Which parts of the fixation map predict an increased generalization.
+%% Which parts of the fixation map correlates with an increased generalization.
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect(Project.subjects_600,mask);%subjects
+subjects    = intersect(Project.subjects_1500,mask);%subjects
 g           = Group(subjects);%get the data for these subjects
 g.getSI(3);
 fix         = Fixmat(subjects,[2 3 4]);
@@ -445,7 +475,7 @@ for subs = {subjects(i) subjects(~i)}%good and then bad
     v{c}    = {'phase', 4 , 'deltacsp' [0] 'subject' subs{1}};
 end
 %
-fix.kernel_fwhm = 35;
+fix.kernel_fwhm = 15;
 fix.getmaps(v{:});
 fix.plot;
 % fix.maps = -diff(fix.maps,1,3);fix.plot;
