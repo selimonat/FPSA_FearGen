@@ -4,14 +4,10 @@ function [result] = svm_analysis_behavioral(analysis_type,data,labels)
 %
 %  [result] = SVM_ANALYSIS(analysis_type,data,labels) performs the analysis specified by ANALYSIS_TYPE.
 %  You can choose from the following options:
-%  1 - Classifies by SI (1 / 2 / 3, 3 is high SI)
-%  2 - Classifies by alpha before, phase 1 (1, 2, 3 - 3 is high alpha)
-%  3 - Classifies phases without differentiating subjects.
-%      number of trials is not controlled, as ntrials very high anyway
-%  4 - Classifies phases, within single subjects
-%      number of trials is reduced to 95 per phase, to have balanced data (discr>>baseline/cond)
-%  5 - Classifies 1st vs. 2nd face within Discr. Tasks (1 and 5 seperately)
-%  6 - Classifies Conditions for baseline and testphase (8x8)
+%  1 - Classifies by SI (high=1 vs low=-1)
+%  2 - Classifies by alpha before, phase 1 (low =1 vs high=-1 alpha) (good vs bad
+%  discr)
+% 
 %
 % SVM_ANALYSIS needs a datamatrix, e.g. containing trialloads,
 % which can be found here:
@@ -32,108 +28,42 @@ start_time    = [];%init variables here so that they are global
 savepath      = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_SI_2class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    
     ind = labels.phase == 4;
-    
     result        = [];
     for n = 1:nbootstrap
         Init;
-        for c1 = unique(labels.SI)
-            for c2 = unique(labels.SI)
-                if c1 < c2;
-                    select    = logical(ismember(labels.SI,[c1 c2]).*ind);
-                    Y                               = labels.SI(select)';
-                    X                               = data(select,:);
-                    P                               = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                    %
-                    tic
-                    Classify;
-                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
-                end
-            end
-        end
+        select    = logical(ismember(labels.SI2,[1 -1]).*ind);
+        Y         = labels.SI2(select)';
+        X         = data(select,:);
+        P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+        %
+        tic
+        Classify;
+        fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
+        
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
     end
     
 elseif analysis_type == 2
-    name_analysis = 'subjects_by_alpha_ave'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_alpha_bef_2class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    
-    ind = ismember(labels.phase,[1 5]);
-    result        = [];
-    for n = 1:nbootstrap
-        Init;
-        for c1 = unique(labels.alpha_ave)
-            for c2 = unique(labels.alpha_ave)
-                if c1 < c2;
-                    select    = logical(ismember(labels.alpha_ave,[c1 c2]).*ind);
-                    Y                               = labels.alpha_ave(select)';
-                    X                               = data(select,:);
-                    P                               = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                    %
-                    tic
-                    Classify;
-                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
-                end
-            end
-        end
-        fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
-    end
-elseif analysis_type == 3
-    name_analysis = 'subjects_by_alpha_bef'; %classify subjects, collapse phases
-    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
-    PrepareSavePath;
-    
     ind = labels.phase == 1;
     result        = [];
     for n = 1:nbootstrap
         Init;
-        for c1 = unique(labels.alpha_bef)
-            for c2 = unique(labels.alpha_bef)
-                if c1 < c2;
-                    select    = logical(ismember(labels.alpha_bef,[c1 c2]).*ind);
-                    Y                               = labels.alpha_bef(select)';
-                    X                               = data(select,:);
-                    P                               = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                    %
-                    tic
-                    Classify;
-                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
-                end
-            end
-        end
-        fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
-    end
-elseif analysis_type == 4
-    name_analysis = 'subjects_by_alpha_aft'; %classify subjects, collapse phases
-    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
-    PrepareSavePath;
-    
-    ind = labels.phase == 5;
-    result        = [];
-    for n = 1:nbootstrap
-        Init;
-        for c1 = unique(labels.alpha_aft)
-            for c2 = unique(labels.alpha_aft)
-                if c1 < c2;
-                    select    = logical(ismember(labels.alpha_aft,[c1 c2]).*ind);
-                    Y                               = labels.alpha_aft(select)';
-                    X                               = data(select,:);
-                    P                               = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
-                    %
-                    tic
-                    Classify;
-                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
-                end
-            end
-        end
+        select    = logical(ismember(labels.alpha_bef2,[1 -1]).*ind);
+        Y         = labels.alpha_bef2(select)';
+        X         = data(select,:);
+        P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+        %
+        tic
+        Classify;
+        fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
     end
