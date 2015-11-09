@@ -70,7 +70,7 @@ for l = unique(labels.sub)
     labels.easy_sub(labels.sub == l) = c;
 end
 
- path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','phase1');
+ path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','allsubs','phase1');
  save(fullfile(savepath,'datamatrix.mat'),'datamatrix')
  save(fullfile(savepath,'labels.mat'),'labels')
 %% 
@@ -146,6 +146,7 @@ for l = unique(labels.sub)
     c = c + 1;
     labels.easy_sub(labels.sub == l) = c;
 end
- path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','phase4');
+
+ path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','singletrialfixmaps','allsubs','phase1');
  save(fullfile(savepath,'datamatrix.mat'),'datamatrix')
  save(fullfile(savepath,'labels.mat'),'labels')
