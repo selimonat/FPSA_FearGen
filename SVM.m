@@ -547,3 +547,16 @@ labels.impr = nan(1,length(labels.easy_sub));
 labels.impr(ismember(labels.easy_sub,impr1))  = 1;
 labels.impr(ismember(labels.easy_sub,impr2))  = 2;
 labels.impr(ismember(labels.easy_sub,impr3))  = 3;
+%%
+alpha_bef = mean(mat(:,[1 3]),2);
+alpha_bef_good =  find(alpha_bef<median(alpha_bef));
+alpha_bef_bad =  find(alpha_bef>=median(alpha_bef));
+labels.alpha_bef2 = nan(1,length(labels.easy_sub));
+labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_good))  = 1;
+labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_bad))  = -1;
+%%
+SI_good =  find(g.SI>median(g.SI));
+SI_bad =  find(g.SI<=median(g.SI));
+labels.SI2 = nan(1,length(labels.easy_sub));
+labels.SI2(ismember(labels.easy_sub,SI_good))  = 1;
+labels.SI2(ismember(labels.easy_sub,SI_bad))  = -1;
