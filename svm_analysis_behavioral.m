@@ -19,7 +19,7 @@ path = setPath;
 
 r=0; %so far no randomization implemented
 
-nbootstrap    = 2;
+nbootstrap    = 1;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
