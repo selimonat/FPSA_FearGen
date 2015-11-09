@@ -26,6 +26,7 @@ nsub          = length(ids);
 phases        = 1:5;
 start_time    = [];%init variables here so that they are global
 savepath      = [];
+model         = [];
 
 if analysis_type == 1
     name_analysis = 'subjects_by_SI_2class'; %classify subjects, collapse phases
@@ -70,7 +71,7 @@ elseif analysis_type == 2
 end
 
 
-save(fullfile(savepath,'result.mat'),'result')
+save(fullfile(savepath,'result.mat'),'result','model')
 
     function Classify
         model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
