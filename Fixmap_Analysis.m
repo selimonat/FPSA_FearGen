@@ -976,7 +976,7 @@ fix.plot
 %% subject fixation maps
 v = [];
 c = 0;
-for sub = g.ids'
+for sub = g.ids
         c    = c+1;
         v{c} = {'subject' sub};
 end
@@ -988,6 +988,32 @@ c = 0;
 for ph = 1:5
         c    = c+1;
         v{c} = {'phase' ph 'subject' 6};
-end
+en
 fix.getmaps(v{:});
 fix.plot
+
+%% SI x hyperplane
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\SI_N24\labels.mat')
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\SI_N24\SI_hp.mat')
+g = Group(unique(labels.sub));
+g.getSI(3);
+[mat tags] = g.parameterMat;
+fix = Fixmat(g.ids,4);
+%get subj fixmaps from above, then...
+fix.maps        = imresize(fix.maps,.1,'method','bilinear');
+subjmap = fix.vectorize_maps;
+for sub = 1:size(subjmap,2)
+    hpload(sub) = SI_hp(:)'*subjmap(:,sub);
+end
+[r,p]=corr(hpload',g.SI)
+
+% discr x hyperplane
+fix = Fixmat(unique(labels.sub),1);
+%get subj fixmaps from above,then...
+fix.maps        = imresize(fix.maps,.1,'method','bilinear');
+subjmap = fix.vectorize_maps;
+for sub = 1:size(subjmap,2)
+    hpload(sub) = discr_hp'*subjmap(:,sub);
+end
+SIsubs = unique(labels.sub); %load the SI analysis labels here..
+[r,p] = corr(hpload(ismember(g.ids,SIsubs))',g.SI(ismember(g.ids,SIsubs)))
