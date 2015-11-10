@@ -75,7 +75,7 @@ elseif analysis_type == 2
 end
 
 
-save(fullfile(savepath,'result.mat'),'result','model')
+save(fullfile(savepath,'result.mat'),'result','model','w')
 
     function Classify
         model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
