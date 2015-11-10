@@ -34,6 +34,7 @@ if analysis_type == 1
     PrepareSavePath;
     ind = labels.phase == 4;
     result        = [];
+    w             = [];
     for n = 1:nbootstrap
         Init;
         select    = logical(ismember(labels.SI2,[1 -1]).*ind);
@@ -43,10 +44,11 @@ if analysis_type == 1
         %
         tic
         Classify;
-        fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
+        fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
+        w(n)          = model.SVs'*model.sv_coef;
     end
     
 elseif analysis_type == 2
@@ -55,6 +57,7 @@ elseif analysis_type == 2
     PrepareSavePath;
     ind = labels.phase == 1;
     result        = [];
+    w             = [];
     for n = 1:nbootstrap
         Init;
         select    = logical(ismember(labels.alpha_bef2,[1 -1]).*ind);
@@ -64,9 +67,10 @@ elseif analysis_type == 2
         %
         tic
         Classify;
-        fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,c1,c2,toc,toc(start_time)/60);
+         fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
+        w(n)          = model.SVs'*model.sv_coef;
     end
 end
 
