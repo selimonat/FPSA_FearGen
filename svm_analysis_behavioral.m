@@ -1,4 +1,4 @@
-function [result,w] = svm_analysis_behavioral(analysis_type,data,labels)
+function [result] = svm_analysis_behavioral(analysis_type,data,labels)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -48,7 +48,7 @@ if analysis_type == 1
         
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
-        w(n)          = model.SVs'*model.sv_coef;
+        w(:,n)          = model.SVs'*model.sv_coef;
     end
     
 elseif analysis_type == 2
@@ -70,7 +70,7 @@ elseif analysis_type == 2
          fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
-        w(n)          = model.SVs'*model.sv_coef;
+        w(:,n)          = model.SVs'*model.sv_coef;
     end
 end
 
