@@ -488,7 +488,7 @@ fprintf('done\n')
 dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 134;
+num = 142;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
@@ -508,16 +508,6 @@ t = title('Classes SI');set(t,'FontSize',14);
 ylabel('SI')
 xlabel('Classes')
 %%
-alpha_ave = mean(mat(:,1:4),2);
-alpha_ave1 = find(alpha_ave<prctile(alpha_ave,33));
-alpha_ave2= find(alpha_ave>prctile(alpha_ave,33)&alpha_ave<prctile(alpha_ave,66));
-alpha_ave3 = find(alpha_ave>prctile(alpha_ave,66));
-
-labels.alpha_ave = nan(1,length(labels.easy_sub));
-labels.alpha_ave(ismember(labels.easy_sub,alpha_ave1))  = 1;
-labels.alpha_ave(ismember(labels.easy_sub,alpha_ave2))  = 2;
-labels.alpha_ave(ismember(labels.easy_sub,alpha_ave3))  = 3;
-%%
 alpha_bef = mean(mat(:,[1 3]),2);
 alpha_bef1 = find(alpha_bef<prctile(alpha_bef,33));
 alpha_bef2= find(alpha_bef>prctile(alpha_bef,33)&alpha_bef<prctile(alpha_bef,66));
@@ -527,26 +517,6 @@ labels.alpha_bef = nan(1,length(labels.easy_sub));
 labels.alpha_bef(ismember(labels.easy_sub,alpha_bef1))  = 1;
 labels.alpha_bef(ismember(labels.easy_sub,alpha_bef2))  = 2;
 labels.alpha_bef(ismember(labels.easy_sub,alpha_bef3))  = 3;
-%%
-alpha_aft = mean(mat(:,[2 4]),2);
-alpha_aft1 = find(alpha_aft<prctile(alpha_aft,33));
-alpha_aft2= find(alpha_aft>prctile(alpha_aft,33)&alpha_aft<prctile(alpha_aft,66));
-alpha_aft3 = find(alpha_aft>prctile(alpha_aft,66));
-
-labels.alpha_aft = nan(1,length(labels.easy_sub));
-labels.alpha_aft(ismember(labels.easy_sub,alpha_aft1))  = 1;
-labels.alpha_aft(ismember(labels.easy_sub,alpha_aft2))  = 2;
-labels.alpha_aft(ismember(labels.easy_sub,alpha_aft3))  = 3;
-%%
-impr = alpha_bef - alpha_aft;
-impr1 = find(impr<prctile(impr,33));
-impr2 = find(impr>prctile(impr,33)&impr<prctile(impr,66));
-impr3 = find(impr>prctile(impr,66));
-
-labels.impr = nan(1,length(labels.easy_sub));
-labels.impr(ismember(labels.easy_sub,impr1))  = 1;
-labels.impr(ismember(labels.easy_sub,impr2))  = 2;
-labels.impr(ismember(labels.easy_sub,impr3))  = 3;
 %%
 g = Group(unique(labels.sub));
 g.getSI(3)
@@ -569,3 +539,7 @@ labels.SI2(ismember(labels.easy_sub,SI_good))  = 1;
 labels.SI2(ismember(labels.easy_sub,SI_bad))  = -1;
 a = unique([labels.easy_sub' labels.SI2'],'rows');
 gscatter(a(:,1),g.SI,a(:,2));
+
+
+
+
