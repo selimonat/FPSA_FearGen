@@ -1,4 +1,4 @@
-function [result] = svm_analysis_behavioral(analysis_type,data,labels)
+function [result,w] = svm_analysis_behavioral(analysis_type,data,labels)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
