@@ -372,18 +372,20 @@ fix.plot
 p        = Project;
 mask     = find(p.getMask('ET_feargen').*prod(p.getMask('RATE'),2));
 subjects = intersect([Project.subjects_1500],mask);%subjects
+subjects = setdiff(subjects,9)
 fix      = Fixmat(subjects,4);
 %
 g        = Group(subjects);%get the data for these subjects
 g.getSI(3);
-[M i]       = g.parameterMat;
+
 %%
+[M i]       = g.parameterMat;
 param       = M(:,end);%sharpening index
 %
 c = 0;v = [];
 for subs = subjects(:)'%good and then bad
     c       = c+1;
-    v{c}    = {'phase', 4  'subject' subs 'deltacsp' 0};
+    v{c}    = {'phase', 4  'subject' subs };
 end
 fix.unitize     = 1;
 fix.kernel_fwhm = 35;
@@ -459,7 +461,7 @@ fix.plot;
 %% Which parts of the fixation map correlates with an increased generalization.
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect(Project.subjects_1500,mask);%subjects
+subjects    = intersect(Project.subjects_600,mask);%subjects
 g           = Group(subjects);%get the data for these subjects
 g.getSI(3);
 fix         = Fixmat(subjects,[2 3 4]);
@@ -475,7 +477,7 @@ for subs = {subjects(i) subjects(~i)}%good and then bad
     v{c}    = {'phase', 4 , 'deltacsp' [0] 'subject' subs{1}};
 end
 %
-fix.kernel_fwhm = 15;
+fix.kernel_fwhm = 35;
 fix.getmaps(v{:});
 fix.plot;
 % fix.maps = -diff(fix.maps,1,3);fix.plot;
