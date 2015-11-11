@@ -990,11 +990,13 @@ c = 0;
 for ph = 1:5
         c    = c+1;
         v{c} = {'phase' ph 'subject' 6};
-en
+end
 fix.getmaps(v{:});
 fix.plot
 
 %% SI x hyperplane
+
+w = model.SVs'*model.sv_coef;
 load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\SI_N24\labels.mat')
 load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\SI_N24\SI_hp.mat')
 g = Group(unique(labels.sub));
