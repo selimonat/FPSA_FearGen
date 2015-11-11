@@ -177,7 +177,7 @@ elseif analysis_type == 6
     name_analysis = 'conditions'; %classify conditions in FG
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    
+   
     result=[];
     pc=0;
     for ph = [2 4]
@@ -210,6 +210,42 @@ elseif analysis_type == 6
                     result(:,:,n,sub,pc) = NaN;
                 end
             end
+        end
+    end
+elseif analysis_type == 7
+    name_analysis = 'conditions_1vsrest'; %classify conditions in FG
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    p = Project;
+    mask = p.getMask('RATE'); subjects = intersect(find(mask==1),unique(labels.sub));
+    result = nan(8,nbootstrap,length(subjects),2);
+    pc = 0;
+    for ph = [2 4]
+        indph = labels.phase == ph;
+        pc = pc+1;
+        sc=0;
+        for sub = subjects';%1:nsub
+            sc = sc+1;
+             ind  = logical(ismember(labels.sub,sub).*indph);
+             Ybin = double(labels.csp(ind))';%binary labelling here
+             Ycond = double(labels.cond(ind))';
+             X = data(ind,:);
+             for n = 1:nbootstrap
+                 P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
+                 model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+                 cc=0;
+                 for cond = unique(Ycond)'
+                     cc=cc+1;
+                     if sum(Ycond == cond) ~= 0;
+                         fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
+                         i              = logical(P.test.*(Ycond==cond));
+                         [predicted]    = svmpredict(Ybin(i), X(i,:), model);
+                         result(cc,n,sc,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                     else
+                         fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
+                     end
+                 end
+             end
         end
     end
 end
