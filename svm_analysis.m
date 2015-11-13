@@ -13,6 +13,9 @@ function [result] = svm_analysis(analysis_type,data,labels)
 %      number of trials is reduced to 95 per phase, to have balanced data (discr>>baseline/cond)
 %  5 - Classifies 1st vs. 2nd face within Discr. Tasks (1 and 5 seperately)
 %  6 - Classifies Conditions for baseline and testphase (8x8)
+%  7 - Trains on binary data (1 = csp, 0 = rest), tests each cond to be csp
+%      or not
+%  8 - same as 7, but subjects collapsed
 %
 % SVM_ANALYSIS needs a datamatrix, e.g. containing trialloads,
 % which can be found here:
@@ -24,7 +27,7 @@ path = setPath;
 
 r=0; %so far no randomization implemented
 
-nbootstrap    = 100;
+nbootstrap    = 2;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
@@ -216,16 +219,12 @@ elseif analysis_type == 7
     name_analysis = 'conditions_1vsrest'; %classify conditions in FG
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    p = Project;
-    mask = p.getMask('RATE'); subjects = intersect(find(mask==1),unique(labels.sub));
-    result = nan(8,nbootstrap,length(subjects),2);
+    result = nan(8,nbootstrap,nsub,2);
     pc = 0;
     for ph = [2 4]
         indph = labels.phase == ph;
         pc = pc+1;
-        sc=0;
-        for sub = subjects';%1:nsub
-            sc = sc+1;
+        for sub = 1:nsub;
              ind  = logical(ismember(labels.sub,sub).*indph);
              Ybin = double(labels.csp(ind))';%binary labelling here
              Ycond = double(labels.cond(ind))';
@@ -240,12 +239,43 @@ elseif analysis_type == 7
                          fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
                          i              = logical(P.test.*(Ycond==cond));
                          [predicted]    = svmpredict(Ybin(i), X(i,:), model);
-                         result(cc,n,sc,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                         result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
                      else
                          fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
                      end
                  end
              end
+        end
+    end
+elseif analysis_type == 8
+    warning('this is a test version, probably needs debugging...Press any key to run anyway.')
+    pause
+    name_analysis = 'conditions_1vsrest'; %classify conditions in FG
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result = nan(8,nbootstrap,2);
+    pc = 0;
+    for ph = [2 4]
+        ind = labels.phase == ph;
+        pc = pc+1;
+        Ybin = double(labels.csp(ind))';%binary labelling here
+        Ycond = double(labels.cond(ind))';
+        X = data(ind,:);
+        for n = 1:nbootstrap
+            P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
+            model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+            cc=0;
+            for cond = unique(Ycond)'
+                cc=cc+1;
+                if sum(Ycond == cond) ~= 0;
+                    fprintf('Analysis %s, Phase %d, Run %d - Classifying cond %d... \n',name_analysis,ph,n,cond);
+                    i              = logical(P.test.*(Ycond==cond));
+                    [predicted]    = svmpredict(Ybin(i), X(i,:), model);
+                    result(cc,n,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                else
+                    fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
+                end
+            end
         end
     end
 end
@@ -270,11 +300,16 @@ save(fullfile(savepath,'result.mat'),'result')
     end
 
     function [path] = setPath
-        if ispc || ismac
+        if ismac
             [~,version] = GetGit(fileparts(which(mfilename)));
             path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
+        elseif ispc
+            t = datestr(now,30);
+            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',t);
+            mkdir(path)
+            addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
             [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
             path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
