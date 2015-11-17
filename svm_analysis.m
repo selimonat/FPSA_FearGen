@@ -250,7 +250,7 @@ elseif analysis_type == 7
 elseif analysis_type == 8
     warning('this is a test version, probably needs debugging...Press any key to run anyway.')
     pause
-    name_analysis = 'conditions_1vsrest'; %classify conditions in FG
+    name_analysis = 'conditions_1vsrest_subjcollapsed'; %classify conditions in FG
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result = nan(8,nbootstrap,2);
