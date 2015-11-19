@@ -225,7 +225,7 @@ elseif analysis_type == 7
         indph = labels.phase == ph;
         pc = pc+1;
         for sub = 1:nsub;
-             ind  = logical(ismember(labels.sub,sub).*indph);
+             ind  = logical(ismember(labels.easy_sub,sub).*indph);
              Ybin = double(labels.csp(ind))';%binary labelling here
              Ycond = double(labels.cond(ind))';
              X = data(ind,:);
@@ -278,6 +278,68 @@ elseif analysis_type == 8
             end
         end
     end
+elseif analysis_type == 9
+    name_analysis = 'stimID_1vsrest'; %classify conditions in FG
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result = nan(8,nbootstrap,nsub,2);
+    pc = 0;
+    for ph = [2 4]
+        indph = labels.phase == ph;
+        pc = pc+1;
+        for sub = 1:nsub;
+            ind  = logical(ismember(labels.easy_sub,sub).*indph);
+            Ybin  = double(labels.stim(ind)==1)';%binary labelling here
+            Ycond = double(labels.stim(ind))';
+            X = data(ind,:);
+            for n = 1:nbootstrap
+                P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
+                model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+                cc=0;
+                for cond = unique(Ycond)'
+                    cc=cc+1;
+                    if sum(Ycond == cond) ~= 0;
+                        fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
+                        i              = logical(P.test.*(Ycond==cond));
+                        [predicted]    = svmpredict(Ybin(i), X(i,:), model);
+                        result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                    else
+                        fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
+                    end
+                end
+            end
+        end
+    end
+elseif analysis_type == 10
+    name_analysis = 'stimID_1vs1_subjcollapsed'; %classify stimIDs in FG
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result = nan(8,nbootstrap,nsub,2);
+    
+    for n = 1:nbootstrap
+        Init;
+        pc = 0;
+        for ph = [2 4]
+            indph = labels.phase == ph;
+            pc = pc+1;
+            for s1 = 1:8
+                for s2 = 1:8
+                    if s1 < s2;
+                        select = logical(ismember(labels.stim,[s1 s2]).*indph);
+                        Y      = labels.easy_sub(select)';
+                        X      = data(select,:);
+                        P      = cvpartition(Y,'Holdout',.2);%prepares trainings vs testset
+                        %
+                        tic
+                        Classify;
+                        fprintf('Analysis: %s, Phase %d - Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,ph,n,s1,s2,toc,toc(start_time)/60);
+                    end
+                end
+            end
+        end
+    end
+    fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
+    result(:,:,n,pc) = confusionmat(Real,Classified);
 end
 
 save(fullfile(savepath,'result.mat'),'result')
@@ -306,8 +368,8 @@ save(fullfile(savepath,'result.mat'),'result')
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
-            t = datestr(now,30);
-            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',t);
+            %t = datestr(now,30);
+            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151117T163214');
             mkdir(path)
             addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
