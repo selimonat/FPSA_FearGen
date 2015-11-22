@@ -554,6 +554,15 @@ labels.SI2(ismember(labels.easy_sub,SI_bad))  = -1;
 a = unique([labels.easy_sub' labels.SI2'],'rows');
 gscatter(a(:,1),g.SI,a(:,2));
 
+sigmatest_high = find(g.sigma_test>median(g.sigma_test));
+sigmatest_low = find(g.sigma_test<=median(g.sigma_test));
+labels.sigmatest2 = nan(1,length(labels.easy_sub));
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_high))  = 1;
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_low))  = -1;
+a = unique([labels.easy_sub' labels.sigmatest2'],'rows');
+gscatter(a(:,1),g.sigma_test,a(:,2));
+
+
 %% plot and analyze svm_analysis confusionmatrices further
 %subject classification for 5 phases
 % figure
@@ -625,6 +634,8 @@ for i = 1:size(result,3)
     ylim([0 0.3])
     line(xlim,[0.125 0.125],'LineStyle',':')
 end
+
+
 %% %% collect single trials by fixations
 scale            = .1;%use .1 to have the typical 2500 pixel maps
 final_size       = prod(fix.rect(end-1:end).*scale);
