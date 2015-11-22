@@ -993,9 +993,13 @@ end
 fix.getmaps(v{:});
 %% Can generalization pattern predict SI?
 % w = model.SVs'*model.sv_coef;
-load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\SI_N24\phase4\labels.mat')
 load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\alpha_before_N25\discr_hp.mat')
-g          = Group(unique(labels.sub));
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\1500\alpha_before_N25\labels.mat')
+p = Project;
+mask = p.getMask('RATE');
+subjects = intersect(find(mask),unique(labels.sub));
+
+g          = Group(subjects);
 g.getSI(3);
 [mat tags] = g.parameterMat;
 alpha_bef  = mean(mat(:,[1 3]),2);
@@ -1003,7 +1007,7 @@ fix        = Fixmat(g.ids,4);
 %get subjmaps
 v = [];
 c = 0;
-for sub = g.ids
+for sub = g.ids'
         c    = c+1;
         v{c} = {'subject' sub};
 end
@@ -1014,7 +1018,27 @@ hpload     = discr_hp(:)'*subjmap;
 
 [r,p] = corr(hpload',g.SI)
 figure;
-plot(hpload,g.SI,'b.','MarkerSize',30)
-l = lsline; set(l,'LineWidth',2)
+plot(hpload,g.sigma_test,'b.','MarkerSize',30)
+l = lsline; set(l,'LineWidth',2);
 xlabel('subjmap phase 4 x discr hyperplane')
 ylabel('SI')
+
+%% confusion of 4-5 and 4-1
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\svm_analysis\versiona733ddc\phases_insubject_rand0\result.mat')
+a = squeeze(mean(result,3));%bootstraps
+scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,5]);%scale by rowsums
+load('C:\Users\onat\Google Drive\EthnoMaster\data\midlevel\singletrialfixmaps\N27\labels.mat')
+sub_c = unique(labels.sub);
+p = Project;
+mask = p.getMask('RATE');
+g = Group(intersect(find(mask),sub_c));
+g.getSI(3);
+[mat tags] = g.parameterMat;
+conf45 = squeeze(scaled(4,5,ismember(sub_c,g.ids)));
+conf41 = squeeze(scaled(4,1,ismember(sub_c,g.ids)));
+%correlate confusion with sigma_test and SI
+[r,p]=corr(conf45,mat(:,13))
+[r,p]=corr(conf45,mat(:,14))
+[r,p]=corr(conf41,mat(:,13))
+[r,p]=corr(conf41,mat(:,14))
+%%
