@@ -1,4 +1,4 @@
-function [result] = svm_analysis(analysis_type,data,labels)
+function [result,model,acc] = svm_analysis(analysis_type,data,labels)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -14,7 +14,7 @@ function [result] = svm_analysis(analysis_type,data,labels)
 %  5 - Classifies 1st vs. 2nd face within Discr. Tasks (1 and 5 seperately)
 %  6 - Classifies Conditions for baseline and testphase (8x8)
 %  7 - Trains on binary data (1 = csp, 0 = rest), tests each cond to be csp
-%      or not
+%      or not (takes different fixmaps as input!)
 %  8 - same as 7, but subjects collapsed
 %
 % SVM_ANALYSIS needs a datamatrix, e.g. containing trialloads,
@@ -25,9 +25,9 @@ function [result] = svm_analysis(analysis_type,data,labels)
 
 path = setPath;
 
-r=0; %so far no randomization implemented
+r=0; 
 
-nbootstrap    = 2;
+nbootstrap    = 20;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
@@ -49,7 +49,36 @@ if analysis_type == 1
                     select                          = ismember(labels.easy_sub,[s1 s2]);
                     Y                               = labels.easy_sub(select)';
                     X                               = data(select,:);
+                    randomizeifwanted;
                     P                               = cvpartition(Y,'Holdout',.2);%prepares trainings vs testset
+                    tic
+                    Classify;
+                    fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,s1,s2,toc,toc(start_time)/60);
+                end
+            end
+        end
+        fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
+        result(:,:,n) = confusionmat(Real,Classified);
+    end
+elseif analysis_type == 111
+    name_analysis = 'subjects_balanced'; %classify subjects, collapse phases
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result        = [];
+    for n = 1:nbootstrap
+        Init;
+        for s1 = 1:nsub
+            for s2 = 1:nsub
+                if s1 < s2;
+                    select   = ismember(labels.easy_sub,[s1 s2]);
+                    Y        = labels.easy_sub(select)';
+                    X        = data(select,:); 
+                    Y1        = randsample(find(Y == s1),95*5);
+                    Y2        = randsample(find(Y == s2),95*5);
+                    Y         = Y([Y1;Y2]);
+                    X         = X([Y1;Y2],:);
+                    randomizeifwanted;
+                    P         = cvpartition(Y,'Holdout',.2);%prepares trainings vs testset
                     %
                     tic
                     Classify;
@@ -60,7 +89,7 @@ if analysis_type == 1
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified);
     end
-    
+     
 elseif analysis_type == 2
     name_analysis = 'subjects_inphase'; %classify subjects, respect phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
@@ -83,7 +112,8 @@ elseif analysis_type == 2
                         Y1        = randsample(find(Y == s1),95);
                         Y2        = randsample(find(Y == s2),95);
                         Y         = Y([Y1;Y2]);
-                        X         = X([Y1;Y2]);
+                        X         = X([Y1;Y2],:);
+                        randomizeifwanted;
                         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
                         tic;
                         Classify;
@@ -117,7 +147,36 @@ elseif analysis_type == 3
         end
         result(:,:,n) = confusionmat(Real,Classified);
     end
+elseif analysis_type == 333
+    name_analysis = 'phases_balanced'; %classify subjects, across phases
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
     
+    result   = [];
+    for sub = 1:nsub
+        ind        = labels.easy_sub == sub;
+        for n = 1:nbootstrap
+            Init;
+            for p1 = phases
+                for p2 = phases
+                    if p1 < p2;
+                        select    = logical(ismember(labels.phase,[p1 p2]).*ind);
+                        Y         = labels.phase(select)';
+                        X         = data(select,:);
+                        Y1        = randsample(find(Y == p1),95);
+                        Y2        = randsample(find(Y == p2),95);
+                        Y         = Y([Y1;Y2]);
+                        X         = X([Y1;Y2],:);
+                        P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+                        tic
+                        Classify;
+                        fprintf('Analysis: %s, Run %d - Classifying %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,p1,p2,toc,toc(start_time)/60);
+                    end
+                end
+            end
+            result(:,:,n,sub)= confusionmat(Real,Classified);
+        end
+    end
 elseif analysis_type == 4
     name_analysis = 'phases_insubject'; %classify subjects, across phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
@@ -137,7 +196,7 @@ elseif analysis_type == 4
                         Y1        = randsample(find(Y == p1),95);
                         Y2        = randsample(find(Y == p2),95);
                         Y         = Y([Y1;Y2]);
-                        X         = X([Y1;Y2]);
+                        X         = X([Y1;Y2],:);
                         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
                         tic
                         Classify;
@@ -238,8 +297,9 @@ elseif analysis_type == 7
                      if sum(Ycond == cond) ~= 0;
                          fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
                          i              = logical(P.test.*(Ycond==cond));
-                         [predicted]    = svmpredict(Ybin(i), X(i,:), model);
+                         [predicted,accuracy,~]    = svmpredict(Ybin(i), X(i,:), model);
                          result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                         acc(cc,n,sub,pc) = accuracy(1);
                      else
                          fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
                      end
@@ -269,8 +329,8 @@ elseif analysis_type == 8
                 cc=cc+1;
                 if sum(Ycond == cond) ~= 0;
                     fprintf('Analysis %s, Phase %d, Run %d - Classifying cond %d... \n',name_analysis,ph,n,cond);
-                    i              = logical(P.test.*(Ycond==cond));
-                    [predicted]    = svmpredict(Ybin(i), X(i,:), model);
+                    i                = logical(P.test.*(Ycond==cond));
+                    [predicted]      = svmpredict(Ybin(i), X(i,:), model);
                     result(cc,n,pc)  = sum(predicted)./length(predicted);%predicted as csp
                 else
                     fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
@@ -350,6 +410,12 @@ save(fullfile(savepath,'result.mat'),'result')
         Classified                      = [Classified; predicted_label];
         Real                            = [Real;Y(P.test)];
     end
+    function randomizeifwanted
+        if r == 1
+           warning('Randomizing labels happening...!')
+           Y = Shuffle(Y);
+        end
+    end
     function Init
         Classified = uint8([]);
         Real       = uint8([]);
@@ -369,7 +435,7 @@ save(fullfile(savepath,'result.mat'),'result')
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
             %t = datestr(now,30);
-            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151117T163214');
+            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151121T163214');
             mkdir(path)
             addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
