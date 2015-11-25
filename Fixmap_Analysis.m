@@ -1004,10 +1004,11 @@ g.getSI(3);
 [mat tags] = g.parameterMat;
 alpha_bef  = mean(mat(:,[1 3]),2);
 fix        = Fixmat(g.ids,4);
+fix.kernel_fwhm = 37;
 %get subjmaps
 v = [];
 c = 0;
-for sub = g.ids'
+for sub = g.ids'%unique(labels.sub)%g.ids'
         c    = c+1;
         v{c} = {'subject' sub};
 end
