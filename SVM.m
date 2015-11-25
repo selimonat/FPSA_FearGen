@@ -478,8 +478,8 @@ for l = unique(labels.sub)
     c = c + 1;
     labels.easy_sub(labels.sub == l) = c;
 end
-todelete = find(labels.cond>180);
-fprintf('Will delete another %g trials...\n',sum(todelete));
+todelete = find(ismember(labels.cond,[500 1000 3000]));
+fprintf('Will delete another %g trials...\n',length(todelete));
 datamatrix(:,todelete)=[];
 labels.sub(:,todelete)=[];
 labels.phase(:,todelete)=[];
@@ -488,6 +488,7 @@ labels.cond(:,todelete)=[];
 labels.pos(:,todelete)=[];
 labels.stim(:,todelete)=[];
 labels.easy_sub(:,todelete)=[];
+
 
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/datamatrix.mat','datamatrix');
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/labels.mat','labels');
@@ -502,7 +503,7 @@ fprintf('done\n')
 dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 142;
+num = 73;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
@@ -540,8 +541,8 @@ alpha_bef_good =  find(alpha_bef<median(alpha_bef));
 alpha_bef_bad =  find(alpha_bef>=median(alpha_bef));
 labels.alpha_bef2 = nan(1,length(labels.easy_sub));
 labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_good))  = 1;
-labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_bad))  = -1;
-a = unique([labels.easy_sub' labels.alpha_bef2'],'rows');
+labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_bad))  = 0;
+a = unique([labels.easy_sub' labels.alpha_bef2'],'rows')
 gscatter(a(:,1),alpha_bef,a(:,2));
 %
 g = Group(unique(labels.sub));
@@ -550,16 +551,16 @@ SI_good =  find(g.SI>median(g.SI));
 SI_bad  =  find(g.SI<=median(g.SI));
 labels.SI2 = nan(1,length(labels.easy_sub));
 labels.SI2(ismember(labels.easy_sub,SI_good))  = 1;
-labels.SI2(ismember(labels.easy_sub,SI_bad))  = -1;
-a = unique([labels.easy_sub' labels.SI2'],'rows');
+labels.SI2(ismember(labels.easy_sub,SI_bad))  = 0;%-1
+a = unique([labels.easy_sub' labels.SI2'],'rows')
 gscatter(a(:,1),g.SI,a(:,2));
 
-sigmatest_high = find(g.sigma_test>median(g.sigma_test));
-sigmatest_low = find(g.sigma_test<=median(g.sigma_test));
+sigmatest_good = find(g.sigma_test<median(g.sigma_test));
+sigmatest_bad = find(g.sigma_test>=median(g.sigma_test));
 labels.sigmatest2 = nan(1,length(labels.easy_sub));
-labels.sigmatest2(ismember(labels.easy_sub,sigmatest_high))  = 1;
-labels.sigmatest2(ismember(labels.easy_sub,sigmatest_low))  = -1;
-a = unique([labels.easy_sub' labels.sigmatest2'],'rows');
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_good))  = 1;
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_bad))  = 0;
+a = unique([labels.easy_sub' labels.sigmatest2'],'rows')
 gscatter(a(:,1),g.sigma_test,a(:,2));
 
 
@@ -637,6 +638,12 @@ end
 
 
 %% %% collect single trials by fixations
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+g = Group(subjects);g.getSI(3);
+phases = [2 4];
+fix = Fixmat(subjects,phases);
 scale            = .1;%use .1 to have the typical 2500 pixel maps
 final_size       = prod(fix.rect(end-1:end).*scale);
 trialnumber      = [400 120 124 240 400];
@@ -652,7 +659,7 @@ v = [];
 c=0;
 for nfix = [1 2 3 4];
     for sub = g.ids'
-        for ph = phases
+        for ph = [2 4]
             for tr = 1:max(fix.trialid(fix.phase == ph))
                 v = {'subject' sub, 'phase' ph 'trialid' tr 'fix' nfix};
                 fprintf('Fix %d subject %d phase %d trial %d\n',nfix,sub,ph,tr);
@@ -690,6 +697,7 @@ labels.trial(:,todelete)=[];
 labels.cond(:,todelete)=[];
 labels.pos(:,todelete)=[];
 labels.stim(:,todelete)=[];
+labels.fix(:,todelete)=[];
 
 c = 0;
 for l = unique(labels.sub)
@@ -697,7 +705,7 @@ for l = unique(labels.sub)
     labels.easy_sub(labels.sub == l) = c;
 end
 todelete = find(labels.cond>180);
-fprintf('Will delete another %g trials...\n',sum(todelete));
+fprintf('Will delete another %g trials...\n',length(todelete));
 datamatrix(:,todelete)=[];
 labels.sub(:,todelete)=[];
 labels.phase(:,todelete)=[];
@@ -706,3 +714,4 @@ labels.cond(:,todelete)=[];
 labels.pos(:,todelete)=[];
 labels.stim(:,todelete)=[];
 labels.easy_sub(:,todelete)=[];
+labels.fix(:,todelete)=[];
