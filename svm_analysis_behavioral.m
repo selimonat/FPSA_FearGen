@@ -20,7 +20,7 @@ path = setPath;
 
 r=0; %so far no randomization implemented
 
-nbootstrap    = 2;
+nbootstrap    = 100;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
@@ -30,17 +30,15 @@ savepath      = [];
 model         = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI_2class'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_SI_class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    ind = labels.phase == 4;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        select    = logical(ismember(labels.SI2,[1 -1]).*ind);
-        Y         = labels.SI2(select)';
-        X         = data(select,:);
+        Y         = labels.SI2';
+        X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -48,7 +46,7 @@ if analysis_type == 1
         fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
     end
     
@@ -56,21 +54,19 @@ elseif analysis_type == 2
     name_analysis = 'subjects_by_alpha_bef_2class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    ind = labels.phase == 1;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        select    = logical(ismember(labels.alpha_bef2,[1 -1]).*ind);
-        Y         = labels.alpha_bef2(select)';
-        X         = data(select,:);
+        Y         = labels.alpha_bef2';
+        X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
         Classify;
          fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
     end
 elseif analysis_type == 3
@@ -90,7 +86,7 @@ elseif analysis_type == 3
         fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
     end
     
