@@ -768,19 +768,21 @@ mean_goodbefore=mean(subject_alpha(ismember(g.ids,good_before),1))
 mean_badbefore=mean(subject_alpha(ismember(g.ids,bad_before),1))
 mean_goodafter=mean(subject_alpha(ismember(g.ids,good_before),2))
 mean_badafter=mean(subject_alpha(ismember(g.ids,bad_before),2))
-%% 
-% %create the query cell
-% v = [];
-% c = 0;
-% for subjects = {good bad}    
-%         for cond = [0,18000]
-%             c    = c+1;
-%             v{c} = {'phase', [1 5], 'deltacsp' cond 'subject' subjects{1}};
-%         end
-% end
-% % plot and save fixation maps
-% fix.getmaps(v{:});
-% fix.plot
+%% one map per subject and phase - 135 instances
+%create the query cell
+cond = [-16875:1125:18000,-135:45:180];
+v = [];
+c = 0;
+for ph = 1:5
+    for sub = unique(fix.subject)
+        c    = c+1;
+        v{c} = {'phase' ph 'subject' sub  'deltacsp' cond };
+    end
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+datamatrix = fix.vectorize_maps;
 %% where do good vs bad discriminators look? (independent from condition)
 %GOOD Discrimination BEFORE
 %create the query cell
@@ -1008,7 +1010,7 @@ fix.kernel_fwhm = 37;
 %get subjmaps
 v = [];
 c = 0;
-for sub = g.ids'%unique(labels.sub)%g.ids'
+for sub = unique(fix.subject)
         c    = c+1;
         v{c} = {'subject' sub};
 end
@@ -1042,4 +1044,192 @@ conf41 = squeeze(scaled(4,1,ismember(sub_c,g.ids)));
 [r,p]=corr(conf45,mat(:,14))
 [r,p]=corr(conf41,mat(:,13))
 [r,p]=corr(conf41,mat(:,14))
+%% 
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_discr');
+subjects = intersect(subjects,find(mask));
+fix = Fixmat(subjects,1:5);
+
+%% correlation matrix for subjects (even / odd trials)
+N = length(unique(fix.subject));
+v = [];
+c = 0;
+for sub=unique(fix.subject)
+    c    = c+1;
+    v{c} = {'subject' sub 'trialid' 0:2:400};%even trials
+end
+for sub=unique(fix.subject)
+    c    = c+1;
+    v{c} = {'subject' sub 'trialid' 1:2:400};%odd trials
+end
+fix.getmaps(v{:});
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+corrmat    = fix.corr;
+corrmat    = corrmat(1:N,(N+1):end);
 %%
+% same for phases seperately
+N = length(unique(fix.subject));
+phases = 1:5;
+ed = nan(N,N,length(phases));
+vecmaps=[];
+
+for ph = phases
+    v = [];
+    c = 0;
+    for sub=unique(fix.subject)
+        c    = c+1;
+        v{c} = {'subject' sub 'trialid' 0:2:400 'phase' ph};%even trials
+    end
+    for sub=unique(fix.subject)
+        c    = c+1;
+        v{c} = {'subject' sub 'trialid' 1:2:400 'phase' ph};%odd trials
+    end
+    fix.getmaps(v{:});
+    fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+    vecmaps = [vecmaps fix.vectorize_maps];
+end
+
+%% subjects x phases
+N = length(unique(fix.subject));
+phases = 1:5;
+vecmaps=[];
+for ph = phases
+    v = [];
+    c = 0;
+    for sub=unique(fix.subject)
+        c    = c+1;
+        v{c} = {'subject' sub 'phase' ph};%even trials
+    end
+    fix.getmaps(v{:});
+    fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+    vecmaps = [vecmaps fix.vectorize_maps];
+end
+corrmat = corr(vecmaps);
+Z = linkage(vecmaps','average','correlation');
+[H,T,outperm]=dendrogram(Z);
+
+tree = linkage(corrmat,'average','correlation')
+D = pdist(corrmat,'correlation');
+leafOrder = optimalleaforder(tree,D);
+
+subplot(2,1,1);[H,T,outperm] = dendrogram(tree,0);
+subplot(2,1,2);[H1,T1,outperm1] = dendrogram(tree,0,'Reorder',leafOrder);
+
+%colorcoding
+rgb = circshift(hsv(27),[3 0]);
+subcol=repmat(rgb,5,1);
+phcol=[];for n=1:5;phcol = [phcol; repmat([(6-n)/5 (6-n)/5 (6-n)/5],27,1)];end
+comb = phcol.*subcol;
+fgcol = [repmat([1 0 0],27,1); repmat([0 1 0],27,1); repmat([0 0.6 0],27,1);repmat([0 0.3 0],27,1);repmat([1 0 0],27,1)];
+for n=1:135;hold on;...
+        plot(n,4,'o','MarkerFaceColor',subcol(n,:),'Color',subcol(n,:));...
+        plot(n,3,'o','MarkerFaceColor',phcol(n,:),'Color',phcol(n,:));...
+        plot(n,2,'o','MarkerFaceColor',comb(n,:),'Color',comb(n,:));...
+end
+hold on;
+for n=1:135;plot(n,1,'o','MarkerFaceColor',subcol(outperm1(n),:),'Color',subcol(outperm1(n),:));hold on;end
+for n=1:135;plot(n,0,'o','MarkerFaceColor',phcol(outperm1(n),:),'Color',phcol(outperm1(n),:));hold on;end
+for n=1:135;plot(n,-1,'o','MarkerFaceColor',comb(outperm1(n),:),'Color',comb(outperm1(n),:));hold on;end
+ylim([-1 5])
+
+%% kmeans
+%take all ET subjects, collect single fixations.
+%Run k-means for a range of k
+IDX = [];
+data = datamatrix';
+for k=1:135%length(unique(fix.subject))
+    fprintf('Running k = %d...\n',k)
+    IDX(:,k)=kmeans(data,k,'Distance','correlation');
+    [S,H] = silhouette(data, IDX(:,k));
+    close all
+    sil(k)=mean(S); %The mean silhoette value for two groups
+end
+figure;
+plot(1:k, sil,'ok-','MarkerFaceColor','k')
+%% ET_discr and PMF - subjects
+%
+p = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('PMF');
+subjects = intersect(find(sum(mask,2)==4),subjects);
+fix = Fixmat(subjects,1);
+g = Group(subjects);
+[mat tags ]= g.parameterMat;
+
+[~,ind] = sort(mean(mat(:,[1 3]),2));
+%% ET_feargen and SI - subjects
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('RATE');
+subjects = intersect(find(mask),subjects);
+fix = Fixmat(subjects,4);
+g = Group(subjects);
+g.getSI(3);
+[mat tags ]= g.parameterMat;
+[~,ind] = sort(mat(:,14));
+%% compute dendrograms, plot fixationmaps acc. to leafOrders and sorted by ind
+N = length(unique(fix.subject));
+v = [];
+c = 0;
+for sub=unique(fix.subject)
+    c    = c+1;
+    v{c} = {'subject' sub};
+end
+fix.getmaps(v{:});
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+vecmaps = fix.vectorize_maps;
+%corrmat = corr(vecmaps);
+tree = linkage(vecmaps','average','correlation');
+D = pdist(vecmaps','correlation');
+leafOrder = optimalleaforder(tree,D);
+
+% subplot(2,1,1);[H,T,outperm] = dendrogram(tree,0);
+[H1,T1,outperm1] = dendrogram(tree,0,'Reorder',leafOrder);
+
+figure;
+c=0;
+for sub = subjects(leafOrder)'
+    c=c+1;
+fix.getmaps({'subject' sub})
+h = subplot(1,N,c);imagesc(fix.maps);
+axis square
+axis off
+subplotChangeSize(h,.01,.01);
+colorbar off
+end
+t=supertitle('optimal leaforder');set(t,'FontSize',14);
+
+figure;
+c=0;
+for sub = subjects(ind)'
+    c=c+1;
+fix.getmaps({'subject' sub})
+h = subplot(1,N,c);imagesc(fix.maps);
+axis square
+axis off
+subplotChangeSize(h,.01,.01);
+colorbar off
+end
+t=supertitle('sorted by ...');set(t,'FontSize',14);
+figure;
+bar(mat(ind,14));
+xlim([0 26])
+
+%% color SI dendrogram
+fix = Fixmat(subjects,4);
+fix.getsubmaps
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+[H,T,order,tree] = fix.dendrogram;
+% cluster(1) = [9 12 17]; 
+% cluster(2) = [2 5 11 16 20];
+% cluster(3) = [1 3 4 6 7 8 10 13 14 15 18];
+% cluster(4) = 19;
+k = 4;
+clusters = cluster(tree,'maxclust',k);
+t = sort(tree(:,3));
+th = t(size(tree,1)+2-k);
+[H,T,order] = dendrogram(tree,0,'reorder',order,'colorthreshold', th);
