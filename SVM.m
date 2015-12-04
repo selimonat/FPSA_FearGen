@@ -75,10 +75,11 @@ fprintf('done\n')
 fprintf('starting eigenvector computation\n')
 [e dv] = eig(covmat);
 fprintf('done\n')
-dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
+dv = sort(diag(dv),'descend');
+plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 134;
+num = min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/trialload145dewhite.mat','trialload');
