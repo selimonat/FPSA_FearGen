@@ -1323,7 +1323,7 @@ subjects = intersect(find(mask),Project.subjects_1500);
 mask = p.getMask('ET_feargen');
 subjects = intersect(find(mask),subjects);
 fix = Fixmat(subjects,1:5);
-fix.getsubmaps
+fix.getsubmaps;
 fix.maps   = imresize(fix.maps,.1,'method','bilinear');
 % dendrogram with colored clusters
 figure;
@@ -1437,14 +1437,21 @@ subjects = intersect(find(mask),subjects);
 mask = p.getMask('PMF');
 subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
-cluster(1).subs = [13 4 2 8 1 10 19 9 14];
-cluster(2).subs = [12 3 21 15 5 16 6 18 20 7 17 11];
-cluster(1).leafs = [3 5 11 12 15 16 18 19];
-cluster(2).leafs = [1 2 4 6 7 8 9 10 13 14 17];
+[mat tags] = g.parameterMat;
+g.getSI(3);
+fix = Fixmat(subjects,1:5);
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+[H,T,order,tree] = fix.dendrogram;
+
+cluster(1).subs = [19 13 2 4 8 1 10 9 12 14];
+cluster(2).subs = [16 5 6 18 15 21 3 11 17 7 20];
+cluster(1).leafs = [4 7 9 12 13 15 16 17];
+cluster(2).leafs = [1 2 3 5 6 8 10 11 14 18];
 
 set(H(cluster(1).leafs),'Color','g')
 set(H(cluster(2).leafs),'Color','b')
-set(H(20:end),'Color','k')
+set(H(19:end),'Color','k')
 title('Hierarchical Clustering of Subjects Fixationmaps')
 % alpha
 figure
