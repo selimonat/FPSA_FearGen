@@ -1,11 +1,12 @@
 %% get the data first;
-addpath('/Users/onat/Documents/Code/Matlab/oop/')
+addpath('/Users/onat/Documents/Code/Matlab/fancycarp/')
 clear all;
 p               = Project;
-mask            = p.getMask('ET');
-subjects        = find(mask(:,1));
-subjects        = intersect(subjects,Project.subjects_1500);
-fix             = Fixmat(subjects,[2 3 4]);
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+fix             = Fixmat(subjects,[1 2 3 4 5]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%MEGA SUBJECT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -21,19 +22,20 @@ for ph = [2 4]
     end
 end
 % plot and save some fixation maps
-for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
+for k = 37;%%Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
     fix.kernel_fwhm = k;
     fix.getmaps(v{:});
     
-    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline    
-%     fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+%     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline    
+%     fix.maps    = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    fix.maps    = fix.maps(:,:,1:8) - repmat(mean(fix.maps(:,:,1:8),3),[1 1 8]);%take out the average
     fix.plot;
     supertitle(mat2str(k),1);
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/Maps_Scale_%04.4g.png',k));    
+%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/Maps_Scale_%04.4g.png',k));    
     out= fix.corr;
     figure(1000);clf
     imagesc(out);colorbar
-    SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/CorrMat_Scale_%04.4g.png',k));
+%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/CorrMat_Scale_%04.4g.png',k));
     title(mat2str(k));        
 end
 %% For a given fwhm, compute fixmaps and cormat for different fixation indices.
@@ -77,10 +79,11 @@ tsub = length(unique(fix.subject));
 out  = [];
 % for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
 fix.kernel_fwhm = 25;
-cormat          = nan(16,16,tsub);
+cormat_t = nan(8,8,tsub);
+cormat_b = nan(8,8,tsub);
 subc            = 0;
 for subject = unique(fix.subject);
-    subc = subc + 1;
+    subc = subc + 1
     %creaete the query cell
     v = [];
     c = 0;
@@ -92,22 +95,35 @@ for subject = unique(fix.subject);
     end
     % plot and save fixation maps
     fix.getmaps(v{:});
-    fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline
-    %         fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    maps = fix.maps;
+%     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline
+    fix.maps   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average    
     %         fix.plot
     %         SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
     %         saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    cormat(:,:,subc) = fix.corr;
+    cormat_t(:,:,subc) = fix.corr;
+    fix.maps   = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
+    cormat_b(:,:,subc) = fix.corr;
 end
 % end
+%%
+subplot(1,2,1);
+imagesc(median(cormat_b,3),[-.1 .1]);
+axis square;colorbar;
+set(gca,'fontsize',15)
+axis off
+subplot(1,2,2);
+imagesc(median(cormat_t,3),[-.1 .1])
+axis square;colorbar
+set(gca,'fontsize',15)
+axis off
 %% compute single subject maps and similarity matrices, and finally average them across subjects.
-figure(10);set(gcf,'position',[440    52   932   746]);clf
 tsub = length(unique(fix.subject));
-for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
+cormat_t = nan(8,8,tsub,6);
+cormat_b = nan(8,8,tsub,6);
+for k = 25%Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
     fix.kernel_fwhm = k;
     for nfix = [1 2 3 4 5 6];%there are about 200 7th fixations (not enough)
-        covmat = nan(16,16,tsub);
-        cormat = nan(16,16,tsub);
         subc   = 0;
         for subject = unique(fix.subject);
             subc = subc + 1;
@@ -120,65 +136,94 @@ for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
                     v{c} = {'phase', ph, 'deltacsp' cond 'fix' nfix 'subject' subject};
                 end
             end
-            figure(10);clf;
+%             figure(10);clf;
             % plot and save fixation maps
             fix.getmaps(v{:});
-            fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-%             fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average            
-            covmat(:,:,subc)     = fix.cov;
-            cormat(:,:,subc)     = CancelDiagonals(fix.corr,NaN);
+            maps                 = fix.maps;
+            fix.maps             = maps(:,:,1:8)   - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%correct for baseline
+            cormat_b(:,:,subc,nfix)   = fix.corr;
+            fix.maps   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average            
+            cormat_t(:,:,subc,nfix)   = fix.corr;            
         end
-        missing = sum(isnan(mean(mean(covmat),2)));
-        fprintf('%03d subjects with no fixations.\n',missing);
-        clf;
-        subplot(2,2,1);
-        imagesc(nanmean(covmat(1:8,1:8,:),3));thincolorbar('vert');;title('covariance');ylabel('Baseline');
-        subplot(2,2,3);
-        imagesc(nanmean(covmat(9:end,9:end,:),3));thincolorbar('vert');;title('covariance');ylabel('Test');
-        subplot(2,2,2);
-        imagesc(nanmean(cormat(1:8,1:8,:),3));thincolorbar('vert');;title('correlation');ylabel('Baseline');
-        subplot(2,2,4);
-        imagesc(nanmean(cormat(9:end,9:end,:),3));thincolorbar('vert'); ;title('correlation');ylabel('Test');
-        supertitle(sprintf('Scale:%4.4g, Fix: %02d, Missing: %02d, Total: %02d',k,nfix,missing,tsub),1)
-        drawnow;        
-        SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/SingleFixations/baselinecorrection/Corrmats_Scale_%04.4g_Fix_%02d.png',k,nfix));
     end
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% COMPARE FIXATION PATTERNS ACROSS THE 5 PHASES
-p               = Project;
-mask            = p.getMask('ET');
-subjects        = find(mask(:,1));
-subjects        = intersect(subjects,Project.subjects_1500);
-fix             = Fixmat(subjects,[1 2 3 4 5]);
-% PLOT FIXMAPS for different phases
-v = [];
-c = 0;
-for ph = [1 2 3 4 5]    
-        c = c+1;
-        v{c} = {'phase', ph};    
+%%
+for nf = 1:4;
+    subplot(2,4,nf)
+    imagesc([ nanmean(cormat_b(:,:,:,nf),3) ],[-.2 .1]);
+    title(sprintf('Fixation No: %d',nf))
+    if nf == 1
+        ylabel('Baseline')
+    end
+    axis square
+    axis off
+    colorbar
+    subplot(2,4,nf+4)
+    imagesc([ nanmean(cormat_t(:,:,:,nf),3)],[-.2 .1]);
+    axis square
+    colorbar
+    axis off
+    if nf == 1
+        ylabel('Test')
+    end
 end
-fix.getmaps(v{:})
-fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
-fix.plot;
-
-%% compare MEGA subject -> unitizing vs. Unitized Single subjects' average
-maps = [];
+SaveFigure('/Users/onat/Desktop/SimilarityOFConditionsFixByFix','-r150');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% compare Single subject across task similarity
+sub_c = 0;
+tsub  = length(unique(fix.subject));
+cormat = nan(5,5,tsub)
 for subs = unique(fix.subject);    
-    subs
+    sub_c = sub_c+1;
     v    = [];
     c    = 0;
     for ph = [1 2 3 4 5]
         c    = c+1;
         v{c} = {'phase', ph , 'deltacsp' [0 180 18000] 'subject' subs};
     end
-    fix.getmaps(v{:});
-    maps = cat(4, maps, fix.maps - repmat(mean(fix.maps,3),[1 1 size(fix.maps,3)]));    
+    fix.getmaps(v{:});    
+%     fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+    cormat(:,:,sub_c) = fix.corr;
 end
+%% COMPARE FIXATION PATTERNS ACROSS THE 5 PHASES (MEGASUBJECT)
+sub_c  = 0;
+v      = [];
+c      = 0;
+for ph = [1 2 3 4 5]
+    c    = c+1;
+    v{c} = {'phase', ph , 'deltacsp' [0 180 18000] };
+end
+fix.getmaps(v{:});
+cormat_group= fix.corr;
+%%
+v    = [];
+c    = 0;
+for ph = [1 2 3 4 5]
+    for subs = unique(fix.subject);
+        c    = c+1;
+        v{c} = {'phase', ph , 'deltacsp' [0 180 18000] 'subject' subs};
+    end
+end
+fix.getmaps(v{:});
+maps = fix.maps;
+
+%     fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+cormat= fix.corr;
+imagesc(cormat);
+%%
+for nx = 1:5
+    ix = [1:27]+27*(nx-1);
+    for ny = 1:5
+        iy = [1:27]+27*(ny-1);
+        bla(ny,nx) = mean(diag(cormat(iy,ix)))        
+    end
+end
+
+
 %% Plot simple fixation counts for CS+ and CS? and for different phases.
 p               = Project;
 mask            = p.getMask('ET');
