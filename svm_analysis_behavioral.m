@@ -7,13 +7,14 @@ function [result,w] = svm_analysis_behavioral(analysis_type,data,labels)
 %  1 - Classifies by SI (high=1 vs low=-1)
 %  2 - Classifies by alpha before, phase 1 (low =1 vs high=-1 alpha) (good vs bad
 %  discr)
+%  3 - Classifies by sigma_test, in phase 4 (high = 1, low  = -1)
 % 
 %
 % SVM_ANALYSIS needs a datamatrix, e.g. containing trialloads,
 % which can be found here:
-% .../data/midlevel/singletrialfixmaps/trialload134dewhite.mat',
+% .../data/midlevel/singletrialfixmaps/1500\SI_N24\phase4\trialload.mat
 % as well as labels, found here:
-% .../data/midlevel/singletrialfixmaps/labels.mat'
+% .../data/midlevel/singletrialfixmaps\1500\SI_N24\phase4\labels.mat
 
 path = setPath;
 
@@ -29,17 +30,15 @@ savepath      = [];
 model         = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI_2class'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_SI_class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    ind = labels.phase == 4;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        select    = logical(ismember(labels.SI2,[1 -1]).*ind);
-        Y         = labels.SI2(select)';
-        X         = data(select,:);
+        Y         = labels.SI2';
+        X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -47,7 +46,7 @@ if analysis_type == 1
         fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
     end
     
@@ -55,23 +54,42 @@ elseif analysis_type == 2
     name_analysis = 'subjects_by_alpha_bef_2class'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    ind = labels.phase == 1;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        select    = logical(ismember(labels.alpha_bef2,[1 -1]).*ind);
-        Y         = labels.alpha_bef2(select)';
-        X         = data(select,:);
+        Y         = labels.alpha_bef2';
+        X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
         Classify;
          fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
-        result(:,:,n) = confusionmat(Real,Classified);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
     end
+elseif analysis_type == 3
+    name_analysis = 'subjects_by_sigmatest_class'; %classify subjects, collapse phases
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result        = [];
+    w             = [];
+    for n = 1:nbootstrap
+        Init;
+        Y         = labels.sigmatest2';
+        X         = data;
+        P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+        %
+        tic
+        Classify;
+        fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
+        
+        fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
+        w(:,n)          = model.SVs'*model.sv_coef;
+    end
+    
 end
 
 
@@ -95,11 +113,16 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
     end
 
     function [path] = setPath
-        if ispc || ismac
+        if ismac
             [~,version] = GetGit(fileparts(which(mfilename)));
             path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
+        elseif ispc
+            %t = datestr(now,30);
+            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151121T163214');
+            mkdir(path)
+            addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
             [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
             path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);

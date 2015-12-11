@@ -22,6 +22,7 @@ labels.phase     = NaN(1,ttrial);
 labels.trial     = NaN(1,ttrial);
 labels.cond      = NaN(1,ttrial);
 labels.pos       = NaN(1,ttrial);
+
 v = [];
 c=0;
 for sub = g.ids'
@@ -74,10 +75,11 @@ fprintf('done\n')
 fprintf('starting eigenvector computation\n')
 [e dv] = eig(covmat);
 fprintf('done\n')
-dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
+dv = sort(diag(dv),'descend');
+plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 134;
+num = min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/trialload145dewhite.mat','trialload');
@@ -430,6 +432,7 @@ labels.phase     = NaN(1,ttrial);
 labels.trial     = NaN(1,ttrial);
 labels.cond      = NaN(1,ttrial);
 labels.pos       = NaN(1,ttrial);
+labels.stim      = NaN(1,ttrial);
 v = [];
 c=0;
 for sub = g.ids'
@@ -449,6 +452,7 @@ for sub = g.ids'
                 labels.phase(c)     = ph;
                 labels.trial(c)     = tr;
                 labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                labels.stim(c)      = unique(fix.file(fix.selection));
                 if ismember(ph,[1 5])
                     labels.pos(c)   = mod(tr,2);%1 is 1st, 0 is 2nd
                 else
@@ -468,12 +472,24 @@ labels.phase(:,todelete)=[];
 labels.trial(:,todelete)=[];
 labels.cond(:,todelete)=[];
 labels.pos(:,todelete)=[];
+labels.stim(:,todelete)=[];
 
 c = 0;
 for l = unique(labels.sub)
     c = c + 1;
     labels.easy_sub(labels.sub == l) = c;
 end
+todelete = find(ismember(labels.cond,[500 1000 3000]));
+fprintf('Will delete another %g trials...\n',length(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+labels.stim(:,todelete)=[];
+labels.easy_sub(:,todelete)=[];
+
 
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/datamatrix.mat','datamatrix');
 % save('/home/kampermann/Documents/fearcloud/data/midlevel/singletrialfixmaps/N23/labels.mat','labels');
@@ -488,7 +504,7 @@ fprintf('done\n')
 dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 142;
+num = 73;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
@@ -526,8 +542,8 @@ alpha_bef_good =  find(alpha_bef<median(alpha_bef));
 alpha_bef_bad =  find(alpha_bef>=median(alpha_bef));
 labels.alpha_bef2 = nan(1,length(labels.easy_sub));
 labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_good))  = 1;
-labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_bad))  = -1;
-a = unique([labels.easy_sub' labels.alpha_bef2'],'rows');
+labels.alpha_bef2(ismember(labels.easy_sub,alpha_bef_bad))  = 0;
+a = unique([labels.easy_sub' labels.alpha_bef2'],'rows')
 gscatter(a(:,1),alpha_bef,a(:,2));
 %
 g = Group(unique(labels.sub));
@@ -536,10 +552,167 @@ SI_good =  find(g.SI>median(g.SI));
 SI_bad  =  find(g.SI<=median(g.SI));
 labels.SI2 = nan(1,length(labels.easy_sub));
 labels.SI2(ismember(labels.easy_sub,SI_good))  = 1;
-labels.SI2(ismember(labels.easy_sub,SI_bad))  = -1;
-a = unique([labels.easy_sub' labels.SI2'],'rows');
+labels.SI2(ismember(labels.easy_sub,SI_bad))  = 0;%-1
+a = unique([labels.easy_sub' labels.SI2'],'rows')
 gscatter(a(:,1),g.SI,a(:,2));
 
+sigmatest_good = find(g.sigma_test<median(g.sigma_test));
+sigmatest_bad = find(g.sigma_test>=median(g.sigma_test));
+labels.sigmatest2 = nan(1,length(labels.easy_sub));
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_good))  = 1;
+labels.sigmatest2(ismember(labels.easy_sub,sigmatest_bad))  = 0;
+a = unique([labels.easy_sub' labels.sigmatest2'],'rows')
+gscatter(a(:,1),g.sigma_test,a(:,2));
 
 
+%% plot and analyze svm_analysis confusionmatrices further
+%subject classification for 5 phases
+% figure
+% accuracy = [];
+% for i = 1:5
+%     a = result(:,:,i);
+%     scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,27]);
+%     accuracy(i) = mean(diag(scaled));
+%     accuracystd(i) = std(diag(scaled));
+%     subplot(1,5,i)
+%     imagesc(scaled)
+%     colorbar
+%     caxis([0 1])
+%     axis image
+%     set(gca,'XTick',[],'YTick',[])
+%     colorbar('off')
+%     title(['ph' num2str(i)])
+% end
+% colorbar
+% caxis([0 1])
 
+% plot 8cond "classified as csp" (svm_analysis method 7) 
+figure;
+subplot(1,2,1); [h(1),e(1)] = barwitherr(std(mean(result(:,:,:,1),2),0,3),mean(mean(result(:,:,:,1),2),3));
+title('baseline');ylabel('Classified as CSP')
+subplot(1,2,2); [h(2) e(2)] = barwitherr(std(mean(result(:,:,:,2),2),0,3),mean(mean(result(:,:,:,2),2),3));
+title('testphase');ylabel('Classified as CSP')
+axH = findall(gcf,'type','axes');
+set(axH,'ylim',[0 .25])
+SetFearGenBarColors(h(2));
+set(e,'LineWidth',2);
+
+%subjects:
+[row col] = GetSubplotNumber(size(result,3));
+nsp       = sort([row col]);
+figure(1)%baseline
+for i = 1:size(result,3)
+    
+    subplot(nsp(1),nsp(2),i);
+    bar(mean(result(:,:,i,1),2));
+    axis off
+end
+figure(2)%testphase
+for i = 1:size(result,3)
+    subplot(nsp(1),nsp(2),i);
+    h = bar(mean(result(:,:,i,2),2));
+    axis off
+    SetFearGenBarColors(h)
+end
+%fit Gauss to that
+data = squeeze(mean(result(:,:,:,2),2));
+for i = 1:size(data,2)
+[o(i)]   = FitGauss(-135:45:180,data(:,i),3);
+params(i,:) = o(i).Est;
+LL(i)    = o(i).Likelihood;
+pval(i)  = o(i).pval;
+end
+
+figure%testphase gaussians
+x_HD = linspace(-135,180,500);
+for i = 1:size(result,3)
+    subplot(nsp(1),nsp(2),i);
+    h = barwitherr(std(result(:,:,i,2),0,2),-135:45:180,mean(result(:,:,i,2),2));
+    set(gca,'XTick',[])
+    SetFearGenBarColors(h)
+    hold on;
+    plot(x_HD,o(i).fitfun(x_HD,o(i).Est)+ mean(data(:,i)),'k-','linewidth',2)
+    title(num2str(o(i).pval))
+    ylim([0 0.3])
+    line(xlim,[0.125 0.125],'LineStyle',':')
+end
+
+
+%% %% collect single trials by fixations
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+g = Group(subjects);g.getSI(3);
+phases = [2 4];
+fix = Fixmat(subjects,phases);
+scale            = .1;%use .1 to have the typical 2500 pixel maps
+final_size       = prod(fix.rect(end-1:end).*scale);
+trialnumber      = [400 120 124 240 400];
+ttrial           = length(subjects)*sum(trialnumber(phases));
+datamatrix       = NaN(final_size,ttrial);
+labels.sub       = NaN(1,ttrial);
+labels.phase     = NaN(1,ttrial);
+labels.trial     = NaN(1,ttrial);
+labels.cond      = NaN(1,ttrial);
+labels.pos       = NaN(1,ttrial);
+labels.stim      = NaN(1,ttrial);
+v = [];
+c=0;
+for nfix = [1 2 3 4];
+    for sub = g.ids'
+        for ph = [2 4]
+            for tr = 1:max(fix.trialid(fix.phase == ph))
+                v = {'subject' sub, 'phase' ph 'trialid' tr 'fix' nfix};
+                fprintf('Fix %d subject %d phase %d trial %d\n',nfix,sub,ph,tr);
+                fix.getmaps(v);
+                if ~any(isnan(fix.maps(:)))
+                    c                   = c+1;
+                    %scale it if necessary
+                    if scale ~= 1
+                        fix.maps        = imresize(fix.maps,scale,'method','bilinear');
+                    end
+                    datamatrix(:,c)     = fix.vectorize_maps;
+                    labels.sub(c)       = sub;
+                    labels.phase(c)     = ph;
+                    labels.trial(c)     = tr;
+                    labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                    labels.stim(c)      = unique(fix.file(fix.selection));
+                    labels.fix(c)       = nfix;
+                    if ismember(ph,[1 5])
+                        labels.pos(c)   = mod(tr,2);%1 is 1st, 0 is 2nd
+                    else
+                        labels.pos(c)   = NaN;
+                    end
+                end
+            end
+        end
+    end
+end
+%cut the nans
+todelete = isnan(sum(datamatrix));
+fprintf('Will delete %g trials...\n',sum(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+labels.stim(:,todelete)=[];
+labels.fix(:,todelete)=[];
+
+c = 0;
+for l = unique(labels.sub)
+    c = c + 1;
+    labels.easy_sub(labels.sub == l) = c;
+end
+todelete = find(labels.cond>180);
+fprintf('Will delete another %g trials...\n',length(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+labels.stim(:,todelete)=[];
+labels.easy_sub(:,todelete)=[];
+labels.fix(:,todelete)=[];
