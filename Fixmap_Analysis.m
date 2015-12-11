@@ -1139,7 +1139,7 @@ ylim([-1 5])
 %Run k-means for a range of k
 IDX = [];
 data = datamatrix';
-for k=1:135%length(unique(fix.subject))
+for k=1:20%length(unique(fix.subject))
     fprintf('Running k = %d...\n',k)
     IDX(:,k)=kmeans(data,k,'Distance','correlation');
     [S,H] = silhouette(data, IDX(:,k));
@@ -1188,48 +1188,285 @@ D = pdist(vecmaps','correlation');
 leafOrder = optimalleaforder(tree,D);
 
 % subplot(2,1,1);[H,T,outperm] = dendrogram(tree,0);
-[H1,T1,outperm1] = dendrogram(tree,0,'Reorder',leafOrder);
-
-figure;
-c=0;
-for sub = subjects(leafOrder)'
-    c=c+1;
-fix.getmaps({'subject' sub})
-h = subplot(1,N,c);imagesc(fix.maps);
-axis square
-axis off
-subplotChangeSize(h,.01,.01);
-colorbar off
-end
-t=supertitle('optimal leaforder');set(t,'FontSize',14);
-
+[H1,T1,outperm1] = dendrogram(tree,0,'Reorder',leafOrder);o
+%%
 figure;
 c=0;
 for sub = subjects(ind)'
     c=c+1;
-fix.getmaps({'subject' sub})
-h = subplot(1,N,c);imagesc(fix.maps);
-axis square
-axis off
-subplotChangeSize(h,.01,.01);
-colorbar off
+    fix.getmaps({'subject' sub})
+    h = subplot(1,N,c);imagesc(fix.maps);
+    axis square
+    axis off
+    subplotChangeSize(h,.01,.01);
+    colorbar off
 end
-t=supertitle('sorted by ...');set(t,'FontSize',14);
-figure;
-bar(mat(ind,14));
-xlim([0 26])
+%% sort by mean SCR-response
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('SCR');
+subjects = intersect(find(sum(mask,2)==3),subjects);
+fix = Fixmat(subjects,4);
+fix.getsubmaps;
+
+%% find y-axis cut threshold for given number k of clusters in dendrogram
+k = 20;
+clusters = cluster(tree,'maxclust',k);
+t = sort(tree(:,3));
+th = t(size(tree,1)+2-k);
+[H,T,order] = dendrogram(tree,0,'reorder',order,'colorthreshold', th);
 
 %% color SI dendrogram
 fix = Fixmat(subjects,4);
 fix.getsubmaps
 fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+% dendrogram with colored clusters
+figure;
 [H,T,order,tree] = fix.dendrogram;
-% cluster(1) = [9 12 17]; 
-% cluster(2) = [2 5 11 16 20];
-% cluster(3) = [1 3 4 6 7 8 10 13 14 15 18];
-% cluster(4) = 19;
-k = 5;
-clusters = cluster(tree,'maxclust',k);
-t = sort(tree(:,3));
-th = t(size(tree,1)+2-k);
-[H,T,order] = dendrogram(tree,0,'reorder',order,'colorthreshold', th);
+cluster(1).subs = [3 5 21 14];
+cluster(2).subs = [17 10 15 9 11 1];
+cluster(3).subs = [20 18 8 4 6 2 7 22 19 23 16 24];  
+cluster(4).subs = [13 12];
+cluster(1).leafs = [9 12 17]; 
+cluster(2).leafs = [2 5 11 16 20];
+cluster(3).leafs = [1 3 4 6 7 8 10 13 14 15 18];
+cluster(4).leafs = 19;
+
+rgbs = [0 1 0; 0 0 1;1 0 0; 1 1 0];
+for cl = 1:4;
+    for n = cluster(cl).leafs
+        set(H(n),'Color',rgbs(cl,:))
+    end
+end
+set(H(21:end),'Color','k')
+title('Hierarchical Clustering of Subjects Fixationmaps')
+% grouped Fixmaps for clusters from dendrogram
+figure;
+c=0;
+v=[];
+for cl = [4 3 2 1]
+    c=c+1;
+fix.getmaps({'subject' subjects(cluster(cl).subs)})
+h = subplot(size(cluster,2),1,c);imagesc(fix.maps);
+axis square
+axis off
+subplotChangeSize(h,.01,.01);
+caxis([0 8e-5])
+colorbar off
+end
+% SI mean barplots
+figure(3)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,mean(g.SI(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,mean(g.SI(cluster(nn).subs)),std(g.SI(cluster(nn).subs))./length(cluster(nn).subs),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 30])
+    set(gca,'XTick',[],'YTick',[0 15 30],'FontSize',8)
+end
+% SCR mean bar plots
+clear g
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('RATE');
+subjects = intersect(find(mask),subjects);
+mask = p.getMask('SCR');
+subjects = intersect(find(sum(mask,2)==3),subjects);
+g = Group(subjects);
+g.getSCRtunings('test$',3)
+av_resp = mean(g.tunings.scr.y,2);
+cluster(3).subs(cluster(3).subs==24)=[];
+figure(4)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,mean(av_resp(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,mean(av_resp(cluster(nn).subs)),std(av_resp(cluster(nn).subs))./length(cluster(nn).subs),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 0.5])
+    set(gca,'XTick',[],'YTick',ylim,'FontSize',8)
+end
+% alpha mean bar plot
+p = Project;
+mask = p.getMask('PMF');
+incl = intersect(find(sum(mask,2)==4),g.ids);
+alpha = mean([g.pmf.csp_before_alpha g.pmf.csn_before_alpha],2);
+alpha(~ismember(g.ids,incl))=nan;
+figure(5)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,nanmean(alpha(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,nanmean(alpha(cluster(nn).subs)),nanstd(alpha(cluster(nn).subs))./length(cluster(nn).subs),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 90])
+    set(gca,'XTick',[],'YTick',ylim,'FontSize',8)
+end
+%% take N = 27 (ET_able) subjects, all phases, naive clustering.
+p = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),subjects);
+fix = Fixmat(subjects,1:5);
+fix.getsubmaps
+fix.maps   = imresize(fix.maps,.1,'method','bilinear');
+% dendrogram with colored clusters
+figure;
+[H,T,order,tree] = fix.dendrogram;
+cluster(1).subs = [17 12 1 10];
+cluster(2).subs = [4 6 15];
+cluster(3).subs = [24 11 2 3 19 16 7 22];  
+cluster(4).subs = [14 23 5 26 18 27 21 8 25 9 20 13];
+cluster(1).leafs = [9 19 23]; 
+cluster(2).leafs = [17 20];
+cluster(3).leafs = [1 4 5 7 10 13 18];  
+cluster(4).leafs = [2 3 6 8 11 12 14 15 16 21 22];
+[H,T] = dendrogram(tree,'Orientation','left','Reorder',order);
+rgbs = [0 1 0; 0 0 1;1 0 0; 1 1 0];
+for cl = 1:4;
+    for n = cluster(cl).leafs
+        set(H(n),'Color',rgbs(cl,:))
+    end
+end
+set(H(24:end),'Color','k')
+title('Hierarchical Clustering of Subjects Fixationmaps')
+% grouped Fixmaps for clusters from dendrogram
+figure;
+c=0;
+v=[];
+for cl = [4 3 2 1]
+    c=c+1;
+    fix.getmaps({'subject' subjects(cluster(cl).subs)})
+    h = subplot(size(cluster,2),1,c);imagesc(fix.maps);
+    axis square
+    axis off
+    subplotChangeSize(h,.01,.01);
+    caxis([0 8e-5])
+    colorbar off
+end
+% SI mean barplots
+g.getSI(3);
+mask = p.getMask('RATE');
+incl = intersect(find(mask),g.ids);
+g.SI(~ismember(g.ids,incl))=nan;
+figure(3)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,nanmean(g.SI(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,nanmean(g.SI(cluster(nn).subs)),nanstd(g.SI(cluster(nn).subs))./sqrt(sum(~isnan(g.SI(cluster(nn).subs)))),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 50])
+    set(gca,'XTick',[],'YTick',ylim,'FontSize',8)
+end
+% SCR mean bar plots
+clear g
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),subjects);
+mask = p.getMask('SCR');
+subjects = intersect(find(sum(mask,2)==3),subjects);
+g = Group(subjects);
+g.getSCRtunings('test$',3)
+av_resp = mean(g.tunings.scr.y,2);
+cluster(4).subs(cluster(4).subs==27)=[];
+figure(4)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,mean(av_resp(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,mean(av_resp(cluster(nn).subs)),std(av_resp(cluster(nn).subs))./sqrt(sum(~isnan(av_resp(cluster(nn).subs)))),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 0.6])
+    set(gca,'XTick',[],'YTick',ylim,'FontSize',8)
+end
+% alpha mean bar plot
+p = Project;
+mask = p.getMask('PMF');
+incl = intersect(find(sum(mask,2)==4),g.ids);
+alpha = mean([g.pmf.csp_before_alpha g.pmf.csn_before_alpha],2);
+alpha(~ismember(g.ids,incl))=nan;
+figure(5)
+nn=0;
+for n =[4 3 2 1]
+    nn=nn+1;
+    subplot(4,1,n);
+    b=bar(nn,nanmean(alpha(cluster(nn).subs)));
+    hold on;
+    e = errorbar(nn,nanmean(alpha(cluster(nn).subs)),nanstd(alpha(cluster(nn).subs))./sqrt(sum(~isnan(alpha(cluster(nn).subs)))),'.-');
+    set(b,'FaceColor',rgbs(nn,:));
+    set(e,'LineWidth',1.5,'Color','k')
+    axis square
+    ylim([0 90])
+    set(gca,'XTick',[],'YTick',ylim,'FontSize',8)
+end
+%% subjects we have all the data for
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),subjects);
+mask = p.getMask('SCR');
+subjects = intersect(find(sum(mask,2)==3),subjects);
+mask = p.getMask('RATE');
+subjects = intersect(find(mask),subjects);
+mask = p.getMask('PMF');
+subjects = intersect(find(sum(mask,2)==4),subjects);
+g = Group(subjects);
+cluster(1).subs = [13 4 2 8 1 10 19 9 14];
+cluster(2).subs = [12 3 21 15 5 16 6 18 20 7 17 11];
+cluster(1).leafs = [3 5 11 12 15 16 18 19];
+cluster(2).leafs = [1 2 4 6 7 8 9 10 13 14 17];
+
+set(H(cluster(1).leafs),'Color','g')
+set(H(cluster(2).leafs),'Color','b')
+set(H(20:end),'Color','k')
+title('Hierarchical Clustering of Subjects Fixationmaps')
+% alpha
+figure
+for n = 1:2;
+subplot(1,2,n);
+b(n) = bar(mean(mean(mat(cluster(n).subs,[1 3]),2)));
+hold on;
+e(n) =errorbar(mean(mean(mat(cluster(n).subs,[1 3]),2)),std(mean(mat(cluster(n).subs,[1 3]),2))./sqrt(length(cluster(n).subs)),'.');
+ylim([0 70]);
+axis square;
+set(gca,'XTick',[],'YTick',[0 20 40 60])
+end
+t = supertitle('initial threshold'), set(t,'FontSize',14)
+%SI
+figure
+for n = 1:2;
+subplot(1,2,n);
+b(n) = bar(mean(mean(mat(cluster(n).subs,14),2)));
+hold on;
+e(n) =errorbar(mean(mean(mat(cluster(n).subs,14),2)),std(mean(mat(cluster(n).subs,14),2))./sqrt(length(cluster(n).subs)),'.');
+ylim([0 30]);
+axis square;
+set(gca,'XTick',[],'YTick',[0 10 20 30])
+end
+t = supertitle('Sharpening Index (SI)'), set(t,'FontSize',14);
