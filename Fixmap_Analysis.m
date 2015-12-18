@@ -1270,7 +1270,7 @@ fix = Fixmat(subjects,4);
 fix.getsubmaps
 fix.maps   = imresize(fix.maps,.1,'method','bilinear');
 % dendrogram with colored clusters
-figure;
+figure;cccc
 [H,T,order,tree] = fix.dendrogram;
 
 
@@ -1367,13 +1367,15 @@ end
 figure;
 for n =1:k
     subplot(1,k,n);
-    b=bar(mean(g.SI(cluster(n).subs)));
+    %b=bar(mean(g.SI(cluster(n).subs)));
+    b=bar(mean(g.sigma_test(cluster(n).subs)));
     hold on;
-    e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
+    %e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
+    e = errorbar(mean(g.sigma_test(cluster(n).subs)),std(g.sigma_test(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
     set(b,'FaceColor',rgbs(n,:));
     set(e,'LineWidth',1.5,'Color','k')
     axis square
-    ylim([0 40])
+    ylim([0 80])
     set(gca,'XTickLabel',{''},'FontSize',14)
 end
 
@@ -1391,14 +1393,16 @@ for n =1:k
     ylim([0 70])
     set(gca,'XTickLabel',{''},'FontSize',14)
 end
+
 %SCR
+g.ModelSCR('test$',3)
 for n = 1:length(g.ids)
     ind = g.subject{n}.scr.findphase('test$');
     g.subject{n}.scr.cut(ind);
     g.subject{n}.scr.run_ledalab;
     scr(:,:,n) = g.subject{n}.scr.ledalab.mean(1:800,1:8);
 end
-for n=1:length(g.ids);subplot(5,5,n);plot(repmat(g.subject{n}.scr.ledalab.x(1:800,1),[1 8]),scr(:,:,n));end
+for n=[cluster(1).subs cluster(2).subs];subplot(5,5,n);plot(repmat(g.subject{n}.scr.ledalab.x(1:800,1),[1 8]),scr(:,:,n));end
 %exemplary SCRs
 subs = [2 3];%4 is for cluster 1, 3 for cluster 2
 figure;
@@ -1416,16 +1420,19 @@ for n = 1:k
 subplot(1,k,n)
 t0 = find(g.subject{1}.scr.ledalab.x(:,1)==0);
 const     = squeeze(mean(mean(mean(scr(1:t0,:,cluster(n).subs),1),2),3));
-plot(repmat(g.subject{1}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,cluster(n).subs),3)-const,'LineWidth',2.5)
+plot(repmat(g.subject{1}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,cluster(n).subs),3),'LineWidth',2.5)
 axis square
 set(gca,'FontSize',14)
 xlim([-1.1 7.1])
 end
 EqualizeSubPlotYlim(1)
 % SCR mean bar plots
-const     = squeeze(mean(mean(scr(1:t0,:,:),1),2));
-av_resp = squeeze(mean(mean(scr,1),2))-const;
-% av_resp = squeeze(mean(scr,1));
+av_resp = squeeze(mean(mean(scr,1),2));
+%OR
+%const     = squeeze(mean(mean(scr(1:t0,:,:),1),2));
+%av_resp = squeeze(mean(mean(scr,1),2))-const;
+%OR
+% = squeeze(mean(scr,1));
 % av_resp = squeeze(av_resp(4,:)./av_resp(8,:));
 
 figure;
