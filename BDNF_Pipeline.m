@@ -1,15 +1,26 @@
 %%BDNF Stack
 addpath([homedir '/Documents/GitHub/fancycarp/'])
 p = Project;
-mask = p.getMask('ET_feargen');
+% mask = p.getMask('ET_feargen');
 %create groups. 1 = GG, 2 = AG,AA
-g1 = Group(intersect(find(mask),Project.subjects_bdnf(Project.BDNF ==1)));
-g2 = Group(intersect(find(mask),Project.subjects_bdnf(Project.BDNF ==2)));
+g1 = Group(Project.subjects_bdnf(Project.BDNF ==1));
+g2 = Group(Project.subjects_bdnf(Project.BDNF ==2));
 N1 = length(g1.ids);
 N2 = length(g2.ids);
 %get SI
 g1.getSI(3);
 g2.getSI(3);
+%
+threshold = .05;
+valid2 = prod([g2.tunings.rate{3}.pval;g2.tunings.rate{4}.pval] > -log10(threshold));
+valid1 = prod([g1.tunings.rate{3}.pval;g1.tunings.rate{4}.pval] > -log10(threshold));
+g1.sigma_cond(~valid1) = NaN;
+g2.sigma_cond(~valid2) = NaN;
+g1.sigma_test(~valid1) = NaN;
+g2.sigma_test(~valid2) = NaN;
+g1.SI(~valid1) = NaN;
+g2.SI(~valid2) = NaN;
+
 %% plot the results as bars with fitted Gaussian
 g1.PlotRatingResults
 t = supertitle('Group 1');set(t,'FontSize',14);
@@ -21,13 +32,13 @@ c=0;
 for n = [g1 g2]
     c=c+1;
     subplot(1,2,c)
-    bar(1,mean(n.sigma_cond));
+    bar(1,nanmean(n.sigma_cond));
     hold on;
-    bar(2,mean(n.sigma_test));
-    bar(3,mean(n.SI));
-    errorbar(1,mean(n.sigma_cond),std(n.sigma_cond)./sqrt(length(n.ids)),'k.','linewidth',2)
-    errorbar(2,mean(n.sigma_test),std(n.sigma_test)./sqrt(length(n.ids)),'k.','linewidth',2)
-    errorbar(3,mean(n.SI),std(n.SI)./sqrt(length(n.ids)),'k.','linewidth',2)
+    bar(2,nanmean(n.sigma_test));
+    bar(3,nanmean(n.SI));
+    errorbar(1,nanmean(n.sigma_cond),nanstd(n.sigma_cond)./sqrt(sum(~isnan(n.sigma_cond))),'k.','linewidth',2)
+    errorbar(2,nanmean(n.sigma_test),nanstd(n.sigma_test)./sqrt(sum(~isnan(n.sigma_cond))),'k.','linewidth',2)
+    errorbar(3,nanmean(n.SI),nanstd(n.SI)./sqrt(sum(~isnan(n.sigma_cond))),'k.','linewidth',2)
     ylabel(sprintf('Fear tuning parameter (deg)'))
     t = title(['Group ' num2str(c)]);set(t,'FontSize',14);
     set(gca,'xtick',[1 2 3],'xticklabel',{'Cond' 'Test' 'SI'})
