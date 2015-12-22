@@ -1318,16 +1318,16 @@ subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
 g.getSI(3);
 [mat tags ] = g.parameterMat;
-fix = Fixmat(subjects,1);
+fix = Fixmat(subjects,1:5);
 fix.getsubmaps
 fix.maps   = imresize(fix.maps,.1,'method','bilinear');
 % dendrogram with colored clusters
 [H,T,order,tree] = fix.dendrogram;
 
-cluster(1).subs = [4 8 13 2 1 10 12 3 5 19 9 14 16];
-cluster(2).subs = [6 15 21 17 7 20 11 18];
-cluster(1).leafs = [3 5 7 10 11 12 14 15 16 17 18 19]; 
-cluster(2).leafs = [1 2 4 6 8 9 13];
+cluster(1).subs = [13 4 2 8 1 10 19 9 14];
+cluster(2).subs = [12 3 21 15 5 16 16 18 20 7 17 11];
+cluster(1).leafs = [4 6 11 12 15 16 17 19]; 
+cluster(2).leafs = [1 2 3 5 7 8 9 10 13 14 18];
 %OR
 cluster(1).subs = [4 8 13 2 1 10];
 cluster(2).subs = [12 3 5 19 9 14 16];
@@ -1347,7 +1347,7 @@ set(H(end),'Color','k')
 set(H,'LineWidth',2)
 axis off
 
-fix.plotband(subjects(order)');
+fix.plotband(subjects(order));
 
 % grouped Fixmaps for clusters from dendrogram
 figure;
@@ -1367,15 +1367,15 @@ end
 figure;
 for n =1:k
     subplot(1,k,n);
-    %b=bar(mean(g.SI(cluster(n).subs)));
+%     b=bar(mean(g.SI(cluster(n).subs)));
     b=bar(mean(g.sigma_test(cluster(n).subs)));
     hold on;
-    %e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
+%     e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
     e = errorbar(mean(g.sigma_test(cluster(n).subs)),std(g.sigma_test(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
     set(b,'FaceColor',rgbs(n,:));
     set(e,'LineWidth',1.5,'Color','k')
     axis square
-    ylim([0 80])
+    ylim([0 60])
     set(gca,'XTickLabel',{''},'FontSize',14)
 end
 
@@ -1427,13 +1427,13 @@ xlim([-1.1 7.1])
 end
 EqualizeSubPlotYlim(1)
 % SCR mean bar plots
-av_resp = squeeze(mean(mean(scr,1),2));
+% av_resp = squeeze(mean(mean(scr,1),2));
 %OR
-%const     = squeeze(mean(mean(scr(1:t0,:,:),1),2));
-%av_resp = squeeze(mean(mean(scr,1),2))-const;
-%OR
-% = squeeze(mean(scr,1));
-% av_resp = squeeze(av_resp(4,:)./av_resp(8,:));
+% const     = squeeze(mean(mean(scr(1:t0,:,:),1),2));
+% av_resp = squeeze(mean(mean(scr,1),2))-const;
+% %OR
+av_resp = squeeze(mean(scr,1));
+av_resp = squeeze(av_resp(4,:)./av_resp(8,:));
 
 figure;
 for n =1:k
@@ -1444,66 +1444,6 @@ for n =1:k
     set(b,'FaceColor',rgbs(n,:));
     set(e,'LineWidth',1.5,'Color','k')
     axis square
-%     ylim([0 .7])
-    set(gca,'XTicklabel',{''},'YTick',[0 0.25 .5],'FontSize',14)
+%     ylim([0 1.5])
+    set(gca,'XTicklabel',{''},'YTick',[0 .5 1 1.5],'FontSize',14)
 end
-
-%% subjects we have all the data for
-p = Project;
-mask = p.getMask('ET_feargen');
-subjects = intersect(find(mask),Project.subjects_1500);
-mask = p.getMask('ET_discr');
-subjects = intersect(find(mask),subjects);
-mask = p.getMask('SCR');
-subjects = intersect(find(sum(mask,2)==3),subjects);
-mask = p.getMask('RATE');
-subjects = intersect(find(mask),subjects);
-mask = p.getMask('PMF');
-subjects = intersect(find(sum(mask,2)==4),subjects);
-g = Group(subjects);
-[mat tags] = g.parameterMat;
-g.getSI(3);
-fix = Fixmat(subjects,1:5);
-fix.getsubmaps;
-fix.maps   = imresize(fix.maps,.1,'method','bilinear');
-[H,T,order,tree] = fix.dendrogram;
-
-cluster(1).subs = [19 13 2 4 8];
-cluster(2).subs = [1 10 12 14 9 16 5];
-cluster(3).subs = [3 21 15 6 18 20 7 17 11];
-cluster(1).leafs = [9,11,13,16];
-cluster(2).leafs = [4 5 7 14 17 18];
-cluster(3).leafs = [1 2 3 6 8 10 12 15];
-
-set(H(cluster(1).leafs),'Color','g')
-set(H(cluster(2).leafs),'Color','b')
-set(H(cluster(3).leafs),'Color','r')
-set(H(19:end),'Color','k')
-set(H,'LineWidth',2)
-axis off
-title('Hierarchical Clustering of Subjects Fixationmaps')
-k = 3;
-% alpha
-figure
-for n = 1:k;
-subplot(1,k,n);
-b(n) = bar(mean(mean(mat(cluster(n).subs,[1 3]),2)));
-hold on;
-e(n) =errorbar(mean(mean(mat(cluster(n).subs,[1 3]),2)),std(mean(mat(cluster(n).subs,[1 3]),2))./sqrt(length(cluster(n).subs)),'.');
-ylim([0 70]);
-axis square;
-set(gca,'XTick',[],'YTick',[0 20 40 60])
-end
-t = supertitle('initial threshold'), set(t,'FontSize',14)
-%SI
-figure
-for n = 1:k;
-subplot(1,k,n);
-b(n) = bar(mean(mean(mat(cluster(n).subs,14),2)));
-hold on;
-e(n) =errorbar(mean(mean(mat(cluster(n).subs,14),2)),std(mean(mat(cluster(n).subs,14),2))./sqrt(length(cluster(n).subs)),'.');
-ylim([0 30]);
-axis square;
-set(gca,'XTick',[],'YTick',[0 10 20 30])
-end
-t = supertitle('Sharpening Index (SI)'), set(t,'FontSize',14);
