@@ -45,9 +45,9 @@ EqualizeSubPlotYlim(gcf)
 [p,tbl,stats] = anova1([g1.sigma_test; g2.sigma_test],[ones(length(g1.ids),1); ones(length(g2.ids),1)*2])
 [p,tbl,stats] = anova1([g1.SI; g2.SI],[ones(length(g1.ids),1); ones(length(g2.ids),1)*2])
 %% ANOVAN
-data  = [g1.sigma_cond         ; g2.sigma_cond;g1.sigma_test; g2.sigma_test]
-group = [[ones(length(g1.ids),1); ones(length(g2.ids),1)*2   ;ones(length(g1.ids),1); ones(length(g2.ids),1)*2 ] [ones(length(g1.ids)*2,1); ones(length(g2.ids)*2,1)*2  ]]
-[p,tbl,stats] = anovan(data,group,'model','interaction');
+data  = [g1.sigma_cond; g2.sigma_cond; g1.sigma_test; g2.sigma_test];
+group = [[ones(length(g1.ids),1); ones(length(g2.ids),1)*2   ;ones(length(g1.ids),1); ones(length(g2.ids),1)*2 ] [ones(length(g1.ids)*2,1); ones(length(g2.ids)*2,1)*2  ]];
+[p,tbl,stats] = anovan(data,group,'model','interaction','varnames',char('group', 'timepoint'));
 
 %% fixation maps
 fix  = Fixmat(10,2);%this is a dummy to be filled later.
