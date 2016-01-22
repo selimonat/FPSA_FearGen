@@ -1,109 +1,123 @@
-%% general stats
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% alpha
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% plot all alphas for N=51, 1500 and 600 seperately
+bar([1 2 4 5 7 8 10 11 13 14 16 17],[mean(mat(:,1)) mean(mat(:,2)) mean(mat(:,3)) mean(mat(:,4)) mean(mat15(:,1)) mean(mat15(:,2)) mean(mat15(:,3)) mean(mat15(:,4)) mean(mat6(:,1)) mean(mat6(:,2)) mean(mat6(:,3)) mean(mat6(:,4))],'FaceColor','white')
+hold on;
+errorbar([1 2 4 5 7 8 10 11 13 14 16 17],[mean(mat(:,1)) mean(mat(:,2)) mean(mat(:,3)) mean(mat(:,4)) mean(mat15(:,1)) mean(mat15(:,2)) mean(mat15(:,3)) mean(mat15(:,4)) mean(mat6(:,1)) mean(mat6(:,2)) mean(mat6(:,3)) mean(mat6(:,4))],[std(mat(:,1))./sqrt(51) std(mat(:,2))./sqrt(51) std(mat(:,3))./sqrt(51) std(mat(:,4))./sqrt(51) std(mat15(:,1))./sqrt(25) std(mat15(:,2))./sqrt(25) std(mat15(:,3))./sqrt(25) std(mat15(:,4))./sqrt(25) std(mat6(:,1))./sqrt(26) std(mat6(:,2))./sqrt(26) std(mat6(:,3))./sqrt(26) std(mat6(:,4))./sqrt(26)],'k.')
+set(gca,'xtick',[1.5 4.5 8.5 11.5 15.5 18.5],'xticklabel',{'CS+' 'CS-' 'CS+' 'CS-' 'CS+' 'CS-'})
+%%
+load('C:\Users\onat\Desktop\Lea\behavioral_data.mat','data')
+[h,p,ci,stats] = ttest(data(:,1),data(:,3))%before the experiment, CSP vs CSN
+
+[h,p,ci,stats] = ttest(data(:,1),data(:,2))%CSP before to after
+[h,p,ci,stats] = ttest(data(:,3),data(:,4))%CSN before to after
+
+[h,p,ci,stats] = ttest(data(:,9),data(:,10),'tail','right') % csp_imprv vs csn_imprv
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% RATE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+p    = Project;
+mask = p.getMask('RATE');
+Subjects = intersect(find(mask),[Project.subjects_1500 Project.subjects_600]);
+g = Group(Subjects);
+g.getSI(3);
+[mat tags] = g.parameterMat;
+
+figure
+bar([1 2 3 6 7 8 10 11 12],[mean(mat(:,12)) mean(mat(:,13)) mean(mat(:,14)) mean(mat(1:18,12)) mean(mat(1:18,13)) mean(mat(1:18,14)) mean(mat(19:end,12)) mean(mat(19:end,13)) mean(mat(19:end,14))],'facecolor','white')
+hold on;
+errorbar([1 2 3 6 7 8 10 11 12],[mean(mat(:,12)) mean(mat(:,13)) mean(mat(:,14)) mean(mat(1:18,12)) mean(mat(1:18,13)) mean(mat(1:18,14)) mean(mat(19:end,12)) mean(mat(19:end,13)) mean(mat(19:end,14))],...
+    [std(mat(:,12))./sqrt(37) std(mat(:,13))./sqrt(37) std(mat(:,14))./sqrt(37) std(mat(1:18,12))./sqrt(18) std(mat(1:18,13))./sqrt(18) std(mat(1:18,14))./sqrt(18) std(mat(19:end,12))./sqrt(19) std(mat(19:end,13))./sqrt(19) std(mat(19:end,14))./sqrt(19)],'k.')
+set(gca,'xticklabel',{'Cond_all' 'Test_all' 'SI_all' 'Cond_1500' 'Test_1500' 'SI_1500' 'Cond_600' 'Test_600' 'SI_600'})
+
+figure;
+bar([1 2 3],mean(mat(:,12:14)));hold on;
+errorbar([1 2 3],mean(mat(:,12:14)),std(mat(:,12:14))./sqrt(length(mat)),'k.','LineWidth',2)
+
+[h,p,ci,stats] = ttest(data(:,12),data(:,13))
+
+% plot bars and Gaussians in Feargen Colors
+%
+g.tunings.rate{3}.GroupFit(3)
+g.tunings.rate{4}.GroupFit(3)
+clf
+subplot(1,2,1);h = bar(unique(g.tunings.rate{3}.x(1,:)),g.tunings.rate{3}.y_mean);SetFearGenBarColors(h);
+axis square
+hold on;
+errorbar(unique(g.tunings.rate{3}.x(1,:)),g.tunings.rate{3}.y_mean,g.tunings.rate{3}.y_std./sqrt(27),'k.','LineWidth',2)
+xlim([-160 200])
+box off
+set(gca,'xtick',[0 180],'xticklabel',{'CS+' 'CS-'})
+x = linspace(g.tunings.rate{3}.x(1,1),g.tunings.rate{3}.x(1,end),100);
+% plot(x ,  g.tunings.rate{3}.singlesubject{1}.fitfun( x,mean(g.tunings.rate{3}.params(:,1:2))) ,'k--','linewidth',1);
+plot(x ,  g.tunings.rate{3}.groupfit.fitfun( x,g.tunings.rate{3}.groupfit.Est(1:2)) ,'k--','linewidth',2);
+hold off
+set(gca,'fontsize',15)
+%
+subplot(1,2,2);h = bar(unique(g.tunings.rate{4}.x(1,:)),g.tunings.rate{4}.y_mean);SetFearGenBarColors(h);hold on;
+errorbar(unique(g.tunings.rate{4}.x(1,:)),g.tunings.rate{4}.y_mean,g.tunings.rate{4}.y_std./sqrt(27),'k.','LineWidth',2)
+EqualizeSubPlotYlim(gcf)
+axis square
+box off
+xlim([-160 200])
+set(gca,'xtick',[0 180],'xticklabel',{'CS+' 'CS-'})
+x = linspace(g.tunings.rate{4}.x(1,1),g.tunings.rate{4}.x(1,end),100);
+plot(x ,  g.tunings.rate{4}.groupfit.fitfun( x,g.tunings.rate{4}.groupfit.Est(1:2)) ,'k-','linewidth',2);
+% plot(x ,  g.tunings.rate{3}.singlesubject{1}.fitfun( x,mean(g.tunings.rate{4}.params(:,1:2))) ,'k--','linewidth',1);
+
+set(gca,'fontsize',15)
+hold off
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% alpha x feargen
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+p               = Project;
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),Project.subjects_1500);
+mask            = p.getMask('RATE');
+subjects        = intersect(find(mask),subjects);
+g15               = Group(subjects);
+g15.getSI(3)
+mat15 = g15.parameterMat;
+clear g15;
 p               = Project;
 mask            = p.getMask('PMF');
 subjects        = intersect(find(sum(mask,2)==4),Project.subjects_600);
 mask            = p.getMask('RATE');
 subjects        = intersect(find(mask),subjects);
-g               = Group(subjects);
-g.getSI(3)
-
-[mat labels] = g.parameterMat;
-
-SI_norm =mean(g.sigma_cond-g.sigma_test)./mean(g.sigma_cond);
-
-%plot something for that
-means  = [mean(mean(mat(:,1:4),2)),mean(mat(:,end-2)),mean(mat(:,end-1))];
-errors = [std(mean(mat(:,1:4),2)),std(mat(:,end-2)),std(mat(:,end-1))]/sqrt(length(subjects));
-[hbarr errbar]=barwitherr(errors,means);
-ylim([0 65])
-set(errbar,'LineWidth',2)
-axis off
-
-%% model Ratings as Gaussian
-
-%%1500ms
-p               = Project;
-g1 = Group([6 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22 24 25 26 28 30 33 34 35]);%people with acceptable fits for ratings and PMF
-n1 = length(g1.ids);
-CSP_subject = mean(g1.pmf.params1([1,3],1,:),1);
-CSP_mean = mean(CSP_subject);
-g1.getSI(3);
-FWHM=[];
-for i=1:length(g1.tunings{4}.singlesubject)
-    FWHM(i,:)= [g1.tunings{3}.singlesubject{i}.Est(2) g1.tunings{4}.singlesubject{i}.Est(2)];
-end
-FWHM_mean = mean(FWHM,1);
-AMPL=[];
-for i=1:length(g1.tunings{4}.singlesubject)
-    AMPL(i,:)= [g1.tunings{3}.singlesubject{i}.Est(1) g1.tunings{4}.singlesubject{i}.Est(1)];
-end
-AMPL_mean = mean(AMPL,1);
-
-alpha_incr=[];
-for i=1:length(g1.tunings{4}.singlesubject)
-alpha_incr = [alpha_incr; ((g1.pmf.params1(1,1,i)-g1.pmf.params1(3,1,i))-(g1.pmf.params1(2,1,i)-g1.pmf.params1(4,1,i)))];
-end
+g6               = Group(subjects);
+g6.getSI(3)
+mat6 = g6.parameterMat;
+clear g6;
+mat = [mat15;mat6];
+%% corr alpha x feargen
+[r,p]=corrcoef(mean(mat(:,[1 3]),2),mat(:,12))
+[r,p]=corrcoef(mean(mat(:,[1 3]),2),mat(:,13))
+[r,p]=corrcoef(mean(mat(:,[1 3]),2),mat(:,14))
 
 
-%%
-%600ms
-p               = Project;
-mask            = p.getMask('RATE');
-subjects        = intersect(find(mask),Project.subjects_600);
-g2              = Group(subjects);
-n2 = length(g2.ids);
+% plot correlations between threshold and sigma/SI
+subplot(1,3,1)
+plot(mat(:,12),mean(mat(:,[1 3]),2),'k.','Markersize',25);box off;lsline
+title(sprintf('r = %1.2g',corr2(mean(mat(:,[1 3]),2),mat(:,12))))
+xlabel(sprintf('sigma_{cond} (in deg)'))
+axis square
+set(gca,'fontsize',20)
+ylabel(sprintf('Perceptual Discrimination \n (alpha in deg)'))
 
-g2.getSI(3);
-FWHM=[];
-for i=1:length(g2.tunings{4}.singlesubject)
-    FWHM(i,:)= [g2.tunings{3}.singlesubject{i}.Est(2) g2.tunings{4}.singlesubject{i}.Est(2)];
-end
-FWHM_mean = mean(FWHM,1);
-AMPL=[];
-for i=1:length(g2.tunings{4}.singlesubject)
-    AMPL(i,:)= [g2.tunings{3}.singlesubject{i}.Est(1) g2.tunings{4}.singlesubject{i}.Est(1)];
-end
-AMPL_mean = mean(AMPL,1);
-
-alpha_incr=[];
-for i=1:length(g2.tunings{4}.singlesubject)
-alpha_incr = [alpha_incr; ((g2.pmf.params1(1,1,i)-g2.pmf.params1(3,1,i))-(g2.pmf.params1(2,1,i)-g2.pmf.params1(4,1,i)))];
-end
+subplot(1,3,2)
+plot(mat(:,13),mean(mat(:,[1 3]),2),'k.','Markersize',25);box off;lsline
+title(sprintf('r = %1.2g',corr2(mean(mat(:,[1 3]),2),mat(:,13))))
+xlabel(sprintf('sigma_{test} (in deg)'));
+axis square
+set(gca,'fontsize',20)
 
 
-%% look at perception and ratings  - %do good discriminators generalize less?
-clear all;
-p         = Project;
-rate_mask = find(p.getMask('RATE'));
-pmf_mask  = find(sum(p.getMask('PMF'),2) == 4);
-subs      = intersect(intersect(rate_mask,pmf_mask),Project.subjects_1500);
-g         = Group(subs);
-g.getSI(3);
-[mat labels] = g.parameterMat;
-
-
-med  = median(mean(mat(:,[1 2 3 4]),2));
-
-good = g.ids(find(mean(mat(:,[1 2 3 4]),2) < med));
-bad  = g.ids(find(mean(mat(:,[1 2 3 4]),2) >= med));
-alpha_good = mean(mean(mat(ismember(g.ids,good),[1 2 3 4]),2));
-alpha_bad  = mean(mean(mat(ismember(g.ids,bad),[1 2 3 4]),2));
-
-sigma_cond_good = mat(ismember(g.ids,good),12);
-sigma_cond_bad  = mat(ismember(g.ids,bad),12);
-sigma_test_good = mat(ismember(g.ids,good),12);
-sigma_test_bad  = mat(ismember(g.ids,bad),12);
-SI_good         = mat(ismember(g.ids,good),end);
-SI_bad          = mat(ismember(g.ids,bad),end);
-
-[H,P,CI,STATS] = ttest(sigma_cond_good,sigma_cond_bad)
-[H,P,CI,STATS] = ttest(sigma_test_good,sigma_test_bad)
-[H,P,CI,STATS] = ttest(SI_good,SI_bad)
-%nope.
-
-%% anova SI to alpha
-classes   = unique([labels.easy_sub' labels.SI'],'rows');classes = classes(:,2);
-
-[p,tbl,stats] = anova1(alpha_ave,classes)
-figure;boxplot(impr,classes)
-
+subplot(1,3,3)
+plot(mat(:,14),mean(mat(:,[1 3]),2),'k.','Markersize',25);box off;lsline
+title(sprintf('r = %1.2g',corr2(mean(mat(:,[1 3]),2),mat(:,14))))
+xlabel(sprintf(sprintf('sigma_{cond} - sigma_{test} (in deg) \n Sharpening Index')))
+axis square
+set(gca,'fontsize',20)
