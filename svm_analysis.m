@@ -521,7 +521,7 @@ save(fullfile(savepath,'result.mat'),'result')
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
             %t = datestr(now,30);
-            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151123');
+            path = fullfile(homedir,'Documents','Experiments','FearCloud_Eyelab','data','midlevel','svm_analysis','20160115');
             mkdir(path)
             addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
