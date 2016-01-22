@@ -79,8 +79,11 @@ tsub = length(unique(fix.subject));
 out  = [];
 % for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
 fix.kernel_fwhm = 25;
+fix.kernel_fwhm = 37*0.8;
 cormat_t = nan(8,8,tsub);
 cormat_b = nan(8,8,tsub);
+pval_t = nan(8,8,tsub);
+pval_b = nan(8,8,tsub);
 subc            = 0;
 for subject = unique(fix.subject);
     subc = subc + 1
@@ -101,9 +104,9 @@ for subject = unique(fix.subject);
     %         fix.plot
     %         SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
     %         saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    cormat_t(:,:,subc) = fix.corr;
+    [cormat_t(:,:,subc) pval_t(:,:,subc)] = fix.corr;
     fix.maps   = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
-    cormat_b(:,:,subc) = fix.corr;
+    [cormat_b(:,:,subc) pval_b(:,:,subc)] = fix.corr;
 end
 % end
 %%
@@ -503,6 +506,22 @@ fix.plot;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Which parts of the fixation map correlates with good alpha
+p           = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect(Project.subjects_1500,find(mask));
+mask = p.getMask('PMF');
+subjects = intersect(subjects,find(sum(mask,2)==4));
+g = Group(subjects);[mat tags] = g.parameterMat;
+fix = Fixmat(subjects, 1);
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+subjmaps = fix.vectorize_maps;
+for n = 1:length(subjmaps)
+    [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2));
+end
+imagesc(reshape(r,[50 50]),[-1.5 1.5])
+for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
 %% Which parts of the fixation map correlates with an increased generalization.
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
@@ -1396,7 +1415,7 @@ end
 
 %SCR
 g.ModelSCR('test$',3)
-for n = 1:length(g.ids)
+for n = 1:length(g.ids)-1
     ind = g.subject{n}.scr.findphase('test$');
     g.subject{n}.scr.cut(ind);
     g.subject{n}.scr.run_ledalab;
@@ -1447,3 +1466,9 @@ for n =1:k
 %     ylim([0 1.5])
     set(gca,'XTicklabel',{''},'YTick',[0 .5 1 1.5],'FontSize',14)
 end
+%% random useful code snippets
+valid = prod([g.tunings.rate{3}.pval;g.tunings.rate{4}.pval] > -log10(0.05));
+mat((ismember(unique(fix.subject),subjects)==0),[1:11]) = nan;
+mat((ismember(unique(fix.subject),subjects)==0),[12:14])= nan;
+
+
