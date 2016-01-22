@@ -37,7 +37,7 @@ if analysis_type == 1
     w             = [];
     for n = 1:nbootstrap
         Init;
-        Y         = labels.SI2';
+        Y         = labels.SI';
         X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
@@ -70,14 +70,14 @@ elseif analysis_type == 2
         w(:,n)          = model.SVs'*model.sv_coef;
     end
 elseif analysis_type == 3
-    name_analysis = 'subjects_by_sigmatest_class'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_sigmatest'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        Y         = labels.sigmatest2';
+        Y         = labels.sigma';
         X         = data;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
@@ -119,7 +119,7 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
-            %t = datestr(now,30);
+            t = datestr(now,30);
             path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151121T163214');
             mkdir(path)
             addpath([homedir '/Documents/GitHub/libsvm/matlab'])
