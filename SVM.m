@@ -504,7 +504,7 @@ fprintf('done\n')
 dv = sort(diag(dv),'descend');plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = 73;
+num = 108;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
@@ -716,3 +716,8 @@ labels.pos(:,todelete)=[];
 labels.stim(:,todelete)=[];
 labels.easy_sub(:,todelete)=[];
 labels.fix(:,todelete)=[];
+
+
+%% 
+a = squeeze(mean(result,3));%bootstraps
+scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,5]);%scale by rowsums
