@@ -1,4 +1,4 @@
-function [result,w] = svm_analysis_behavioral(analysis_type,data,labels)
+function [result,w] = svm_analysis_behavioral(analysis_type,data,labels,r,nbootstrap)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -18,9 +18,9 @@ function [result,w] = svm_analysis_behavioral(analysis_type,data,labels)
 
 path = setPath;
 
-r=0; %so far no randomization implemented
+% r=0; %so far no randomization implemented
 
-nbootstrap    = 100;
+% nbootstrap    = 100;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
@@ -39,6 +39,7 @@ if analysis_type == 1
         Init;
         Y         = labels.SI';
         X         = data;
+        randomizeifwanted;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -58,8 +59,9 @@ elseif analysis_type == 2
     w             = [];
     for n = 1:nbootstrap
         Init;
-        Y         = labels.alpha_bef2';
+        Y         = labels.discr';
         X         = data;
+        randomizeifwanted;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -79,6 +81,7 @@ elseif analysis_type == 3
         Init;
         Y         = labels.sigma';
         X         = data;
+        randomizeifwanted;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -101,6 +104,12 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
         Classified                      = [Classified; predicted_label];
         Real                            = [Real;Y(P.test)];
     end
+    function randomizeifwanted
+        if r == 1
+            warning('Randomizing labels happening...!')
+            Y = Shuffle(Y);
+        end
+    end
     function Init
         Classified = uint8([]);
         Real       = uint8([]);
@@ -120,7 +129,7 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
             t = datestr(now,30);
-            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis','20151121T163214');
+            path = fullfile(homedir,'Documents','Experiments','FearCloud_Eyelab','data','midlevel','svm_analysis','20160125');
             mkdir(path)
             addpath([homedir '/Documents/GitHub/libsvm/matlab'])
         elseif isunix
