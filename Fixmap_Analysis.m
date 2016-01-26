@@ -522,10 +522,12 @@ for n = 1:length(subjmaps)
 end
 imagesc(reshape(r,[50 50]),[-1.5 1.5])
 for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+
+
 %% Which parts of the fixation map correlates with an increased generalization.
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect(Project.subjects_600,mask);%subjects
+subjects    = intersect(Project.subjects_1500,mask);%subjects
 g           = Group(subjects);%get the data for these subjects
 g.getSI(3);
 fix         = Fixmat(subjects,[2 3 4]);
@@ -1470,5 +1472,22 @@ end
 valid = prod([g.tunings.rate{3}.pval;g.tunings.rate{4}.pval] > -log10(0.05));
 mat((ismember(unique(fix.subject),subjects)==0),[1:11]) = nan;
 mat((ismember(unique(fix.subject),subjects)==0),[12:14])= nan;
+%% latest dendrogram, k=3 clusters
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+fix = Fixmat(subjects,4);
+fix.getsubmaps;
+fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+g = Group(subjects);g.getSI(3);[mat tags]=g.parameterMat;
+%now we need to prepare the correct data for these guys
+mask = p.getMask('RATE');
+invalid_r = ~ismember(subjects,find(mask));
+mask = p.getMask('PMF');
+invalid_a = ~ismember(subjects,find(sum(mask,2)==4)); 
+mat(invalid_a,1:11) = NaN;
+mat(invalid_r,12:14)= NaN;
 
+[branch_id] = fix.dendrogram(3,mat(:,14));
+%[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
 
