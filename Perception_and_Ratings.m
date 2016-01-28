@@ -1,3 +1,14 @@
+p    = Project;
+mask = p.getMask('PMF');
+Subjects = intersect(find(sum(mask,2)==4),[Project.subjects_1500]);
+g15= Group(Subjects);
+mat15 = g15.parameterMat;
+clear g15%for memory reasons
+Subjects = intersect(find(sum(mask,2)==4),Project.subjects_600);
+g6 = Group(Subjects);
+mat6 = g6.parameterMat;
+clear g6
+mat = [mat15;mat6];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % alpha
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6,6 +17,20 @@ bar([1 2 4 5 7 8 10 11 13 14 16 17],[mean(mat(:,1)) mean(mat(:,2)) mean(mat(:,3)
 hold on;
 errorbar([1 2 4 5 7 8 10 11 13 14 16 17],[mean(mat(:,1)) mean(mat(:,2)) mean(mat(:,3)) mean(mat(:,4)) mean(mat15(:,1)) mean(mat15(:,2)) mean(mat15(:,3)) mean(mat15(:,4)) mean(mat6(:,1)) mean(mat6(:,2)) mean(mat6(:,3)) mean(mat6(:,4))],[std(mat(:,1))./sqrt(51) std(mat(:,2))./sqrt(51) std(mat(:,3))./sqrt(51) std(mat(:,4))./sqrt(51) std(mat15(:,1))./sqrt(25) std(mat15(:,2))./sqrt(25) std(mat15(:,3))./sqrt(25) std(mat15(:,4))./sqrt(25) std(mat6(:,1))./sqrt(26) std(mat6(:,2))./sqrt(26) std(mat6(:,3))./sqrt(26) std(mat6(:,4))./sqrt(26)],'k.')
 set(gca,'xtick',[1.5 4.5 8.5 11.5 15.5 18.5],'xticklabel',{'CS+' 'CS-' 'CS+' 'CS-' 'CS+' 'CS-'})
+
+%% plot actual figure
+%better worse
+csp_better = length(find(mat(:,1)-mat(:,3)>0))./length(mat(:,1));
+csn_better = length(find(mat(:,2)-mat(:,4)>0))./length(mat(:,2));
+bar([csp_better 1-csp_better; csn_better 1-csn_better],0.4,'stacked')
+set(gca,'XTicklabel',{'CS+','CS-'})
+xlim([0.5 2.5])
+n1 = length(find(mat(:,1)-mat(:,3)>0)); N1 = length(mat(:,1));
+n2 = length(find(mat(:,2)-mat(:,4)>0)); N2 = length(mat(:,2));
+x1 = [repmat('a',N1,1); repmat('b',N2,1)];
+x2 = [ones(n1,1); repmat(2,N1-n1,1); ones(n2,1); repmat(2,N2-n2,1)];
+[tbl,chi2stat,pval] = crosstab(x1,x2)
+
 %%
 load('C:\Users\onat\Desktop\Lea\behavioral_data.mat','data')
 [h,p,ci,stats] = ttest(data(:,1),data(:,3))%before the experiment, CSP vs CSN
@@ -121,3 +146,24 @@ title(sprintf('r = %1.2g',corr2(mean(mat(:,[1 3]),2),mat(:,14))))
 xlabel(sprintf(sprintf('sigma_{cond} - sigma_{test} (in deg) \n Sharpening Index')))
 axis square
 set(gca,'fontsize',20)
+
+%% all correlations
+clf
+mat(:,15) = mean(mat(:,[1 3]),2);
+mat(:,16) = mean(mat(:,[2 4]),2);
+tags{15} = 'alpha_before';
+tags{16} = 'alpha_after';
+[r,pval]=corr(mat);
+hold off
+imagesc(r)
+set(gca,'XTick',1:length(mat),'YTick',1:length(mat),'YTickLabel',tags)
+axis image
+colorbar
+hold on;
+[y x]=ind2sub(size(r),find(pval<0.05));
+text(x,y,'x','FontSize',8)
+[y x]=ind2sub(size(r),find(pval<0.01));
+text(x,y,'x','FontSize',11)
+[y x]=ind2sub(size(r),find(pval<0.001));
+text(x,y,'x','FontSize',15)
+
