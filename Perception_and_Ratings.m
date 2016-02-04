@@ -153,6 +153,8 @@ mat(:,15) = mean(mat(:,[1 3]),2);
 mat(:,16) = mean(mat(:,[2 4]),2);
 tags{15} = 'alpha_before';
 tags{16} = 'alpha_after';
+%% 
+clf
 [r,pval]=corr(mat);
 hold off
 imagesc(r)
