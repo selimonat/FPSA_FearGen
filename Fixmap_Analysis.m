@@ -1479,7 +1479,10 @@ subjects = intersect(find(mask),Project.subjects_1500);
 fix = Fixmat(subjects,4);
 fix.getsubmaps;
 fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
-g = Group(subjects);g.getSI(3);[mat tags]=g.parameterMat;
+
+
+
+g = Group(subjects);g.getSI(8);[mat tags]=g.parameterMat;
 %now we need to prepare the correct data for these guys
 mask = p.getMask('RATE');
 invalid_r = ~ismember(subjects,find(mask));
@@ -1491,3 +1494,11 @@ mat(invalid_r,12:14)= NaN;
 [branch_id] = fix.dendrogram(3,mat(:,14));
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
 
+load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrmat.mat')
+scr = [ss' m];
+sub1 = subjects(branch_id==1);
+sub2 = subjects(branch_id==2);
+subplot(1,2,1);h = bar(mean(scr(ismember(scr(:,1),sub1),2:end)));SetFearGenBarColors(h);
+subplot(1,2,2);h = bar(mean(scr(ismember(scr(:,1),sub2),2:end)));SetFearGenBarColors(h);
+EqualizeSubPlotYlim(gcf)
