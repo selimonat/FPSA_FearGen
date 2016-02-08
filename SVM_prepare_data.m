@@ -83,6 +83,7 @@ subjects        = intersect(find(sum(mask,2)==4),subjects);
 g               = Group(subjects);
 g.getSI(3);
 [mat,tag] = g.parameterMat;
+clear g
 
 %good discriminator vs bad
 crit = median(mean(mat(:,[1 3]),2));
@@ -105,7 +106,8 @@ labels.pos       = NaN(1,ttrial);
 labels.discr     = NaN(1,ttrial);
 v = [];
 c=0;
-for sub = g.ids'
+deletecount = 0;
+for sub = subjects(:)'
     for ph = phases
         for tr = 1:max(fix.trialid(fix.phase == ph))
             v = {'subject' sub, 'phase' ph 'trialid' tr 'deltacsp' fix.realcond};
@@ -128,6 +130,8 @@ for sub = g.ids'
                 else
                     labels.pos(c)   = NaN;
                 end
+            else
+                deletecount = deletecount +1;
             end
         end
     end
@@ -163,7 +167,6 @@ eigen = fliplr(e);
 num = min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
-
 
 
 % save ~/Desktop/phase1.mat datamatrix labels
@@ -462,24 +465,13 @@ fix.getsubmaps;
 fix.maps = reshape(hp,[50 50]);
 fix.plot;
 
-g = Group(unique(labels.sub));g.getSI(3);[mat tags] = g.parameterMat; fix = Fixmat(g.ids,4);fix.getsubmaps;
+g = Group(unique(labels.sub));g.getSI(3);[mat tags] = g.parameterMat; clear g;
+fix = Fixmat(unique(labels.sub),4);fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmap    = fix.vectorize_maps;
 hpload     = hp(:)'*subjmap;
-[r,pval]=corr(hpload',g.SI)
-%correlating ph04 with something of ph01
-p = Project;
-mask = p.getMask('ET_discr');ET_people = find(mask);mask = p.getMask('PMF');discr_people = find(sum(mask,2)==4);
-ETPMF = intersect(ET_people,discr_people);
-ETPMF = intersect(ETPMF,Project.subjects_1500);
-valid = ismember(g.ids,ETPMF);
-sum(valid)
-%or
-p = Project;
-mask = p.getMask('ET_feargen');ET_people = find(mask);mask = p.getMask('RATE');rate_people = find(mask);
-ETRATE = intersect(ET_people,rate_people);
-ETRATE = intersect(ETRATE,Project.subjects_1500);
-valid = ismember(g.ids,ETRATE);
-sum(valid)
+[r,pval]=corr(hpload',mat(:,14))
 
-
+p = Project; mask = p.getMask('PMF');
+valid = ismember(unique(labels.sub),find(sum(mask,2)==4));
+[r,pval]=corr(hpload(valid)',mean(mat(valid,[1 3]),2))
