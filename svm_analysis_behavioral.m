@@ -30,7 +30,7 @@ savepath      = [];
 model         = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI_class'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_SI'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -52,7 +52,7 @@ if analysis_type == 1
     end
     
 elseif analysis_type == 2
-    name_analysis = 'subjects_by_alpha_class'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_alpha'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -72,7 +72,7 @@ elseif analysis_type == 2
         w(:,n)          = model.SVs'*model.sv_coef;
     end
 elseif analysis_type == 3
-    name_analysis = 'subjects_by_sigmatest'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_kappa'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -129,9 +129,9 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
             t = datestr(now,30);
-            path = fullfile(homedir,'Documents','Experiments','FearCloud_Eyelab','data','midlevel','svm_analysis','20160127');
+            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160217';
             mkdir(path)
-            addpath([homedir '/Documents/GitHub/libsvm/matlab'])
+            addpath('C:\Users\user\Documents\GitHub\libsvm\matlab\')
         elseif isunix
             [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
             path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
