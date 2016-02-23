@@ -506,36 +506,115 @@ fix.plot;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Which parts of the fixation map correlates with good alpha
+%% Which parts of the fixation map correlate with good alpha
+clear all
 p           = Project;
 mask = p.getMask('ET_discr');
-subjects = intersect(Project.subjects_1500,find(mask));
+subjects = intersect([Project.subjects_1500],find(mask));
 mask = p.getMask('PMF');
 subjects = intersect(subjects,find(sum(mask,2)==4));
 g = Group(subjects);[mat tags] = g.parameterMat;
+clear g
 fix = Fixmat(subjects, 1);
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
+
+%normal correlation
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2));
 end
 imagesc(reshape(r,[50 50]),[-1.5 1.5])
 for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+fix.maps = reshape(r,[50 50]);
+fix.plot
 
+%bootstrap
+for n = 1:length(subjmaps)
+    data = [subjmaps(n,:)',mean(mat(:,[1 3]),2)];
+    if ~any(sum(data)==0)
+        n
+        [dummy dummy2] = CorrelationMatrix(data, 100,0.05,'bootci');
+        cmat(n) = dummy(1,2);
+        pmat(n) = dummy2(1,2);
+    else
+        cmat(n) = NaN;
+        pmat(n) = 0;
+    end
+end
+%mask: multiply with average fixmap
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+fix.maps = Scale(mean(fix.maps,3));
+fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.plot
+%binary mask
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+fix.maps = mean(fix.maps,3);
+bla = fix.maps;
+fix.maps = bla > prctile(bla(:),5);
+fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.plot
 
-%% Which parts of the fixation map correlates with an increased generalization.
+%% Which parts of the fixation map correlate with an increased generalization.
+clear all
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect(Project.subjects_1500,mask);%subjects
+subjects    = intersect([Project.subjects_1500],mask);%subjects
 g           = Group(subjects);%get the data for these subjects
-g.getSI(3);
-fix         = Fixmat(subjects,[2 3 4]);
-fix.unitize = 1;
-[M i]       = g.parameterMat;
-param       = M(:,end);%sharpening index
+g.getSI(8);
+[mat tags]  = g.parameterMat;
+clear g;
+fix         = Fixmat(subjects,4);
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+subjmaps = fix.vectorize_maps;
+
+%normal correlation
+param       = mat(:,13);%kappa test
+
+for n = 1:length(subjmaps)
+    [r(n),pval(n)] = corr(subjmaps(n,:)',param);
+end
+imagesc(reshape(r,[50 50]),[-1.5 1.5])
+for n = find(pval<0.001);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+fix.maps = reshape(r,[50 50]);
+fix.plot
+
+%bootci
+for n = 1:length(subjmaps)
+    data = [subjmaps(n,:)',mat(:,14)];
+    if ~any(sum(data)==0)
+        n
+        [dummy dummy2] = CorrelationMatrix(data, 100,0.05,'bootstrp');
+        dummy(isnan(dummy)) = 0;
+        cmat(n) = mean(dummy);
+%         pmat(n) = dummy2;
+    else
+        cmat(n) = NaN;
+        pmat(n) = 0;
+    end
+end
+
+%mask: multiply with average fixmap
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+fix.maps = Scale(mean(fix.maps,3));
+fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.plot
+%binary mask
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+fix.maps = mean(fix.maps,3);
+bla = fix.maps;
+fix.maps = bla > prctile(bla(:),5);
+fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.plot
+
+%% median split good vs bad generalizers
 i           = param > median(param);%median
-%
+
 c = 0;
 v = [];
 for subs = {subjects(i) subjects(~i)}%good and then bad
@@ -1491,10 +1570,10 @@ invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:14)= NaN;
 
-[branch_id] = fix.dendrogram(3,mat(:,14));
+[branch_id] = fix.dendrogram(4,mat(:,13));
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
 
-load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
+% load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrmat.mat')
 scr = [ss' m];
 sub1 = subjects(branch_id==1);
@@ -1502,3 +1581,100 @@ sub2 = subjects(branch_id==2);
 subplot(1,2,1);h = bar(mean(scr(ismember(scr(:,1),sub1),2:end)));SetFearGenBarColors(h);
 subplot(1,2,2);h = bar(mean(scr(ismember(scr(:,1),sub2),2:end)));SetFearGenBarColors(h);
 EqualizeSubPlotYlim(gcf)
+
+%% find beneficial locations that correlate with discrimination/alpha
+clear all
+p = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),[Project.subjects_1500 Project.subjects_600]);
+mask = p.getMask('PMF');
+subjects = intersect(find(sum(mask,2)==4),subjects);
+g = Group(subjects);
+[mat tags] = g.parameterMat;
+
+fix = Fixmat(subjects,1);
+fix.getsubmaps;
+fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+submaps = fix.vectorize_maps;
+r = NaN(length(submaps),1);
+pval = NaN(length(submaps),1);
+for n = 1:size(fix.maps,3)
+    [r(n),pval(n)] = corr(submaps(n,:)',mean(mat(:,[1 3]),2));
+end
+imagesc(reshape(r,[50 50]))
+
+
+%% freezing behavior?
+clear all
+p               = Project;
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),Project.subjects_1500);
+fix = Fixmat(subjects,4);
+%
+[a,b] = fix.histogram;
+close;
+histmat = zscore(a(:,1:8)')';
+imagesc(histmat)
+b = bar(sum(histmat));
+SetFearGenBarColors(b);
+figure;
+subplot(1,2,1);imagesc(a(:,1:8));
+subplot(1,2,2);imagesc(histmat);
+
+%sort histmat by SCR amplitude
+scr_bars(2,:)=[];
+histmat(end,:)=[];
+a(end,:) = [];
+scr_ampl = scr_bars(:,1) - scr_bars(:,2);
+[~,i] = sort(scr_ampl);
+subplot(1,2,1);imagesc(a(i,1:8));
+subplot(1,2,2);imagesc(histmat(i,:));
+
+%% SVM results (svm_analysis option 14 and 15)
+%insubject:
+w0 = w;
+w = mean(w0,3);
+num=60;
+fix.getsubmaps;
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+meanmap = Scale(mean(fix.maps,3));
+
+for n = 1:size(w,2);
+    hp(:,:,n) = squeeze(eigen(:,1:num)*w(:,n));
+end
+% for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
+for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]).*meanmap;end
+fix.plot
+
+a = mean(result,4);
+scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,2]);
+mean(scaled,3);
+
+
+%just show CSP and CSN as fixmap
+v = [];
+c = 0;
+for cs = [0 180]
+    for sub = subjects(:)'
+        
+        c    = c+1;
+        v{c} = {'deltacsp' cs 'subject' sub};
+    end
+end
+fix.getmaps(v{:});
+fix.plot
+fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 2]);
+fix.plot
+%%
+p = Project;
+subjects = [Project.subjects_1500 Project.subjects_600];
+
+c=0;
+for n = subjects(:)'
+    c=c+1;
+    s = Subject(n);
+    resp(c,1) = sum(s.paradigm{2}.out.response(s.paradigm{2}.presentation.oddball));
+    resp(c,2) = sum(s.paradigm{3}.out.response(s.paradigm{3}.presentation.oddball));
+    resp(c,3) = sum(s.paradigm{4}.out.response(s.paradigm{4}.presentation.oddball));
+    clear s
+end
