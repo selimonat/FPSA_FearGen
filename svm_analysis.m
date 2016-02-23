@@ -486,9 +486,50 @@ elseif analysis_type == 13
             w(:,n) = model.SVs'*model.sv_coef;
         end
     end
+elseif analysis_type ==14
+    name_analysis = 'CSPvCSN_insubject'; %classify CSP vs CSN within the subject
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    
+    result   = [];
+    for n = 1:nbootstrap
+        for sub = 1:nsub
+            ind  = logical(ismember(labels.easy_sub,sub));
+            Init;
+            Y                   = labels.csp(ind)';
+            X                   = data(ind,:);
+            P                   = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+            tic
+            Classify;
+            fprintf('Analysis: %s, Run %d, Sub %d %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,sub,1,0,toc,toc(start_time)/60);
+            result(:,:,sub,n) = confusionmat(Real,Classified,'order',[1 0]);
+            w(:,sub,n)          = model.SVs'*model.sv_coef;
+        end
+    end
+elseif analysis_type ==15
+    name_analysis = 'CSPvCSN_collapsesubject'; %classify CSP vs CSN within the subject
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    
+    result   = [];
+    for n = 1:nbootstrap
+        Init;
+        Y                   = labels.csp';
+        X                   = data;
+        P                   = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
+        tic
+        Classify;
+        fprintf('Analysis: %s, Run %d,  %d vs %d... in %g seconds, cumulative time %g minutes...\n',name_analysis,n,1,0,toc,toc(start_time)/60);
+        result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
+        w(:,n)          = model.SVs'*model.sv_coef;
+    end
 end
-
-save(fullfile(savepath,'result.mat'),'result')
+try
+    save(fullfile(savepath,'result.mat'),'result','model','w')
+catch
+    save(fullfile(savepath,'result.mat'),'result')
+end
+    
 
    function Classify
         model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
@@ -519,11 +560,11 @@ save(fullfile(savepath,'result.mat'),'result')
             path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
-        elseif ispc
-            %t = datestr(now,30);
-            path = fullfile(homedir,'Documents','Experiments','FearCloud_Eyelab','data','midlevel','svm_analysis','20160115');
+         elseif ispc
+            t = datestr(now,30);
+            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160217';
             mkdir(path)
-            addpath([homedir '/Documents/GitHub/libsvm/matlab'])
+            addpath('C:\Users\user\Documents\GitHub\libsvm\matlab\')
         elseif isunix
             [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
             path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
