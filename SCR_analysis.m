@@ -148,11 +148,12 @@ scr_response = mean(m,2);
 %% conditioning manipulation check
 p = Project;
 mask = find(sum(p.getMask('SCR'),2)==3);
-subjects = intersect(mask,Project.subjects_600);
+subjects = intersect(mask,Project.subjects_1500);
 
 phasenames = {'base$' 'cond$' 'test$'};
 phaseconds = [9 3 9];
 bdnf_problems = [2 13 18 31 32 39 50];
+subjects = Project.subjects_bdnf;
 %%
 
 for ph = 1:3
@@ -183,6 +184,45 @@ phaseconds = [8 2 8];
 bdnf_problems = [2 13 18 31 32 39 50];
 
 
-%% 
+%% plot single fits
+for n = 1:length(g.ids)
+    subplot(floor(sqrt(length(g.ids))),ceil(sqrt(length(g.ids))),n);
+    b=bar(g.tunings.scr.x(n,:),g.tunings.scr.y(n,:));
+    SetFearGenBarColors(b);
+    hold on;
+    x_HD = linspace(min(g.tunings.scr.x(n,:)),max(g.tunings.scr.x(n,:)),1000);
+    title(sprintf('Sub: %i, p = %5.5g',g.ids(n),g.tunings.scr.singlesubject{n}.pval));
+    hold on;
+    plot(x_HD,g.tunings.scr.singlesubject{n}.fitfun(x_HD,g.tunings.scr.singlesubject{n}.Est),'k-','linewidth',3);
+    
+end
+% EqualizeSubPlotYlim(gcf)
+for n = 1:length(g.ids);valid(n) = g.tunings.scr.singlesubject{n}.pval > -log10(0.05);end
+for n = find(valid)
+subplot(5,6,n)
+bla = ylim;
+text(135,bla(2)*0.8,'X','FontSize',20)
+end
+%% make Groupfit and plot it
+g.tunings.scr.GroupFit(8)
+% ylims = [0 0.55];%1500
+ylims = [0 0.8]; %600
+% Yticks = 0:0.1:0.5;%1500
+Yticks = [0 0.2 0.4 0.6 0.8];%600
 
+clf
+n = 1;
+x_HD = linspace(min(g.tunings.scr.x(n,:)),max(g.tunings.scr.x(n,:)),1000);
+b = bar(-135:45:180,mean(g.tunings.scr.y));
+axis square
+xlim([-180 225])
+ylim(ylims)
+hold on;
+SetFearGenBarColors(b);
+plot(x_HD,g.tunings.scr.groupfit.fitfun(linspace(-135,180,1000),g.tunings.scr.groupfit.Est),'k','LineWidth',2)
+errorbar(-135:45:180,mean(g.tunings.scr.y),std(g.tunings.scr.y)./sqrt(length(g.ids)),'k.','LineWidth',2)
+set(gca,'XTicklabel',-135:45:180,'YTick',Yticks)
+title('Groupfit Von Mises SCR 600 ms');
+%compare it to mean(single subject fit) Curve
+plot(x_HD,g.tunings.scr.groupfit.fitfun(linspace(-135,180,1000),mean(g.tunings.scr.params)),'b','LineWidth',2)
 
