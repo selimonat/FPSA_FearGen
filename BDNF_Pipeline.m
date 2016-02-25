@@ -209,5 +209,75 @@ eigen = fliplr(e);
 % n where explained variance is > 95%
 num = min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
-trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
+triallnoad = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
+%% SCR
+p = Project;
+phasenames = {'base$' 'cond$' 'test$'};
+phaseconds = [9 3 9];
+bdnf_problems = [2 13 18 31 32 39 50];
+subjects = Project.subjects_bdnf(~ismember(Project.subjects_bdnf,bdnf_problems));
+for ph = 1:3
+    sc = 0;
+    for sub = subjects(:)'
+        fprintf('Working on phase %d, subject %d .. \n',ph,sub)
+        sc=sc+1;
+        s = Subject(sub);
+        ids(sc) = s.id;
+        s.scr.cut(s.scr.findphase(phasenames{ph}));
+        s.scr.run_ledalab;
+        s.scr.plot_tuning_ledalab(1:phaseconds(ph))
+        if ismember(ph,[1 3])
+            scr_bars(sc,:,ph) = s.scr.fear_tuning;
+        else
+            scr_bars(sc,[4 8 9],ph) = s.scr.fear_tuning;
+        end
+        close all
+        clear s
+    end
+end
+%
+load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\scr_N70_BCT.mat');
+%% plot
+ylims = [0 1];
+Yticks = 0:0.2:1;
+for g = [1 2]
+    for n = [1 3]
+        subpl((-1+g)*3+n) = subplot(2,3,(-1+g)*3+n);
+        b = bar(1:8,mean(scr_bars(members(:,g),1:8,n)));
+        hold on;
+        ylim(ylims)
+        xlim([0 9])
+        e = errorbar(1:8,mean(scr_bars(members(:,g),1:8,n)),std(scr_bars(members(:,g),1:8,n))./sqrt(size(scr_bars,1)),'k.');
+        set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks)
+        SetFearGenBarColors(b)
+        set(e,'LineWidth',2,'Color','k')
+        axis square
+        box off
+    end
+    subplot(2,3,(-1+g)*3+1);ylabel('SCR [muS]')
+    %cond special treatment
+    n=2;
+    subpl((-1+g)*3+n) = subplot(2,3,(-1+g)*3+n);
+    b(1) = bar(4,mean(scr_bars(members(:,g),4,2)));
+    hold on;
+    e(1) = errorbar(4,mean(scr_bars(members(:,g),4,2)),std(scr_bars(members(:,g),4,2))./sqrt(size(scr_bars,1)),'k.');
+    ylim(ylims)
+    xlim([0 9])
+    set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks);
+    b(2) =  bar(8,mean(scr_bars(members(:,g),8,2)));
+    e(2) = errorbar(8,mean(scr_bars(members(:,g),8,2)),std(scr_bars(members(:,g),8,2))./sqrt(size(scr_bars,1)));
+    set(b(1),'FaceColor',[1 0 0],'EdgeColor','w');
+    set(b(2),'FaceColor','c','EdgeColor','w');
+    set(e,'LineWidth',2,'Color','k');
+    axis square
+    box off
+    try
+        for n = 1:size(scr_bars,3)
+            subplot(2,3,(-1+g)*3+n)
+            line([0 9],repmat(mean(scr_bars(members(:,g),9,n)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':')
+        end
+    end
+end
+subplot(2,3,2);title('Group 1')
+subplot(2,3,5);title('Group 2')
