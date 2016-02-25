@@ -74,7 +74,7 @@ end
 % All the above is done by considering all subjects as one single megasubject i.e. the analysis
 % is not done individually.
 % compute single subject correlation matrices
-%% plot and save single subject fixations maps
+%% plot and save single subject fixations maps RSA
 tsub = length(unique(fix.subject));
 out  = [];
 % for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
@@ -109,7 +109,7 @@ for subject = unique(fix.subject);
     [cormat_b(:,:,subc) pval_b(:,:,subc)] = fix.corr;
 end
 % end
-%%
+%% RSA
 subplot(1,2,1);
 imagesc(median(cormat_b,3),[-.1 .1]);
 axis square;colorbar;
@@ -120,6 +120,53 @@ imagesc(median(cormat_t,3),[-.1 .1])
 axis square;colorbar
 set(gca,'fontsize',15)
 axis off
+
+%% try the same as MDS
+tsub = length(unique(fix.subject));
+dismat_t = zeros(8,8,tsub);
+subc            = 0;
+for subject = unique(fix.subject);
+    subc = subc + 1
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for ph = [4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
+        end
+    end
+    % plot and save fixation maps
+    fix.getmaps(v{:});
+    fix.maps   = fix.maps(:,:,1:8) - repmat(mean(fix.maps(:,:,1:8),3),[1 1 8]);%baseline, take out the average
+    fixmap = fix.vectorize_maps;
+    
+    dismat_t(:,:,subc) = squareform(pdist(fixmap','correlation'));
+    
+end
+%%
+sc = 0;
+for sub = 1:27%[1:22 25:27]
+    sc=sc+1
+    sub
+    mds(:,:,sc)   = mdscale(dismat_t(:,:,sub),2,'criterion','metricstress');
+end
+% mds(:,:) = mdscale(mean(dismat_t,3),2,'criterion','metricstress');
+%%
+% plot plot the MDS results
+colors = GetFearGenColors;
+for n=1:length(mds)
+    for f = 1:8
+        set(gcf,'DefaultAxesColorOrder',colors);
+        plot(mds(f,1,n),mds(f,2,n),'wo','MarkerFaceColor',colors(f,:),'MarkerSize',20)
+        hold on
+    end
+end
+hold on
+axis square
+%%
+
+
 %% compute single subject maps and similarity matrices, and finally average them across subjects.
 tsub = length(unique(fix.subject));
 cormat_t = nan(8,8,tsub,6);
@@ -546,7 +593,7 @@ end
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 fix.maps = Scale(mean(fix.maps,3));
-fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.maps = reshape(r,[50 50]).*fix.maps;
 fix.plot
 %binary mask
 fix.getsubmaps;
@@ -572,7 +619,7 @@ fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
 
 %normal correlation
-param       = mat(:,13);%kappa test
+param       = mat(:,14);%kappa test
 
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',param);
@@ -601,7 +648,7 @@ end
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 fix.maps = Scale(mean(fix.maps,3));
-fix.maps = reshape(cmat,[50 50]).*fix.maps;
+fix.maps = reshape(r,[50 50]).*fix.maps;
 fix.plot
 %binary mask
 fix.getsubmaps;
