@@ -21,6 +21,7 @@ path = setPath;
 % r=0; %so far no randomization implemented
 
 % nbootstrap    = 100;
+balance=1;
 cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
@@ -62,11 +63,12 @@ elseif analysis_type == 2
         Y         = labels.discr';
         X         = data;
         randomizeifwanted;
+%         balanceclasses;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
         Classify;
-         fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
+        fprintf('Analysis: %s, Run %d - in %g seconds, cumulative time %g minutes...\n',name_analysis,n,toc,toc(start_time)/60);
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
@@ -96,7 +98,7 @@ elseif analysis_type == 3
 end
 
 
-save(fullfile(savepath,'result.mat'),'result','model','w')
+% save(fullfile(savepath,'result.mat'),'result','model','w')
 
     function Classify
         model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
@@ -108,6 +110,16 @@ save(fullfile(savepath,'result.mat'),'result','model','w')
         if r == 1
             warning('Randomizing labels happening...!')
             Y = Shuffle(Y);
+        end
+    end
+    function balanceclasses
+        if balance == 1;
+            nclass = hist(Y,unique(Y));
+            [tclass,class] = min(nclass);%set total number we want
+            ind = randi([1 tclass],nclass(1),1);
+            class_ind = find((Y==class));
+            Y = Y([class_ind(ind); find(Y~=class)]);
+            X = X([class_ind(ind); find(Y~=class)],:);
         end
     end
     function Init
