@@ -95,7 +95,6 @@ subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('PMF');
 subjects        = intersect(find(sum(mask,2)==4),subjects);
 g               = Group(subjects);
-g.getSI(3);
 [mat,tag] = g.parameterMat;
 clear g
 
@@ -593,5 +592,12 @@ num = min(find((cumsum(dv)./sum(dv))>.95));
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
 
-
+%% subject identificatino
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\versionABCDEFG\subjects_rand0\result.mat')
+a = result;
+scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,27]);
+subplot(1,2,1);imagesc(mean(scaled,3))
+axis square
+subplot(1,2,2);a = CancelDiagonals(mean(scaled,3),0);imagesc(a);
+axis square
 
