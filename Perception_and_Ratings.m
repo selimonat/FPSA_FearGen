@@ -25,16 +25,19 @@ for n = 2:4
 end
 subplot(3,3,1);ylabel('Rating of p(shock)')
 %%scr 
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat','subjects','scr_bars')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600BCT.mat','subjects','scr_bars')
+ylims = [.3 1.1];%600   %1500: 0.7
+Yticks = [0.3 0.6 0.9];%600, %1500: [0 0.3 0.6]
+
 % plot
 for n = [1 3]
 subpl(3+n) = subplot(3,3,3+n);
 b = bar(1:8,mean(scr_bars(:,1:8,n)));
 hold on;
-ylim([0 0.7])
+ylim(ylims)
 xlim([0 9])
 e = errorbar(1:8,mean(scr_bars(:,1:8,n)),std(scr_bars(:,1:8,n))./sqrt(size(scr_bars,1)),'k.');
-set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 0.3 0.6])
+set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks)
 SetFearGenBarColors(b)
 set(e,'LineWidth',2,'Color','k')
 axis square
@@ -46,13 +49,13 @@ subpl(5) = subplot(3,3,5);
 b(1) = bar(4,mean(scr_bars(:,4,2)));
 hold on;
 e(1) = errorbar(4,mean(scr_bars(:,4,2)),std(scr_bars(:,4,2))./sqrt(size(scr_bars,1)),'k.');
-ylim([0 0.7])
+ylim(ylims)
 xlim([0 9])
-set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 0.3 0.6]);
+set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks);
 b(2) =  bar(8,mean(scr_bars(:,8,2)));
 e(2) = errorbar(8,mean(scr_bars(:,8,2)),std(scr_bars(:,8,2))./sqrt(size(scr_bars,1)));
-set(b(1),'FaceColor',[1 0 0]);
-set(b(2),'FaceColor','c');
+set(b(1),'FaceColor',[1 0 0],'EdgeColor','w');
+set(b(2),'FaceColor','c','EdgeColor','w');
 set(e,'LineWidth',2,'Color','k');
 axis square
 box off
@@ -63,9 +66,8 @@ try
     end
 end
 
-EqualizeSubPlotYlim(subpl(4:6));
-
-% add generalization in fixations
+t = supertitle('Conditioning in 600 ms');set(t,'FontSize',14)
+%% add generalization in fixations
 mask = p.getMask('ET_feargen');
 subjects = intersect(find(mask),Project.subjects_600);
 fix = Fixmat(subjects,2:4);
