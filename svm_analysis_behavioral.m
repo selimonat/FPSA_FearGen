@@ -1,4 +1,4 @@
-function [result,w] = svm_analysis_behavioral(analysis_type,data,labels,r,nbootstrap)
+function [result,w,reals,classes] = svm_analysis_behavioral(analysis_type,data,labels,r,nbootstrap)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -21,8 +21,8 @@ path = setPath;
 % r=0; %so far no randomization implemented
 
 % nbootstrap    = 100;
-balance=1;
-cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
+balance       = 1;
+cmd           = '-t 0 -c 1 -q '; %t 0: linear, -c 1: criterion, -q: quiet   -w1 1.0715 -w0 1
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
 phases        = 1:5;
@@ -31,7 +31,7 @@ savepath      = [];
 model         = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_SI1213'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -40,6 +40,7 @@ if analysis_type == 1
         Init;
         Y         = labels.SI';
         X         = data;
+        balanceclasses;
         randomizeifwanted;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
@@ -50,6 +51,8 @@ if analysis_type == 1
         fprintf('===============\nFinished run %d in %g minutes...\n===============\n',n,toc(start_time)/60);
         result(:,:,n) = confusionmat(Real,Classified,'order',[1 0]);
         w(:,n)          = model.SVs'*model.sv_coef;
+        reals(:,n)       = Real;
+        classes(:,n) = Classified;
     end
     
 elseif analysis_type == 2
@@ -63,7 +66,7 @@ elseif analysis_type == 2
         Y         = labels.discr';
         X         = data;
         randomizeifwanted;
-%         balanceclasses;
+        balanceclasses;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
         tic
@@ -74,7 +77,7 @@ elseif analysis_type == 2
         w(:,n)          = model.SVs'*model.sv_coef;
     end
 elseif analysis_type == 3
-    name_analysis = 'subjects_by_kappa'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_kappa1213'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -83,6 +86,7 @@ elseif analysis_type == 3
         Init;
         Y         = labels.sigma';
         X         = data;
+        balanceclasses;
         randomizeifwanted;
         P         = cvpartition(Y,'Holdout',.2); %prepares trainings vs testset
         %
@@ -114,12 +118,13 @@ end
     end
     function balanceclasses
         if balance == 1;
-            nclass = hist(Y,unique(Y));
-            [tclass,class] = min(nclass);%set total number we want
-            ind = randi([1 tclass],nclass(1),1);
-            class_ind = find((Y==class));
-            Y = Y([class_ind(ind); find(Y~=class)]);
-            X = X([class_ind(ind); find(Y~=class)],:);
+            classtocut = mode(Y);
+            numbers = hist(Y,[0 1]);
+            maxtrials = min(numbers);
+            ind = randi(max(numbers),maxtrials,1);
+            ind_tocut = find(Y == classtocut);
+            Y = Y([ind_tocut(ind); find(Y~=classtocut)]);
+            X = X([ind_tocut(ind); find(Y~=classtocut)],:);
         end
     end
     function Init
@@ -128,7 +133,7 @@ end
         start_time = tic;
     end
     function PrepareSavePath
-        savepath      = fullfile(path,[name_analysis '_rand' num2str(r),filesep]);
+        savepath      = fullfile(path,[name_analysis '_rand' num2str(r) '_b' num2str(balance),filesep]);
         if exist(savepath) == 0;mkdir(savepath);end
         fprintf('Created save path: %s\n',savepath);
     end
