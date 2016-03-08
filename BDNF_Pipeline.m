@@ -253,7 +253,16 @@ subs2 = Project.subjects_bdnf(Project.BDNF ==2);
 members(:,1) = ismember(subjects,subs1);
 members(:,2) = ismember(subjects,subs2);
 %% OR
-load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\scr_N70_BCT.mat');
+load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\males_scr_1_2.mat')
+scr_bars1m = scr_bars1;
+scr_bars2m = scr_bars2;
+load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\females_scr_1_2.mat')
+scr_bars1 = [scr_bars1m; scr_bars1];
+scr_bars2 = [scr_bars2m; scr_bars2];
+members(:,1) = [ones(41,1);zeros(32,1)];
+members(:,2) = [zeros(41,1);ones(32,1)];
+scr_bars = [scr_bars1;scr_bars2];
+members = logical(members);
 %% plot
 ylims = [0 1];
 Yticks = 0:0.2:1;
@@ -297,3 +306,26 @@ for g = [1 2]
 end
 subplot(2,3,2);title('Group 1')
 subplot(2,3,5);title('Group 2')
+%% statistical tests for SCR
+%CSP vs null trials
+scr1 = scr_bars1(:,4,2)-scr_bars1(:,9,2);
+scr2 = scr_bars2(:,4,2)-scr_bars2(:,9,2);
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+scr1 = scr_bars1(:,4,3)-scr_bars1(:,9,3);
+scr2 = scr_bars2(:,4,3)-scr_bars2(:,9,3);
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+%CSP-CSN./CSP+CSN
+scr1 =( scr_bars1(:,4,2)-scr_bars1(:,8,2))./( scr_bars1(:,4,2)+scr_bars1(:,8,2));
+scr2 =( scr_bars2(:,4,2)-scr_bars2(:,8,2))./( scr_bars2(:,4,2)+scr_bars2(:,8,2));
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+scr1 =( scr_bars1(:,4,3)-scr_bars1(:,8,3))./( scr_bars1(:,4,3)+scr_bars1(:,8,3));
+scr2 =( scr_bars2(:,4,3)-scr_bars2(:,8,3))./( scr_bars2(:,4,3)+scr_bars2(:,8,3));
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+% SCR across 2 or 8 conditions (cond/test)
+scr1 = mean(scr_bars1(:,1:8,2),2)
+scr2 = mean(scr_bars2(:,1:8,2),2)
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+scr1 = mean(scr_bars1(:,1:8,3),2)
+scr2 = mean(scr_bars2(:,1:8,3),2);
+[H,P,CI,STATS] = ttest2(scr1,scr2)
+
