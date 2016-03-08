@@ -11,6 +11,8 @@ N2 = length(g2.ids);
 g1.getSI(8);
 g2.getSI(8);
 %
+[mat1 tags] = g1.misesMat;
+mat2 = g2.misesMat;
 threshold = .05;
 valid2 = prod([g2.tunings.rate{3}.pval;g2.tunings.rate{4}.pval] > -log10(threshold));
 valid1 = prod([g1.tunings.rate{3}.pval;g1.tunings.rate{4}.pval] > -log10(threshold));
@@ -20,6 +22,8 @@ g1.sigma_test(~valid1) = NaN;
 g2.sigma_test(~valid2) = NaN;
 g1.SI(~valid1) = NaN;
 g2.SI(~valid2) = NaN;
+mat1(~valid1,:) = NaN;
+mat2(~valid2,:) = NaN;
 
 %%
 g1.tunings.rate{3}.GroupFit(8)
@@ -52,18 +56,26 @@ for n = [g1 g2]
     box off;
 end
 EqualizeSubPlotYlim(gcf)
-%% get mu
-for s = 1:length(g1.ids)
-    mu1(s,1) = g1.tunings.rate{3}.singlesubject{s}.Est(3);
-    mu1(s,2) = g1.tunings.rate{4}.singlesubject{s}.Est(3);
-end
-for s = 1:length(g2.ids)
-    mu2(s,1) = g2.tunings.rate{3}.singlesubject{s}.Est(3);
-    mu2(s,2) = g2.tunings.rate{4}.singlesubject{s}.Est(3);
-end
-mat1 = [g1.sigma_cond g1.sigma_test g1.SI mu1];
-mat2 = [g2.sigma_cond g2.sigma_test g2.SI mu2];
-tags = {'kappa_cond','kappa_test','SI','Mu_cond','mu_test'};
+%% barplot Kappa|SI|Mu
+figure;
+subplot(1,2,1)
+bar([1 2 4 5 7 8],[nanmean(mat1(:,1)),nanmean(mat2(:,1)),nanmean(mat1(:,2)),nanmean(mat2(:,2)),nanmean(mat1(:,3)),nanmean(mat2(:,3))])
+box off
+hold on;errorbar([1 2 4 5 7 8],...
+    [nanmean(mat1(:,1)),nanmean(mat2(:,1)),nanmean(mat1(:,2)),nanmean(mat2(:,2)),nanmean(mat1(:,3)),nanmean(mat2(:,3))],...
+    [nanstd(mat1(:,1))./sqrt(sum(valid1)),nanstd(mat2(:,1))./sqrt(sum(valid2)),nanstd(mat1(:,2))./sqrt(sum(valid1)),nanstd(mat2(:,2))./sqrt(sum(valid2)),nanstd(mat1(:,3))./sqrt(sum(valid1)),nanstd(mat2(:,3))./sqrt(sum(valid2))],'k.','LineWidth',1.5)
+legend('Group 1','Group 2')
+set(gca,'XTick',[ 1.5 4.5 7.5],'XTickLabel',{'kappa_cond' 'kappa_test' 'SI'})
+legend('Group 1')
+subplot(1,2,2)
+bar([1 2 4 5],[nanmean(abs(mat1(:,4))),nanmean(abs(mat2(:,4))),nanmean(abs(mat1(:,5))),nanmean(abs(mat2(:,5)))])
+box off
+hold on;errorbar([1 2 4 5],...
+    [nanmean(abs(mat1(:,4))),nanmean(abs(mat2(:,4))),nanmean(abs(mat1(:,5))),nanmean(abs(mat2(:,5)))],...
+    [nanstd(abs(mat1(:,4)))./sqrt(sum(valid1)),nanstd(abs(mat2(:,4)))./sqrt(sum(valid2)),nanstd(abs(mat1(:,5)))./sqrt(sum(valid1)),nanstd(abs(mat2(:,5)))./sqrt(sum(valid2))],'k.','LineWidth',1.5)
+legend('Group 1','Group 2')
+set(gca,'XTick',[ 1.5 4.5],'XTickLabel',{'Mu_cond' 'Mu_test'},'YTick',0:10:45)
+legend('Group 1')
 
 %% ttests
 [H,P,CI,STATS] = ttest2(g1.sigma_cond,g2.sigma_cond)
@@ -236,7 +248,11 @@ for ph = 1:3
         clear s
     end
 end
-%
+subs1 = Project.subjects_bdnf(Project.BDNF ==1);
+subs2 = Project.subjects_bdnf(Project.BDNF ==2);
+members(:,1) = ismember(subjects,subs1);
+members(:,2) = ismember(subjects,subs2);
+%% OR
 load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\scr_N70_BCT.mat');
 %% plot
 ylims = [0 1];
