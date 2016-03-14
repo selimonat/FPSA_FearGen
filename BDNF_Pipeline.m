@@ -80,7 +80,7 @@ legend('Group 1')
 %% ttests
 [H,P,CI,STATS] = ttest2(g1.sigma_cond,g2.sigma_cond)
 [H,P,CI,STATS] = ttest2(g1.sigma_test,g2.sigma_test)
-[H,P,CI,STATS] = ttest2([g1.sigma_test ;g1.sigma_cond],[g2.sigma_test ;g2.sigma_cond]);
+[H,P,CI,STATS] = ttest2([g1.sigma_test ;g1.sigma_cond],[g2.sigma_test ;g2.sigma_cond])
 [H,P,CI,STATS] = ttest2(g1.SI,g2.SI)
 
 [H,P,CI,STATS] = ttest2(abs(mat1(:,end-1)),abs(mat2(:,end-1)))%mu cond
@@ -227,7 +227,7 @@ triallnoad = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 p = Project;
 phasenames = {'base$' 'cond$' 'test$'};
 phaseconds = [9 3 9];
-bdnf_problems = [2 13 18 31 32 39 50];
+bdnf_problems = [2 13 18 31 32 39 50 82];
 subjects = Project.subjects_bdnf(~ismember(Project.subjects_bdnf,bdnf_problems));
 for ph = 1:3
     sc = 0;
@@ -306,7 +306,35 @@ for g = [1 2]
 end
 subplot(2,3,2);title('Group 1')
 subplot(2,3,5);title('Group 2')
+%%
+phase1corr = scr_bars(:,1:8,1)-repmat(scr_bars(:,9,1),[1 8]);
+phase3corr = scr_bars(:,1:8,3)-repmat(scr_bars(:,9,3),[1 8]);
+figure
+subplot(2,1,1)
+b = bar(1:8,mean(phase3corr(members(:,1),:,:))-mean(phase1corr(members(:,1),:,:)));
+hold on
+e = errorbar(1:8,mean(phase3corr(members(:,1),:,:))-mean(phase1corr(members(:,1),:,:)),...
+    std(phase3corr(members(:,1),:,:)-phase1corr(members(:,1),:,:))./sqrt(sum(members(:,1))),'k.');
+set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
+axis square
+box off
+ylim([-.1 .9])
+SetFearGenBarColors(b)
+subplot(2,1,2)
+b = bar(1:8,mean(phase3corr(members(:,2),:,:))-mean(phase1corr(members(:,2),:,:)));
+hold on
+e = errorbar(1:8,mean(phase3corr(members(:,2),:,:))-mean(phase1corr(members(:,2),:,:)),...
+    std(phase3corr(members(:,2),:,:)-phase1corr(members(:,2),:,:))./sqrt(sum(members(:,2))),'k.');
+set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
+axis square
+box off
+ylim([-.1 .9])
+SetFearGenBarColors(b)
+EqualizeSubPlotYlim(gcf)
+
 %% statistical tests for SCR
+scr_bars1 = scr_bars(members(:,1),:,:);
+scr_bars2 = scr_bars(members(:,2),:,:);
 %CSP vs null trials
 scr1 = scr_bars1(:,4,2)-scr_bars1(:,9,2);
 scr2 = scr_bars2(:,4,2)-scr_bars2(:,9,2);
