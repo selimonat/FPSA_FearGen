@@ -1656,14 +1656,23 @@ clear all
 p               = Project;
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),Project.subjects_1500);
-fix = Fixmat(subjects,4);
+fix = Fixmat(subjects,[2 4]);
 %
 [a,b] = fix.histogram;
 close;
-histmat = zscore(a(:,1:8)')';
-imagesc(histmat)
-b = bar(sum(histmat));
+for pc = [1 2]%phase count
+histmat(:,:,pc) = zscore(a(:,1:8,pc)')';
+subplot(1,2,pc)
+b = bar(mean(histmat(:,:,pc)));
+hold on;
 SetFearGenBarColors(b);
+e = errorbar(mean(histmat(:,:,pc)),std(histmat(:,:,pc))./sqrt(length(histmat)),'k.');
+axis square
+set(gca,'XTicklabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
+end
+subplot(1,2,1)
+ylabel('mean zscore(nfix)')
+%%
 figure;
 subplot(1,2,1);imagesc(a(:,1:8));
 subplot(1,2,2);imagesc(histmat);
@@ -1698,20 +1707,112 @@ scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,2]);
 mean(scaled,3);
 
 
-%just show CSP and CSN as fixmap
-v = [];
-c = 0;
-for cs = [0 180]
+%% take difference CS+ - CS- as simple fixation map
+p               = Project;
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),Project.subjects_1500);
+fix = Fixmat(subjects,2:4);
+
+pc = 0;
+for ph = unique(fix.phase)
+    pc = pc+1;
+    sc=0;
     for sub = subjects(:)'
-        
+        sc=sc+1;
+        c = 0;
+        v = [];
+        for cs = [0 180]
+            c    = c+1;
+            v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
+        end
+    fix.getmaps(v{:});
+    maps(:,:,sc,pc) = fix.maps(:,:,1) - mean(fix.maps,3);
+    end
+end
+fix.maps = squeeze(mean(maps,3));%over subjects
+fix.plot
+%weights from overall fixation probability within the phase...
+c = 0;
+v=[];
+for ph = unique(fix.phase)
+    c    = c+1;
+    v{c} = {'phase' ph};
+end
+fix.getmaps(v{:});
+meanmaps = Scale(fix.maps);
+fix.maps = squeeze(mean(maps,3)).*meanmaps;
+%% take difference CS+ NEIGHBORS- CS- as simple fixation map
+p               = Project;
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),Project.subjects_1500);
+fix = Fixmat(subjects,[2 4]);
+
+pc = 0;
+for ph = unique(fix.phase)
+    pc = pc+1;
+    sc=0;
+    for sub = subjects(:)'
+        sc=sc+1;
+        c = 0;
+        v = [];
+        for cs = fix.realcond(:)' %[-45 45; 180 180]';neighbor vs CS-
+            c    = c+1;
+            v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
+        end
+    fix.getmaps(v{:});
+    maps(:,:,sc,pc) = mean(fix.maps(:,:,[3 5]),3) - fix.maps(:,:,8);
+    end
+end
+fix.maps = squeeze(mean(maps,3));%over subjects
+fix.plot
+%weights from overall fixation probability within the phase...
+c = 0;
+v=[];
+for ph = unique(fix.phase)
+    c    = c+1;
+    v{c} = {'phase' ph};
+end
+fix.getmaps(v{:});
+meanmaps = Scale(fix.maps);
+fix.maps = squeeze(mean(maps,3)).*meanmaps;
+
+%% is CS+ more similar between subjects than CS-?
+p               = Project;
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),Project.subjects_1500);
+fix = Fixmat(subjects,4);
+
+c = 0;
+v = [];
+for cond = [0 180]
+    for sub = subjects(:)'
         c    = c+1;
-        v{c} = {'deltacsp' cs 'subject' sub};
+        v{c} = {'deltacsp' cond 'subject' sub};
     end
 end
 fix.getmaps(v{:});
-fix.plot
-fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 2]);
-fix.plot
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+maps = fix.vectorize_maps;
+for a = 1:27
+    for b = 1:27
+        if a < b
+            rcsp(a,b) = corr(maps(:,a),maps(:,b));
+        else
+            rcsp(a,b) = NaN;
+        end
+    end
+end
+nanmean(nanmean(rcsp))
+for a = 28:54
+    for b = 28:54
+        if a < b
+            rcsn(a-27,b-27) = corr(maps(:,a),maps(:,b));
+        else
+            rcsn(a-27,b-27) = NaN;
+        end
+    end
+end
+nanmean(nanmean(rcsn))
 %%
 p = Project;
 subjects = [Project.subjects_1500 Project.subjects_600];
@@ -1725,3 +1826,23 @@ for n = subjects(:)'
     resp(c,3) = sum(s.paradigm{4}.out.response(s.paradigm{4}.presentation.oddball));
     clear s
 end
+%% entropy
+%% try the same as MDS
+tsub = length(unique(fix.subject));
+subc            = 0;
+for subject = unique(fix.subject);
+    subc = subc + 1
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for ph = [4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
+        end
+    end
+    fix.getmaps(v{:});
+    entr(:,subc) = fix.entropy;
+end
+
+    
