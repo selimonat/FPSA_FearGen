@@ -195,10 +195,12 @@ g               = Group(subjects);
 g.getSI(8);
 [mat,tag] = g.parameterMat;
 clear g;
-
-subs_goodsigma = subjects(mat(:,13)  >= median(mat(:,13)));
-subs_sharpener = subjects(mat(:,14)  >= median(mat(:,14)));
-
+subs_goodsigma = subjects(mat(:,13)  >=median(mat(:,13)));
+subs_sharpener = subjects(mat(:,14)  >=median(mat(:,14)));
+% 
+%crit = log(mat(:,13)+1)-log(mat(:,12)+1);
+% subs_sharpener = subjects(crit >= median(crit));
+% subs_goodsigma = subjects(log(mat(:,13)+1) >=median(log(mat(:,13)+1)));
 
 %prepare fixmaps
 phases = 4;
@@ -277,7 +279,7 @@ dv = sort(diag(dv),'descend');
 plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = min(find((cumsum(dv)./sum(dv))>.95));
+num =60;%min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
@@ -488,7 +490,7 @@ fix.maps = reshape(hp,[50 50]);
 fix.plot;
 
 
-g = Group(unique(labels.sub));g.getSI(8);[mat tags] = g.parameterMat; clear g;
+g = Group(unique(labels.sub));g.getSI(3);[mat tags] = g.parameterMat; clear g;
 phase = 4;
 param = mat(:,13);%mean(mat(:,[1 3]),2);
 
@@ -587,7 +589,8 @@ dv = sort(diag(dv),'descend');
 plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
 eigen = fliplr(e);
 % n where explained variance is > 95%
-num = min(find((cumsum(dv)./sum(dv))>.95));
+% num = min(find((cumsum(dv)./sum(dv))>.95));
+num=60;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
