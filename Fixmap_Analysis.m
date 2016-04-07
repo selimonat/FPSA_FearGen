@@ -553,6 +553,20 @@ fix.plot;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% correlation of subject fixation patterns between different phases
+
+subc=0;
+for subs = subjects(:)'
+    subc=subc+1;
+    c = 0;v = [];
+    for ph = 1:5
+        c       = c+1;
+        v{c}    = {'phase', ph , 'subject' subs};
+    end
+    fix.getmaps(v{:});
+    corrmat(:,:,subc) = fix.corr;
+end
+
 %% Which parts of the fixation map correlate with good alpha
 clear all
 p           = Project;
@@ -1617,7 +1631,7 @@ invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:14)= NaN;
 
-[branch_id] = fix.dendrogram(4,mat(:,13));
+[branch_id,ids] = fix.dendrogram(3,mean(mat(:,[1 3]),2));
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
 
 % load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
@@ -1628,12 +1642,74 @@ sub2 = subjects(branch_id==2);
 subplot(1,2,1);h = bar(mean(scr(ismember(scr(:,1),sub1),2:end)));SetFearGenBarColors(h);
 subplot(1,2,2);h = bar(mean(scr(ismember(scr(:,1),sub2),2:end)));SetFearGenBarColors(h);
 EqualizeSubPlotYlim(gcf)
+%% dendrogram of phases 1:5
+p = Project;
+mask = p.getMask('ET_feargen');
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),subjects);
+fix = Fixmat(subjects,1:5);
+g = Group(subjects);[mat tags] = g.parameterMat;mises = g.loadmises; mat(:,12:16) = mises;
+mask = p.getMask('RATE');
+invalid_r = ~ismember(subjects,find(mask));
+mask = p.getMask('PMF');
+invalid_a = ~ismember(subjects,find(sum(mask,2)==4)); 
+mat(invalid_a,1:11) = NaN;
+mat(invalid_r,12:14)= NaN;
+
+
+fix.getsubmaps; 
+fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat')
+scr_crit = (scr_bars(:,4,3)-scr_bars(:,8,3))./(scr_bars(:,4,3)+scr_bars(:,8,3));
+[branch_id,ids] = fix.dendrogram(2,scr_crit);
+
+
+%plot SCR tunings for both clusters
+subplot(1,2,1); b=bar(nanmean(scr_bars(branch_id==1,1:8,3)));axis square;SetFearGenBarColors(b);hold on;
+errorbar(nanmean(scr_bars(branch_id==1,1:8,3)),nanstd(scr_bars(branch_id==1,1:8,3))./sqrt(length(branch_id)),'k.');
+subplot(1,2,2); b=bar(nanmean(scr_bars(branch_id==2,1:8,3)));axis square;SetFearGenBarColors(b);hold on;
+errorbar(nanmean(scr_bars(branch_id==2,1:8,3)),nanstd(scr_bars(branch_id==1,1:8,3))./sqrt(length(branch_id)),'k.');
+EqualizeSubPlotYlim(gcf)
+%correct for mean arousal
+figure
+scr_bars_mc = scr_bars(:,1:8,3)-repmat(nanmean(scr_bars(:,1:8,3),2),[1 8]);
+subplot(1,2,1); b=bar(nanmean(scr_bars_mc(branch_id==1,:)));axis square;SetFearGenBarColors(b);hold on;
+errorbar(nanmean(scr_bars_mc(branch_id==1,:)),nanstd(scr_bars_mc(branch_id==1,:))./sqrt(length(branch_id)),'k.');
+subplot(1,2,2); b=bar(nanmean(scr_bars_mc(branch_id==2,:)));axis square;SetFearGenBarColors(b);hold on;
+errorbar(nanmean(scr_bars_mc(branch_id==2,:)),nanstd(scr_bars_mc(branch_id==1,:))./sqrt(length(branch_id)),'k.');
+EqualizeSubPlotYlim(gcf)
+% SCR after cond (only 4 and 8)
+figure;
+subplot(1,2,1); b=bar([4 8],nanmean(scr_bars(branch_id==1,[4 8],2)));axis square;xlim([0 9]);
+subplot(1,2,2); b=bar([4 8],nanmean(scr_bars(branch_id==2,[4 8],2)));axis square;xlim([0 9]);
+EqualizeSubPlotYlim(gcf)
+% SCR curves
+scr_data = NaN(800,11,length(subjects));
+sc=0;
+for sub = subjects(:)'
+        fprintf('Working on subject %d .. \n',sub)
+        sc=sc+1;
+        try
+        s = Subject(sub);
+        s.scr.cut(s.scr.findphase('test$'));
+        s.scr.run_ledalab;
+        scr_data(:,:,sc) = s.scr.ledalab.mean;
+        end
+end
+
+figure;
+subplot(1,2,1);SetFearGenColors; plot(nanmean(scr_data(:,1:8,branch_id==1),3),'LineWidth',2);axis square
+subplot(1,2,2);SetFearGenColors; plot(nanmean(scr_data(:,1:8,branch_id==2),3),'LineWidth',2);axis square
+EqualizeSubPlotYlim(gcf)
+
 
 %% find beneficial locations that correlate with discrimination/alpha
 clear all
 p = Project;
 mask = p.getMask('ET_discr');
-subjects = intersect(find(mask),[Project.subjects_1500 Project.subjects_600]);
+subjects = intersect(find(mask),[Project.subjects_1500]);
 mask = p.getMask('PMF');
 subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
@@ -1645,11 +1721,11 @@ fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 submaps = fix.vectorize_maps;
 r = NaN(length(submaps),1);
 pval = NaN(length(submaps),1);
-for n = 1:size(fix.maps,3)
+for n = 1:length(submaps)
     [r(n),pval(n)] = corr(submaps(n,:)',mean(mat(:,[1 3]),2));
 end
-imagesc(reshape(r,[50 50]))
-
+fix.maps = reshape(r,[50 50]);
+fix.plot
 
 %% freezing behavior?
 clear all
@@ -1713,6 +1789,7 @@ mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),Project.subjects_1500);
 fix = Fixmat(subjects,2:4);
 
+subjects = unique(fix.subject);
 pc = 0;
 for ph = unique(fix.phase)
     pc = pc+1;
@@ -1726,7 +1803,7 @@ for ph = unique(fix.phase)
             v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
         end
     fix.getmaps(v{:});
-    maps(:,:,sc,pc) = fix.maps(:,:,1) - mean(fix.maps,3);
+    maps(:,:,sc,pc) = fix.maps(:,:,1) - fix.maps(:,:,2);%-mean(fix.maps,3);
     end
 end
 fix.maps = squeeze(mean(maps,3));%over subjects
