@@ -84,28 +84,31 @@ plot(x,VonMises(deg2rad(x),0.1678,2.2181,deg2rad(-5.0893),0.2204),'k-','LineWidt
 subplot(3,3,4)
 plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',1.5)
 % single subject example
-% sub = 7;
-% g2 = Group(sub); g2.ModelRatings(2,8);g2.ModelRatings(3,8);g2.ModelRatings(4,8);
-% [rate sds] = g2.getRatings(2:4);
+sub = 18; %(subs(13))
+g2 = Group(sub); g2.ModelRatings(2,8);g2.ModelRatings(3,8);g2.ModelRatings(4,8);
+[rate sds] = g2.getRatings(2:4);
 
-for sub = 1:length(g.ids)
-    for n = 7:9
-        subplot(3,3,n)
-        b=bar(-135:45:180,rate(:,:,n-5));
-        SetFearGenBarColors(b);
-        hold on;
-        errorbar(-135:45:180,rate(:,:,n-5),sds(:,:,n-5)./sqrt(2),'k.','LineWidth',2)
-        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0,5,10])
-        params = g2.tunings.rate{n-5}.singlesubject{1}.Est(1:4);
-        plot(x,VonMises(deg2rad(x),params(1),params(2),deg2rad(params(3)),params(4)),'k-','LineWidth',1.5)
-        ylim([0 11])
-        axis square
-        box off
-    end
+
+for n = [8 9]
+    subplot(3,3,n)
+    b=bar(-135:45:180,rate(:,:,n-5));
+    SetFearGenBarColors(b);
+    hold on;
+    errorbar(-135:45:180,rate(:,:,n-5),sds(:,:,n-5)./sqrt(2),'k.','LineWidth',2)
+    set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0,5,10])
+    params = g2.tunings.rate{n-5}.singlesubject{1}.Est(1:4);
+    plot(x,VonMises(deg2rad(x),params(1),params(2),deg2rad(params(3)),params(4)),'k-','LineWidth',1.5)
+    ylim([0 11])
+    axis square
+    box off
 end
+%plot baseline with nullfit line
+subplot(3,3,n)
+plot(x,mean(mean(ratings(13,:,2))),'k-','LineWidth',1.5)
 
 %% SEARCH
 % single subject example
+csps = g.getcsp;
 clf
 for sub = 1:length(g.ids)
     close all
@@ -117,7 +120,24 @@ for sub = 1:length(g.ids)
         errorbar(-135:45:180,ratings(sub,:,n-5),sds(sub,:,n-5)./sqrt(2),'k.','LineWidth',2)
         set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0,5,10])
         ylim([0 10])
-        title(num2str(sub))
+        title([num2str(sub) ' ' num2str(csps(sub))])
+    end
+    pause
+end
+%
+csps = g.getcsp;
+clf
+for sub = [5 13 15 22 23]%1:length(g.ids)
+    close all
+    for n = 7:9
+        subplot(3,3,n)
+        b=bar(-135:45:180,ratings(sub,:,n-5));
+        SetFearGenBarColors(b);
+        hold on;
+        errorbar(-135:45:180,ratings(sub,:,n-5),sds(sub,:,n-5)./sqrt(2),'k.','LineWidth',2)
+        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0,5,10])
+        ylim([0 10])
+        title([num2str(sub) ' ' num2str(csps(sub))])
     end
     pause
 end
@@ -203,13 +223,12 @@ subplot(1,2,2)
 b = bar([mean(mat15(:,11)) mean(mat6(:,11)) mean(mat(:,11))]);
 hold on;
 e = errorbar([mean(mat15(:,11)) mean(mat6(:,11)) mean(mat(:,11))],...
-  [std(mat15(:,11))./sqrt(length(mat15)) std(mat6(:,11))./sqrt(length(mat6)) std(mat(:,11))./sqrt(length(mat6))],'k.');
+  [std(mat15(:,11))./sqrt(length(mat15)) std(mat6(:,11))./sqrt(length(mat6)) std(mat(:,11))./sqrt(length(mat))],'k.');
 set(e,'LineWidth',1.5)
 set(b,'FaceColor','white','BarWidth',0.3)
 box off
 ylim([-3 20])
 set(gca,'xticklabel',{'1500ms' '600ms' 'pooled' },'YTick',[0:5:20])
-
 
 %% plot resnik figure
 %better worse
@@ -223,6 +242,117 @@ n2 = length(find(mat(:,2)-mat(:,4)>0)); N2 = length(mat(:,2));
 x1 = [repmat('a',N1,1); repmat('b',N2,1)];
 x2 = [ones(n1,1); repmat(2,N1-n1,1); ones(n2,1); repmat(2,N2-n2,1)];
 [tbl,chi2stat,pval] = crosstab(x1,x2)
+%% mean Weibulls
+p = Project;
+load(sprintf('%smidlevel%sweibull%sdata.mat',Project.path_project,filesep,filesep));
+mask = p.getMask('PMF');pmfsub = intersect(find(sum(mask,2)==4),[Project.subjects_1500 Project.subjects_600]);
+c=0;
+for s = pmfsub(:)'
+    c=c+1;
+    for chain=1:4
+    params(c,:,chain) = data(s).params1(chain,:);
+    end
+end
+%1/ CS+ before
+%2/ CS- before
+%3/ CS+ after
+%4/ CS- after
+figure
+x = 0:0.1:120;
+alphas = [mean(mat(:,1)),mean(mat(:,2)),mean(mat(:,3)),mean(mat(:,4))];
+rest   = [7.2652 0.1631 0.0606];
+subplot(1,2,1)
+plot(x,PAL_Weibull([alphas(1) rest],x),'r-','LineWidth',2)%CSP before
+hold on
+plot(x,PAL_Weibull([alphas(2) rest],x),'r:','LineWidth',2)%CSP after
+ylim([0 1])
+xlim([min(x) max(x)])
+set(gca,'YTick',0:0.2:1,'XTick',0:45:max(x))
+axis square
+box off
+line([alphas(1) alphas(1)],[0 PAL_Weibull([alphas(1) rest],alphas(1))],'Color','k')
+subplot(1,2,2)
+plot(x,PAL_Weibull([alphas(3) rest],x),'b-','LineWidth',2)%CSN before
+hold on
+plot(x,PAL_Weibull([alphas(4) rest],x),'b:','LineWidth',2)%CSN after
+ylim([0 1])
+xlim([min(x) max(x)])
+set(gca,'YTick',0:0.2:1,'XTick',0:45:max(x))
+axis square
+box off
+line([alphas(3) alphas(3)],[0 PAL_Weibull([alphas(3) rest],alphas(3))],'Color','k')
+%% plot peakshift and alpha changes
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+for ss = 1:length(subsR)
+    s = Subject(subsR(ss));
+    csps(ss) = s.csp;
+end
+peakshift0 = [csps' mat(:,15)];
+peakshift = peakshift0;
+ind = peakshift(:,1)==1; %find csp = 1
+peakshift(ind,1) = 9;    %just so that it gets plotted next to 8
+c = 0;
+for cs = 2:9
+    c = c+1;
+    shift_m(c)   = mean(peakshift(peakshift(:,1)==cs,2));
+    shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
+end
+%prepare alpha
+improvement = [peakshift(:,1) mat(:,11)];
+c = 0;
+for cs = 2:9
+    c = c+1;
+    impr_m(c)   = nanmedian(improvement(improvement(:,1)==cs,2));
+    impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
+end
+clf
+subplot(2,1,1)
+plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
+hold on;
+plot(2:9,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+line([1 10],[0 0],'Color','k','LineWidth',2)
+set(gca,'XTick',[3 5 7 9],'XTickLabel',{'male','ID1','female','ID2'})
+ylabel('Peakshift Mu (deg)')
+subplot(2,1,2)
+bar(2:9,impr_m)
+hold on;
+errorbar(2:9,impr_m,impr_sd,'k.','LineWidth',2)
+ylabel('mean improvement CS+>CS-')
+
+%% collapse genders, just 1-4
+for n = 6:9
+    peakshift(peakshift(:,1)==n,1) = n-4;
+end
+c = 0;
+for cs = 2:5
+    c = c+1;
+    shift_m(c)   = mean(peakshift(peakshift(:,1)==cs,2));
+    shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
+end
+%prepare alpha
+improvement = [peakshift(:,1) mat(:,11)];
+c = 0;
+for cs = 2:5
+    c = c+1;
+    impr_m(c)   = nanmedian(improvement(improvement(:,1)==cs,2));
+    impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
+end
+clf
+subplot(2,1,1)
+plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
+hold on;
+plot(2:5,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+line([1 6],[0 0],'Color','k','LineWidth',2)
+set(gca,'XTick',2:5,'XTickLabel',{'pre','gender','post','ID'})
+ylabel('Peakshift Mu (deg)')
+subplot(2,1,2)
+bar(2:5,impr_m)
+xlim([1 6])
+hold on;
+errorbar(2:5,impr_m,impr_sd,'k.','LineWidth',2)
+ylabel('mean improvement CS+>CS-')
+
+
 
 %%
 [h,p,ci,stats] = ttest(mat(:,1),mat(:,2))%csp before to after
