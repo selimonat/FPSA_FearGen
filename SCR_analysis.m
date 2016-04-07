@@ -11,10 +11,10 @@ scr15 = mean(scr(ind15,:));
 [h,pval,ci,stats] = ttest(scr(ind15,3),scr(ind15,4));
 scr6 = mean(scr(ind6,:));
 subplot(1,2,1)
-b=bar(scr15);
+b = bar(scr15);
 SetFearGenBarColors(b);
 subplot(1,2,2)
-b=bar(scr6);
+b = bar(scr6);
 SetFearGenBarColors(b);
 EqualizeSubPlotYlim(gcf)
 
@@ -150,15 +150,13 @@ p = Project;
 mask = find(sum(p.getMask('SCR'),2)==3);
 subjects = intersect(mask,Project.subjects_1500);
 
+
+%%
 phasenames = {'base$' 'cond$' 'test$'};
 phaseconds = [9 3 9];
-bdnf_problems = [2 13 18 31 32 39 50];
-subjects = Project.subjects_bdnf;
-%%
-
 for ph = 1:3
     sc = 0;
-    for sub = subjects(~ismember(subjects,bdnf_problems))
+    for sub = subjects(:)'
         fprintf('Working on phase %d, subject %d .. \n',ph,sub)
         sc=sc+1;
         s = Subject(sub);
@@ -175,14 +173,19 @@ for ph = 1:3
     end
 end
 
-clear all
-p = Project;
-subjects =
-
-phasenames = {'base$' 'cond$' 'test$'};
-phaseconds = [8 2 8];
-bdnf_problems = [2 13 18 31 32 39 50];
-
+%% SCR graphs, not bars
+scr_data = NaN(800,11,length(subjects));
+sc=0;
+for sub = subjects(:)'
+        fprintf('Working on subject %d .. \n',sub)
+        sc=sc+1;
+        try
+        s = Subject(sub);
+        s.scr.cut(s.scr.findphase('test$'));
+        s.scr.run_ledalab;
+        scr_data(:,:,sc) = s.scr.ledalab.mean;
+        end
+end
 
 %% plot single fits
 for n = 1:length(g.ids)
@@ -226,3 +229,17 @@ title('Groupfit Von Mises SCR 600 ms');
 %compare it to mean(single subject fit) Curve
 plot(x_HD,g.tunings.scr.groupfit.fitfun(linspace(-135,180,1000),mean(g.tunings.scr.params)),'b','LineWidth',2)
 
+%% 
+p = Project;
+mask = find(sum(p.getMask('SCR'),2)==3);
+subs_scr = intersect(mask,Project.subjects_1500);
+
+mask = find(sum(p.getMask('PMF'),2)==4);
+subs_pmf = intersect(mask,Project.subjects_1500);
+
+subs = intersect(subs_pmf,subs_scr);
+g = Group(subs); mat = g.parameterMat;
+
+crit = (scr_bars(:,4,3)-scr_bars(:,8,3))./(scr_bars(:,4,3)+scr_bars(:,8,3));
+crit = params(:,1);
+[r,pval]=corr(mat(:,11),crit(ismember(subs_scr,subs)))
