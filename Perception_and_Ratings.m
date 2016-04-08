@@ -281,13 +281,32 @@ set(gca,'YTick',0:0.2:1,'XTick',0:45:max(x))
 axis square
 box off
 line([alphas(3) alphas(3)],[0 PAL_Weibull([alphas(3) rest],alphas(3))],'Color','k')
-%% plot peakshift and alpha changes
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% peakshift business
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% peakshift histograms
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
-for ss = 1:length(subsR)
-    s = Subject(subsR(ss));
-    csps(ss) = s.csp;
-end
-peakshift0 = [csps' mat(:,15)];
+clf
+ind = subs15;
+subplot(2,2,1);hist(abs(mat(ind,12)),10);ylabel('Kappa Cond');hold on;plot(mat(13,12),14,'bo');axis square
+subplot(2,2,2);hist(abs(mat(ind,13)),10);ylabel('Kappa Test');hold on;plot(mat(13,13),14,'bo');axis square
+subplot(2,2,3);hist(abs(mat(ind,15)),10);ylabel('Mu Cond');hold on;plot(abs(mat(13,15)),14,'bo');axis square
+subplot(2,2,4);hist(abs(mat(ind,16)),10);ylabel('Mu Test');hold on;plot(abs(mat(13,16)),14,'bo');axis square
+EqualizeSubPlotYlim(gcf);
+%% corr kappa and mu
+ind = subs15;
+clf
+s1=subplot(2,1,1);plot(mat(ind,12),abs(mat(ind,15)),'bo','MarkerFaceColor','b');axis square;lsline;
+set(gca,'YTick',0:45:100);xlabel('Kappa Cond');ylabel('abs(Mu) Cond')
+s2=subplot(2,1,2);plot(mat(ind,13),abs(mat(ind,16)),'bo','MarkerFaceColor','b');axis square;lsline;
+set(gca,'YTick',0:45:100);xlabel('Kappa Test');ylabel('abs(Mu) Test')
+EqualizeSubPlotYlim(gcf);
+
+%% plot peakshift and alpha changes
+% load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+
+peakshift0 = [csps(subs15)' mat(subs15,16)];
 peakshift = peakshift0;
 ind = peakshift(:,1)==1; %find csp = 1
 peakshift(ind,1) = 9;    %just so that it gets plotted next to 8
@@ -298,14 +317,14 @@ for cs = 2:9
     shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
 end
 %prepare alpha
-improvement = [peakshift(:,1) mat(:,11)];
+improvement = [peakshift(:,1) mat(subs15,11)];
 c = 0;
 for cs = 2:9
     c = c+1;
-    impr_m(c)   = nanmedian(improvement(improvement(:,1)==cs,2));
+    impr_m(c)   = nanmean(improvement(improvement(:,1)==cs,2));
     impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
 end
-clf
+figure
 subplot(2,1,1)
 plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
 hold on;
@@ -318,6 +337,7 @@ bar(2:9,impr_m)
 hold on;
 errorbar(2:9,impr_m,impr_sd,'k.','LineWidth',2)
 ylabel('mean improvement CS+>CS-')
+ylim([-30 30])
 
 %% collapse genders, just 1-4
 for n = 6:9
@@ -326,31 +346,32 @@ end
 c = 0;
 for cs = 2:5
     c = c+1;
-    shift_m(c)   = mean(peakshift(peakshift(:,1)==cs,2));
-    shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
+    shift_mc(c)   = mean(peakshift(peakshift(:,1)==cs,2));
+    shift_sdc(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
 end
 %prepare alpha
-improvement = [peakshift(:,1) mat(:,11)];
+improvement = [peakshift(:,1) mat(subs15,11)];
 c = 0;
 for cs = 2:5
     c = c+1;
-    impr_m(c)   = nanmedian(improvement(improvement(:,1)==cs,2));
-    impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
+    impr_mc(c)   = nanmean(improvement(improvement(:,1)==cs,2));
+    impr_sdc(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
 end
-clf
+figure;
 subplot(2,1,1)
 plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
 hold on;
-plot(2:5,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+plot(2:5,shift_mc,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
 line([1 6],[0 0],'Color','k','LineWidth',2)
 set(gca,'XTick',2:5,'XTickLabel',{'pre','gender','post','ID'})
 ylabel('Peakshift Mu (deg)')
 subplot(2,1,2)
-bar(2:5,impr_m)
+bar(2:5,impr_mc)
 xlim([1 6])
 hold on;
-errorbar(2:5,impr_m,impr_sd,'k.','LineWidth',2)
-ylabel('mean improvement CS+>CS-')
+errorbar(2:5,impr_mc,impr_sdc,'k.','LineWidth',2)
+
+ylabel('median improvement CS+>CS-')
 
 
 
