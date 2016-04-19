@@ -282,18 +282,45 @@ axis square
 box off
 line([alphas(3) alphas(3)],[0 PAL_Weibull([alphas(3) rest],alphas(3))],'Color','k')
 %%
+%%
+[h,p,ci,stats] = ttest(mat(:,1),mat(:,2))%csp before to after
+[h,p,ci,stats] = ttest(mat(:,3),mat(:,4))%csn before to after
+[h,p,ci,stats] = ttest(mat(:,1)-mat(:,2),mat(:,3)-mat(:,4))%csp improvement different than csn improvement?
+
+[h,p,ci,stats] = ttest(mat15(:,1),mat15(:,2))%csp before to after
+[h,p,ci,stats] = ttest(mat15(:,3),mat15(:,4))%csn before to after
+[h,p,ci,stats] = ttest(mat15(:,1)-mat15(:,2),mat15(:,3)-mat15(:,4))%csp improvement diff than csn improvement
+
+[h,p,ci,stats] = ttest(mat6(:,1),mat6(:,2))%csp before to after
+[h,p,ci,stats] = ttest(mat6(:,3),mat6(:,4))%csn before to after
+[h,p,ci,stats] = ttest(mat6(:,1)-mat6(:,2),mat6(:,3)-mat6(:,4))%csp improvement diff than csn improvement
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % peakshift business
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% subjects for 1500 AND 600ms that have pmf AND rate data (N=48)
+p = Project;
+subs = intersect(find(p.getMask('RATE')),[Project.subjects_1500 Project.subjects_600]);
+mask = p.getMask('PMF');
+subs = intersect(subs,find(sum(mask,2)==4));
+
+
 %% peakshift histograms
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+% load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+subs15 = ismember(subjects,Project.subjects_1500);
 clf
 ind = subs15;
-subplot(2,2,1);hist(abs(mat(ind,12)),10);ylabel('Kappa Cond');hold on;plot(mat(13,12),14,'bo');axis square
-subplot(2,2,2);hist(abs(mat(ind,13)),10);ylabel('Kappa Test');hold on;plot(mat(13,13),14,'bo');axis square
-subplot(2,2,3);hist(abs(mat(ind,15)),10);ylabel('Mu Cond');hold on;plot(abs(mat(13,15)),14,'bo');axis square
-subplot(2,2,4);hist(abs(mat(ind,16)),10);ylabel('Mu Test');hold on;plot(abs(mat(13,16)),14,'bo');axis square
-EqualizeSubPlotYlim(gcf);
+bins = 8;
+subplot(2,2,1);hist(abs(mat(ind,12)),bins);hold on;plot(mat(13,12),14,'bo');axis square;ylim([0 20]);
+subplot(2,2,2);hist(abs(mat(ind,13)),bins);hold on;plot(mat(13,13),14,'bo');axis square;ylim([0 20]);
+subplot(2,2,3);hist(abs(mat(ind,15)),bins);hold on;plot(abs(mat(13,15)),11,'bo');axis square;ylim([0 12]);
+subplot(2,2,4);hist(abs(mat(ind,16)),bins);hold on;plot(abs(mat(13,16)),11,'bo');axis square;ylim([0 12]);
+labels = {'Kappa Cond' 'Kappa Test' 'abs(mu) Cond' 'abs(mu) test'};
+for n=1:4
+    subplot(2,2,n)
+    ylabel(labels{n})
+end
 %% corr kappa and mu
 ind = subs15;
 clf
@@ -305,8 +332,8 @@ EqualizeSubPlotYlim(gcf);
 
 %% plot peakshift and alpha changes
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
-
-peakshift0 = [csps(subs15)' mat(subs15,16)];
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+peakshift0 = [csps' mat(:,16)];%mat15 is cond, mat16 is test
 peakshift = peakshift0;
 ind = peakshift(:,1)==1; %find csp = 1
 peakshift(ind,1) = 9;    %just so that it gets plotted next to 8
@@ -314,31 +341,38 @@ c = 0;
 for cs = 2:9
     c = c+1;
     shift_m(c)   = mean(peakshift(peakshift(:,1)==cs,2));
-    shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
+    shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(sum(peakshift(:,1)==cs)));
 end
 %prepare alpha
-improvement = [peakshift(:,1) mat(subs15,11)];
+improvement = [peakshift(:,1) mat(:,11)];
 c = 0;
 for cs = 2:9
     c = c+1;
     impr_m(c)   = nanmean(improvement(improvement(:,1)==cs,2));
-    impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
+    impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(sum(improvement(:,1)==cs)));
 end
 figure
-subplot(2,1,1)
-plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
+plot(peakshift(:,2),peakshift(:,1),'bo','MarkerSize',10,'LineWidth',2)
 hold on;
-plot(2:9,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
-line([1 10],[0 0],'Color','k','LineWidth',2)
-set(gca,'XTick',[3 5 7 9],'XTickLabel',{'male','ID1','female','ID2'})
-ylabel('Peakshift Mu (deg)')
-subplot(2,1,2)
-bar(2:9,impr_m)
-hold on;
-errorbar(2:9,impr_m,impr_sd,'k.','LineWidth',2)
-ylabel('mean improvement CS+>CS-')
-ylim([-30 30])
-
+plot(shift_m,2:9,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+line([0 0],[1 10],'Color','k','LineWidth',2)
+set(gca,'YTick',[3 5 7 9],'YTickLabel',{'male','ID1','female','ID2'})
+xlabel('Peakshift Mu (deg)')
+% figure
+% subplot(2,1,1)
+% plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
+% hold on;
+% plot(2:9,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+% line([1 10],[0 0],'Color','k','LineWidth',2)
+% set(gca,'XTick',[3 5 7 9],'XTickLabel',{'male','ID1','female','ID2'})
+% ylabel('Peakshift Mu (deg)')
+% subplot(2,1,2)
+% bar(2:9,impr_m)
+% hold on;
+% errorbar(2:9,impr_m,impr_sd,'k.','LineWidth',2)
+% ylabel('mean improvement CS+>CS-')
+% ylim([-50 50])
+% 
 %% collapse genders, just 1-4
 for n = 6:9
     peakshift(peakshift(:,1)==n,1) = n-4;
@@ -347,15 +381,15 @@ c = 0;
 for cs = 2:5
     c = c+1;
     shift_mc(c)   = mean(peakshift(peakshift(:,1)==cs,2));
-    shift_sdc(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(48));
+    shift_sdc(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(sum(peakshift(:,1)==cs)));
 end
 %prepare alpha
-improvement = [peakshift(:,1) mat(subs15,11)];
+improvement = [peakshift(:,1) mat(:,11)];
 c = 0;
 for cs = 2:5
     c = c+1;
     impr_mc(c)   = nanmean(improvement(improvement(:,1)==cs,2));
-    impr_sdc(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(48));
+    impr_sdc(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(sum(improvement(:,1)==cs)));
 end
 figure;
 subplot(2,1,1)
@@ -371,24 +405,66 @@ xlim([1 6])
 hold on;
 errorbar(2:5,impr_mc,impr_sdc,'k.','LineWidth',2)
 
-ylabel('median improvement CS+>CS-')
+ylabel('mean improvement CS+>CS-')
 
+%% check where ratings peak on CS+
+p = Project;
+mask = p.getMask('PMF');
+subs = intersect(find(sum(mask,2)==4),[Project.subjects_1500 Project.subjects_600]);
+g = Group(subs);ratings = g.getRatings(2:4);[mat tags] = g.parameterMat;clear g;
+[~,ind] = max(ratings(:,:,4),[],2);
+max4=ind==4;
+figure;plot(max4,mat(:,11),'bo');xlim([-1 2]);
+[h,p,ci,stats] = ttest2(mat(max4,11),mat(~max4,11),'tail','right')
+[h,p,ci,stats] = ttest(mat(max4,11),[],'tail','right')
+%% binning of people around Mu = 0
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+subs6  =ismember(subjects,Project.subjects_600);
+subs15 =ismember(subjects,Project.subjects_1500);
+N48    =ones(48,1);
+ph = 16;
 
+ind=logical(N48);
+improvement = mat(ind,11);%corrected improvement
+noshift = abs(mat(ind,ph))<=22.5;
+[h,p,ci,stats] = ttest2(improvement(noshift==1),improvement(noshift==0),'tail','right')
+[h,p,ci,stats] = ttest(improvement(noshift==1),[],'tail','right')
+%% threshold bars for these noshifts vs. shifters
+clf
+subplot(2,1,1)
+bar([1 2 4 5],mean([mat(noshift,1),mat(noshift,2),mat(noshift,3),mat(noshift,4)]));
+hold on;box off
+errorbar([1 2 4 5],mean([mat(noshift,1),mat(noshift,2),mat(noshift,3),mat(noshift,4)]),std([mat(noshift,1),mat(noshift,2),mat(noshift,3),mat(noshift,4)])./sqrt(sum(noshift)),'k.','LineWidth',1.5);
+ylim([0 70]);axis square
+set(gca,'XTick',[1.5 4.5],'XTicklabel',{'CS+' 'CS-'},'YTick',0:35:70)
+subplot(2,1,2)
+bar([1 2 4 5],mean([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~noshift,4)]));
+hold on;box off;axis square
+ylim([0 70]);
+errorbar([1 2 4 5],mean([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~noshift,4)]),std([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~noshift,4)])./sqrt(sum(~noshift)),'k.','LineWidth',1.5)
+set(gca,'XTick',[1.5 4.5],'XTicklabel',{'CS+' 'CS-'},'YTick',0:35:70)
+%% SCR for noshifter vs shifter
+figure;
+SetFearGenColors;
+subplot(2,2,1);plot(nanmean(scr_data(:,1:8,noshift),3),'LineWidth',2);ylim([0 1]);set(gca,'XTick',[]);box off
+subplot(2,2,2);plot(nanmean(scr_data(:,1:8,~noshift),3),'LineWidth',2);ylim([0 1]);set(gca,'XTick',[]);box off;
+subplot(2,2,3);b=bar(nanmean(scr_bars(noshift,1:8,3)),'LineWidth',2);ylim([0 0.8]);set(gca,'XTick',[4 8],'XTicklabel',{'CS+','CS-'});box off
+SetFearGenBarColors(b);
+subplot(2,2,4);b=bar(nanmean(scr_bars(~noshift,1:8,3)),'LineWidth',2);ylim([0 0.8]);set(gca,'XTick',[4 8],'XTicklabel',{'CS+','CS-'});box off
+SetFearGenBarColors(b);
 
 %%
-[h,p,ci,stats] = ttest(mat(:,1),mat(:,2))%csp before to after
-[h,p,ci,stats] = ttest(mat(:,3),mat(:,4))%csn before to after
-[h,p,ci,stats] = ttest(mat(:,1)-mat(:,2),mat(:,3)-mat(:,4))%csp improvement different than csn improvement?
+subplot(2,3,1);plot(nanmean(scr_data0(:,1:8,noshift),3));subplot(2,3,2);plot(nanmean(scr_data1(:,1:8,noshift),3));subplot(2,3,3);plot(nanmean(scr_data2(:,1:8,noshift),3));
+subplot(2,3,4);plot(nanmean(scr_data0(:,1:8,~noshift),3));subplot(2,3,5);plot(nanmean(scr_data1(:,1:8,~noshift),3));subplot(2,3,6);plot(nanmean(scr_data2(:,1:8,~noshift),3));
+set(gcf,'LineWidth',2)
+scr_data = cat(4,scr_data0,scr_data1,scr_data2);
+for n=1:3
+    scr_datac(:,:,:,n) = scr_data(:,1:8,:,n)-repmat(scr_data(:,9,:,n),[1 8 1 1]);
+end
+subplot(2,3,1);plot(nanmean(scr_data(:,1:8,noshift,1),3));subplot(2,3,2);plot(nanmean(scr_data(:,1:8,noshift,2),3));subplot(2,3,3);plot(nanmean(scr_data(:,1:8,noshift,3),3));
+subplot(2,3,4);plot(nanmean(scr_data(:,1:8,~noshift,1),3));subplot(2,3,5);plot(nanmean(scr_data(:,1:8,~noshift,2),3));subplot(2,3,6);plot(nanmean(scr_data(:,1:8,~noshift,3),3));
 
-[h,p,ci,stats] = ttest(mat15(:,1),mat15(:,2))%csp before to after
-[h,p,ci,stats] = ttest(mat15(:,3),mat15(:,4))%csn before to after
-[h,p,ci,stats] = ttest(mat15(:,1)-mat15(:,2),mat15(:,3)-mat15(:,4))%csp improvement diff than csn improvement
-
-[h,p,ci,stats] = ttest(mat6(:,1),mat6(:,2))%csp before to after
-[h,p,ci,stats] = ttest(mat6(:,3),mat6(:,4))%csn before to after
-[h,p,ci,stats] = ttest(mat6(:,1)-mat6(:,2),mat6(:,3)-mat6(:,4))%csp improvement diff than csn improvement
-
-%% is improvement connected with SCR parameters?
+%% is improvement connected to SCR parameters?
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat','subjects','scr_bars')
 subscr = subjects;clear subjects;
 p = Project;
@@ -441,6 +517,7 @@ hist(mat15(SCR_crit15(:,1)>SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)>SCR_crit15(:
 hold on
 hist(mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10),20,'Color','r')
 [h,p,ci,stats]= ttest2(mat15(SCR_crit15(:,1)>SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)>SCR_crit15(:,2),10),mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10))
+
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
