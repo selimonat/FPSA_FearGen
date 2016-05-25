@@ -150,10 +150,21 @@ p = Project;
 mask = find(sum(p.getMask('SCR'),2)==3);
 subjects = intersect(mask,Project.subjects_1500);
 
-
-%%
+%% SCR graphs, not bars
+scr_data = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('test$'));
+    s.scr.run_ledalab;
+    scr_data(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
+end
+%% collect SCR bars
 phasenames = {'base$' 'cond$' 'test$'};
 phaseconds = [9 3 9];
+scr_bars = NaN(length(subjects),9,3);
 for ph = 1:3
     sc = 0;
     for sub = subjects(:)'
@@ -161,8 +172,8 @@ for ph = 1:3
         sc=sc+1;
         s = Subject(sub);
         s.scr.cut(s.scr.findphase(phasenames{ph}));
-        s.scr.run_ledalab;
-        s.scr.plot_tuning_ledalab(1:phaseconds(ph))
+        s.scr.run_ledalab;        
+        s.scr.plot_tuning_ledalab(1:phaseconds(ph));
         if ismember(ph,[1 3])
             scr_bars(sc,:,ph) = s.scr.fear_tuning;
         else
@@ -173,20 +184,42 @@ for ph = 1:3
     end
 end
 
+
+
+
 %% SCR graphs, not bars
-scr_data = NaN(800,11,length(subjects));
+scr_data0 = NaN(800,9,length(subjects));
 sc=0;
 for sub = subjects(:)'
-        fprintf('Working on subject %d .. \n',sub)
-        sc=sc+1;
-        try
-        s = Subject(sub);
-        s.scr.cut(s.scr.findphase('test$'));
-        s.scr.run_ledalab;
-        scr_data(:,:,sc) = s.scr.ledalab.mean;
-        end
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('base$'));
+    s.scr.run_ledalab;
+    scr_data0(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
+    
 end
-
+scr_data2 = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('test$'));
+    s.scr.run_ledalab;
+    scr_data2(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
+    
+end
+scr_data1 = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('cond$'));
+    s.scr.run_ledalab;
+    scr_data1(:,[4 8 9],sc) = s.scr.ledalab.mean(1:800,1:3);    
+end
 %% plot single fits
 for n = 1:length(g.ids)
     subplot(floor(sqrt(length(g.ids))),ceil(sqrt(length(g.ids))),n);
