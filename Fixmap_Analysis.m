@@ -109,7 +109,8 @@ for subject = unique(fix.subject);
     [cormat_b(:,:,subc) pval_b(:,:,subc)] = fix.corr;
 end
 % end
-%% RSA
+%% RSA plot
+figure
 subplot(1,2,1);
 imagesc(median(cormat_b,3),[-.1 .1]);
 axis square;colorbar;
@@ -117,6 +118,27 @@ set(gca,'fontsize',15)
 axis off
 subplot(1,2,2);
 imagesc(median(cormat_t,3),[-.1 .1])
+axis square;colorbar
+set(gca,'fontsize',15)
+axis off
+
+%% RSA plot but fisherz transformed
+for n = 1:27
+    cormat_tz(:,:,n) = reshape(fisherz(cormat_t(:,:,n)),[8 8 1]);
+    cormat_bz(:,:,n) = reshape(fisherz(cormat_b(:,:,n)),[8 8 1]);
+end
+base = reshape(ifisherz(median(cormat_bz,3)),[8 8 1]);
+base(logical(eye(8,8))) = 1;
+test = reshape(ifisherz(median(cormat_tz,3)),[8 8 1]);
+test(logical(eye(8,8))) = 1;
+figure
+subplot(1,2,1);
+imagesc(base,[-.1 .1]);
+axis square;colorbar;
+set(gca,'fontsize',15)
+axis off
+subplot(1,2,2);
+imagesc(test,[-.1 .1]);
 axis square;colorbar
 set(gca,'fontsize',15)
 axis off
@@ -586,7 +608,7 @@ for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2));
 end
 imagesc(reshape(r,[50 50]),[-1.5 1.5])
-for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+for n = find(pval<0.01);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
 fix.maps = reshape(r,[50 50]);
 fix.plot
 
@@ -609,6 +631,18 @@ fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 fix.maps = Scale(mean(fix.maps,3));
 fix.maps = reshape(r,[50 50]).*fix.maps;
 fix.plot
+
+
+% search pixel that is significant
+[y,x] = ind2sub([50 50],intersect(find(r<0),find(pval<0.01)));
+imagesc(reshape(r,[50 50]).*fix.maps)
+text(x,y,'x','FontSize',20,'Color','w')
+
+
+
+
+
+
 %binary mask
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
@@ -1620,9 +1654,8 @@ fix = Fixmat(subjects,4);
 fix.getsubmaps;
 fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 
+g = Group(subjects);[mat tags]=g.parameterMat;mises = g.loadmises;clear g;mat = [mat mises];
 
-
-g = Group(subjects);g.getSI(8);[mat tags]=g.parameterMat;
 %now we need to prepare the correct data for these guys
 mask = p.getMask('RATE');
 invalid_r = ~ismember(subjects,find(mask));
@@ -1633,14 +1666,83 @@ mat(invalid_r,12:14)= NaN;
 
 [branch_id,ids] = fix.dendrogram(3,mean(mat(:,[1 3]),2));
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
+%% plot the relevant parameters for cluster 1 and 2
+%bars alpha
+subplot(4,2,1:2);
+for n=1:2
+bar(n,nanmean(mean(mat(branch_id==n,[1 3]),2)));
+hold on;
+errorbar(n,nanmean(mean(mat(branch_id==n,[1 3]),2)),nanstd(mean(mat(branch_id==n,[1 3]),2))./sqrt(sum(branch_id==n)),'k.','LineWidth',2);
+end
+xlim([0.5 2.5])
+ylabel('initial alpha')
+ylim([40 70])
+set(gca,'XTick',[],'XTicklabel',[]);box off;
+%bars kappa
+subplot(4,2,3:4);
+for n=1:2
+bar(n,nanmean(mat(branch_id==n,13)));
+hold on;
+errorbar(n,nanmean(mat(branch_id==n,13)),nanstd(mat(branch_id==n,13))./sqrt(sum(branch_id==n)),'k.','LineWidth',2);
+end
+xlim([0.5 2.5]);box off;
+ylabel('kappa test')
+set(gca,'XTick',[])
+%SCR Graphs
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_fordendroN27.mat')
+pl(1)=subplot(4,2,5);
+SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==1),3),'LineWidth',2);axis square
+xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
+ylabel('SCR [\muS]')
+pl(2)=subplot(4,2,6);
+SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==2),3),'LineWidth',2);axis square
+xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
 
+scr_datac = scr_data(:,1:8,:)-repmat(scr_data(:,9,:),[1 8 1]);
+%SCR tunings
+pl(3)=subplot(4,2,7);
+b=bar(1:8,squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1)));SetFearGenBarColors(b);
+hold on;
+errorbar(1:8,squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1)),...
+    squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1))./sqrt(sum(branch_id==1)),'k.','LineWidth',1.5)
+ylim([0 1]);
+ylabel('SCR [\muS]')
+axis square; box off
+set(gca,'XTick',[4 8],'XTicklabel',{'CS+' 'CS-'})
+pl(4)=subplot(4,2,8);
+b=bar(1:8,squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1)));SetFearGenBarColors(b);
+hold on;
+errorbar(1:8,squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1)),...
+    squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1))./sqrt(sum(branch_id==2)),'k.','LineWidth',1.5)
+axis square;box off
+ylim([0 1]);
+set(gca,'XTick',[4 8],'XTicklabel',{'CS+' 'CS-'})
+
+
+
+
+
+%%
 % load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrmat.mat')
-scr = [ss' m];
+% load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrmat.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_fordendro.mat','subjects','branch_id','scr_data','scr_datac','scr_bars_dendro')
 sub1 = subjects(branch_id==1);
 sub2 = subjects(branch_id==2);
-subplot(1,2,1);h = bar(mean(scr(ismember(scr(:,1),sub1),2:end)));SetFearGenBarColors(h);
-subplot(1,2,2);h = bar(mean(scr(ismember(scr(:,1),sub2),2:end)));SetFearGenBarColors(h);
+ph = 2;
+scr_crit = (scr_bars_dendro(:,4,ph)-scr_bars_dendro(:,8,ph))./(scr_bars_dendro(:,4,ph)+scr_bars_dendro(:,8,ph));
+%or
+scr_crit = nanmean(scr_bars_dendro(:,1:8,ph),2)-scr_bars_dendro(:,9,ph);
+%or
+scr_crit = mean(scr_bars_dendro(:,1:8,ph),2);
+
+[branch_id,order] = fix.dendrogram(3,scr_crit);
+[h,p,ci,stats] = ttest2(scr_crit(branch_id==1),scr_crit(branch_id==2),'tail','left');
+% or as bars...
+clf
+for n=1:2
+    subplot(1,2,n);bar(1,mean(scr_crit(branch_id==n)));hold on;errorbar(1,mean(scr_crit(branch_id==n)),std(scr_crit(branch_id==n))./sqrt(sum(branch_id==n)),'k.');
+    axis square
+end
 EqualizeSubPlotYlim(gcf)
 %% dendrogram of phases 1:5
 p = Project;
@@ -1714,6 +1816,7 @@ mask = p.getMask('PMF');
 subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
 [mat tags] = g.parameterMat;
+clear g
 
 fix = Fixmat(subjects,1);
 fix.getsubmaps;
@@ -1726,6 +1829,20 @@ for n = 1:length(submaps)
 end
 fix.maps = reshape(r,[50 50]);
 fix.plot
+%% weighted correlation
+clear all
+p = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),[Project.subjects_1500]);
+mask = p.getMask('PMF');
+subjects = intersect(find(sum(mask,2)==4),subjects);
+g = Group(subjects);
+[mat tags] = g.parameterMat;
+
+fix = Fixmat(subjects,1);
+fix.getsubmaps;
+fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+w = mean(fix.maps,3);w=w(:);
 
 %% freezing behavior?
 clear all
@@ -1921,5 +2038,103 @@ for subject = unique(fix.subject);
     fix.getmaps(v{:});
     entr(:,subc) = fix.entropy;
 end
+%% mean correlation of subjects, ,across phases
+clear r; clear r_z; clear r_back;
+subc            = 0;
+for subject = unique(fix.subject);
+    subc = subc + 1
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for ph = 1:5
+        c    = c+1;
+        v{c} = {'phase', ph, 'subject' subject};
+    end
+    fix.getmaps(v{:});
+    r = fix.corr;
+    r = triu(r);
+    r = CancelDiagonals(r,0);
+    r_z = fisherz(r(r~=0));
+    r_back(subc) = ifisherz(mean(r_z));
+end
+%% mean correlation of phases, across subjects
+pc            = 0;
+for ph = unique(fix.phase);
+    pc = pc + 1
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for sub = unique(fix.subject)
+        c    = c+1;
+        v{c} = {'phase', ph, 'subject' sub};
+    end
+    fix.getmaps(v{:});
+    r = fix.corr;
+    r = triu(r);
+    r = CancelDiagonals(r,0);
+    r_z = fisherz(r(r~=0));
+    r_back(pc) = ifisherz(mean(r_z));
+end
 
-    
+%% loadings of discrmap x cond
+disc = rc;
+disc(disc>=0) = 0;
+disc(isnan(disc)) = 0;
+disc = -disc;
+%create the query cell for conditions
+sc = 0;
+for sub = unique(fix.subject)
+    sc = sc+1;
+    v = [];
+    c = 0;
+    for ph = 4
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' sub};
+        end
+    end
+    fix.getmaps(v{:});
+    fix.maps = fix.maps;% - repmat(mean(fix.maps,3),[1 1 8]);
+    fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+    condmaps = fix.vectorize_maps;
+    discrload(:,sc) = disc * condmaps;
+end
+bar(mean(discrload,2))
+%% only in good people (from dendrogram)
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\disc_posmap.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\dendro_branch_id_subjects.mat','sub2')
+fix = Fixmat(sub2,4);
+sc = 0;
+for sub = unique(fix.subject)
+    sc = sc+1;
+    v = [];
+    c = 0;
+    for ph = 4
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' sub};
+        end
+    end
+    fix.getmaps(v{:});
+    fix.maps = fix.maps;% - repmat(mean(fix.maps,3),[1 1 8]);
+    fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+    condmaps = fix.vectorize_maps;
+    discrload(:,sc) = disc * condmaps;
+end
+bar(mean(discrload,2))
+
+%% compare cs+ to cs- (only good people)
+sc = 0;
+for sub = unique(fix.subject)
+    sc = sc+1;
+    v = [];
+    c = 0;
+    for cond = [0 180]
+        c    = c+1;
+        v{c} = {'deltacsp', cond, 'subject', sub};
+    end
+    fix.getmaps(v{:});
+    maps(:,:,sc) = fix.maps(:,:,1) - fix.maps(:,:,2);
+end
+fix.maps = mean(maps,3);
+fix.plot

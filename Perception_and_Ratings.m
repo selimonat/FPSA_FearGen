@@ -303,7 +303,7 @@ p = Project;
 subs = intersect(find(p.getMask('RATE')),[Project.subjects_1500 Project.subjects_600]);
 mask = p.getMask('PMF');
 subs = intersect(subs,find(sum(mask,2)==4));
-
+%load(...Ethnomaster\data\midlevel\rate_and_pmf_N48.mat')
 
 %% peakshift histograms
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
@@ -340,7 +340,7 @@ peakshift(ind,1) = 9;    %just so that it gets plotted next to 8
 c = 0;
 for cs = 2:9
     c = c+1;
-    shift_m(c)   = mean(peakshift(peakshift(:,1)==cs,2));
+    shift_m(c)   = median(peakshift(peakshift(:,1)==cs,2));
     shift_sd(c)  = std(peakshift(peakshift(:,1)==cs,2)./sqrt(sum(peakshift(:,1)==cs)));
 end
 %prepare alpha
@@ -348,31 +348,17 @@ improvement = [peakshift(:,1) mat(:,11)];
 c = 0;
 for cs = 2:9
     c = c+1;
-    impr_m(c)   = nanmean(improvement(improvement(:,1)==cs,2));
+    impr_m(c)   = nanmedian(improvement(improvement(:,1)==cs,2));
     impr_sd(c)  = nanstd(improvement(improvement(:,1)==cs,2)./sqrt(sum(improvement(:,1)==cs)));
 end
 figure
-plot(peakshift(:,2),peakshift(:,1),'bo','MarkerSize',10,'LineWidth',2)
+plot(peakshift(:,2),-peakshift(:,1),'bo','MarkerSize',10,'LineWidth',2)
+ylim([-10 -1])
 hold on;
-plot(shift_m,2:9,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
-line([0 0],[1 10],'Color','k','LineWidth',2)
-set(gca,'YTick',[3 5 7 9],'YTickLabel',{'male','ID1','female','ID2'})
+plot(shift_m,-(2:9),'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
+line([0 0],[-1 -10],'Color','k','LineWidth',2)
+set(gca,'YTick',[-9 -7 -5 -3],'YTickLabel',{'ID1','female','ID2','male'})
 xlabel('Peakshift Mu (deg)')
-% figure
-% subplot(2,1,1)
-% plot(peakshift(:,1),peakshift(:,2),'bo','MarkerSize',10,'LineWidth',2)
-% hold on;
-% plot(2:9,shift_m,'ro','MarkerSize',10,'MarkerFaceColor','r','LineWidth',2)
-% line([1 10],[0 0],'Color','k','LineWidth',2)
-% set(gca,'XTick',[3 5 7 9],'XTickLabel',{'male','ID1','female','ID2'})
-% ylabel('Peakshift Mu (deg)')
-% subplot(2,1,2)
-% bar(2:9,impr_m)
-% hold on;
-% errorbar(2:9,impr_m,impr_sd,'k.','LineWidth',2)
-% ylabel('mean improvement CS+>CS-')
-% ylim([-50 50])
-% 
 %% collapse genders, just 1-4
 for n = 6:9
     peakshift(peakshift(:,1)==n,1) = n-4;
@@ -443,6 +429,15 @@ hold on;box off;axis square
 ylim([0 70]);
 errorbar([1 2 4 5],mean([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~noshift,4)]),std([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~noshift,4)])./sqrt(sum(~noshift)),'k.','LineWidth',1.5)
 set(gca,'XTick',[1.5 4.5],'XTicklabel',{'CS+' 'CS-'},'YTick',0:35:70)
+%% improvement bar only
+figure
+bar(1,mean(mat(noshift,11)));hold on;
+bar(2,mean(mat(~noshift,11)));
+errorbar(1,mean(mat(noshift,11)),std(mat(noshift,11))./sqrt(sum(noshift)),'k.','LineWidth',2);
+errorbar(2,mean(mat(~noshift,11)),std(mat(~noshift,11))./sqrt(sum(~noshift)),'k.','LineWidth',2);
+set(gca,'XTick',1:2,'XTickLabel',{'no peakshift','peakshift'},'YTick',0:5:10)
+xlim([0 3])
+axis square; box off
 %% SCR for noshifter vs shifter
 figure;
 SetFearGenColors;
