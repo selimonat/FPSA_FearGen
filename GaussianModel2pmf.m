@@ -7,9 +7,9 @@ options.Display     = 'On';
 options.TolX        = 10.^-4;
 options.TolFun      = 10.^-4;
 %%
-sigmas   = linspace(10,90,25);%subject's precision of face representation in degrees
-lambdas  = linspace(0,90,500);%subject's threshold
-stims    = linspace(0,180,200);%location of stimuli
+sigmas   = linspace(10,90,10);%subject's precision of face representation in degrees
+lambdas  = linspace(45,135,10);%subject's threshold
+stims    = linspace(0,250,200);%location of stimuli
 data     = NaN(length(stims),length(sigmas),length(lambdas));
 params   = NaN(4,length(sigmas),length(lambdas));
 lc       = 0;
@@ -30,8 +30,17 @@ for lambda = lambdas(:)'
         funny                                  = @(params) sum( (data(:,sc,lc)' - PF(params,stims)).^2);
         options                                = optimset('Display','off','maxfunevals',10000,'tolX',10^-12,'tolfun',10^-12,'MaxIter',10000,'Algorithm','interior-point');
         [o.params1, o.Likelihood, o.ExitFlag]  = fmincon(funny, params0, [],[],[],[],[-Inf -Inf 0 0],[Inf Inf 1 1],[],options);
-        plot(data(:,sc,lc));hold on;
-        plot(PF(o.params1,stims),'ro');hold off;drawnow;
-        params(:,sc,lc) = o.params1;
+        c = [sc./length(sigmas) 0 1-sc./length(sigmas)]
+        figure(10);
+        plot(data(:,sc,lc),'color',c);hold on;
+        plot(PF(o.params1,stims),'o','color',c);drawnow;
+        params(:,sc,lc) = o.params1;                
     end
+    hold off;
+    figure(20);
+    for n = 1:3
+        subplot(1,3,n);hold on;plot(params(n,:,lc),'o-','color',rand(1,3)); 
+    end
+    drawnow    
+%     pause;
 end

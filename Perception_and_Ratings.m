@@ -636,6 +636,20 @@ text(x,y,'x','FontSize',11)
 [y x]=ind2sub(size(r),find(pval<0.001));
 text(x,y,'x','FontSize',15)
 VerticalXlabel(tags,'interpreter','none')
+%%
 
+%% bin perception, plot kappa
+col = [1 3];
+mat = mat6;
+p = prctile(mean(mat(:,col),2),linspace(0,100,4));
+
+alpha_m = [];alpha_s=[];
+for n = 1:length(p)-1    
+    i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
+    sum(i)
+    alpha_m(n) = mean(mean(mat(i,[12]),2)) 
+    alpha_s(n) = std(mean(mat(i,[12]),2))./sqrt(sum(i)); 
+end
+errorbar(alpha_m,alpha_s)
 
 
