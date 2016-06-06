@@ -183,10 +183,6 @@ for ph = 1:3
         clear s
     end
 end
-
-
-
-
 %% SCR graphs, not bars
 scr_data0 = NaN(800,9,length(subjects));
 sc=0;

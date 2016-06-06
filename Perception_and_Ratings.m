@@ -35,7 +35,7 @@ subplot(3,3,3);
 plot(x,VonMises(deg2rad(x),4.6438,2.2963,deg2rad(-1.4574),1.9557),'k-','LineWidth',1.5)
 
 %%scr 
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat','subjects','scr_bars')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrbars2555_1500_N27.mat','scr_bars','subjects')
 ylims = [0 0.7];%600 0.3 1.1  %1500: 0.7
 Yticks = [0 0.3 0.6];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
 
@@ -333,6 +333,7 @@ EqualizeSubPlotYlim(gcf);
 %% plot peakshift and alpha changes
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+
 peakshift0 = [csps' mat(:,16)];%mat15 is cond, mat16 is test
 peakshift = peakshift0;
 ind = peakshift(:,1)==1; %find csp = 1
@@ -409,10 +410,11 @@ subs6  =ismember(subjects,Project.subjects_600);
 subs15 =ismember(subjects,Project.subjects_1500);
 N48    =ones(48,1);
 ph = 16;
-
-ind=logical(N48);
+%put the index of what you want here: subs6, subs15, or N48
+ind=logical(subs15);
 improvement = mat(ind,11);%corrected improvement
-noshift = abs(mat(ind,ph))<=22.5;
+deltamu = abs(mat(ind,ph));
+noshift = deltamu<=22.5;
 [h,p,ci,stats] = ttest2(improvement(noshift==1),improvement(noshift==0),'tail','right')
 [h,p,ci,stats] = ttest(improvement(noshift==1),[],'tail','right')
 %% threshold bars for these noshifts vs. shifters
@@ -431,10 +433,10 @@ errorbar([1 2 4 5],mean([mat(~noshift,1),mat(~noshift,2),mat(~noshift,3),mat(~no
 set(gca,'XTick',[1.5 4.5],'XTicklabel',{'CS+' 'CS-'},'YTick',0:35:70)
 %% improvement bar only
 figure
-bar(1,mean(mat(noshift,11)));hold on;
-bar(2,mean(mat(~noshift,11)));
-errorbar(1,mean(mat(noshift,11)),std(mat(noshift,11))./sqrt(sum(noshift)),'k.','LineWidth',2);
-errorbar(2,mean(mat(~noshift,11)),std(mat(~noshift,11))./sqrt(sum(~noshift)),'k.','LineWidth',2);
+bar(1,mean(improvement(noshift)));hold on;
+bar(2,mean(improvement(~noshift)));
+errorbar(1,mean(improvement(noshift)),std(improvement(noshift))./sqrt(sum(noshift)),'k.','LineWidth',2);
+errorbar(2,mean(improvement(~noshift)),std(improvement(~noshift))./sqrt(sum(~noshift)),'k.','LineWidth',2);
 set(gca,'XTick',1:2,'XTickLabel',{'no peakshift','peakshift'},'YTick',0:5:10)
 xlim([0 3])
 axis square; box off
