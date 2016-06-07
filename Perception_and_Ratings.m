@@ -25,19 +25,20 @@ for n = 2:4
 end
 subplot(3,3,1);ylabel('Rating of p(shock)')
 %add Groupfit line
-
+params = [5.1801 0.7288 deg2rad(0.8714) 1.8312; 4.4396 1.1171 deg2rad(-0.0598) 1.9506]; %600ms cond;test
+% params = [5.4473,1.3072,deg2rad(-8.0356),1.7061;4.6438,2.2963,deg2rad(-1.4574),1.9557] %1500 cond;test
 x = -150:0.1:195;
 subplot(3,3,1);
 plot(x,mean(mean(ratings(:,:,2))),'k-','LineWidth',1.5)
 subplot(3,3,2);
-plot(x,VonMises(deg2rad(x),5.4473,1.3072,deg2rad(-8.0356),1.7061),'k-','LineWidth',1.5)
+plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',1.5)
 subplot(3,3,3);
-plot(x,VonMises(deg2rad(x),4.6438,2.2963,deg2rad(-1.4574),1.9557),'k-','LineWidth',1.5)
+plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',1.5)
 
 %%scr 
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrbars2555_1500_N27.mat','scr_bars','subjects')
-ylims = [0 0.7];%600 0.3 1.1  %1500: 0.7
-Yticks = [0 0.3 0.6];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
+ylims = [0.3 1.1];%600 0.3 1.1  %1500: 0.7
+Yticks = [0.3 0.6 0.9];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
 
 % plot
 for n = [1 3]
@@ -106,6 +107,9 @@ end
 subplot(3,3,n)
 plot(x,mean(mean(ratings(13,:,2))),'k-','LineWidth',1.5)
 
+%% anova kapp
+group = cat(2,repmat(subs15,[2,1]),[ones(54,1);zeros(54,1)])
+p = anovan([mat(:,12);mat(:,13)],group,'model','interaction','varnames',{'duration','phase'})
 %% SEARCH
 % single subject example
 csps = g.getcsp;
@@ -647,9 +651,15 @@ alpha_m = [];alpha_s=[];
 for n = 1:length(p)-1    
     i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
     sum(i)
-    alpha_m(n) = mean(mean(mat(i,[12]),2)) 
-    alpha_s(n) = std(mean(mat(i,[12]),2))./sqrt(sum(i)); 
+    alpha_m(n) = mean(mean(mat(i,[12 13]),2)) ;
+    alpha_s(n) = std(mean(mat(i,[12 13]),2))./sqrt(sum(i)); 
 end
-errorbar(alpha_m,alpha_s)
+% bar([1 3.5 6],alpha_m)
+% hold on;
+% errorbar([1 3.5 6],alpha_m,alpha_s,'k.','LineWidth',1.5)
+bar([2 4.5 7],alpha_m)
+hold on;
+errorbar([2 4.5 7],alpha_m,alpha_s,'k.','LineWidth',1.5)
+set(gca,'XTick',[1.5 4 6.5],'XTickLabel',{'good' 'moderate' 'bad'})
 
 
