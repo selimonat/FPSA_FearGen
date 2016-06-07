@@ -608,7 +608,7 @@ for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2));
 end
 imagesc(reshape(r,[50 50]),[-1.5 1.5])
-for n = find(pval<0.01);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
 fix.maps = reshape(r,[50 50]);
 fix.plot
 
@@ -656,10 +656,10 @@ fix.plot
 clear all
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect([Project.subjects_1500],mask);%subjects
+subjects    = intersect([Project.subjects_600],mask);%subjects
 g           = Group(subjects);%get the data for these subjects
-g.getSI(8);
 [mat tags]  = g.parameterMat;
+mises = g.loadmises; mat = [mat mises];
 clear g;
 fix         = Fixmat(subjects,4);
 fix.getsubmaps;
@@ -667,13 +667,14 @@ fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
 
 %normal correlation
-param       = mat(:,14);%kappa test
+param       = mat(:,13);%kappa test
 
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',param);
 end
-imagesc(reshape(r,[50 50]),[-1.5 1.5])
-for n = find(pval<0.001);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+imagesc(reshape(r,[50 50]),[-1 1])
+fix.maps = reshape(r,[50 50]);fix.plot
+for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
 fix.maps = reshape(r,[50 50]);
 fix.plot
 
@@ -1649,8 +1650,10 @@ mat((ismember(unique(fix.subject),subjects)==0),[12:14])= nan;
 %% latest dendrogram, k=3 clusters
 p = Project;
 mask = p.getMask('ET_feargen');
-subjects = intersect(find(mask),Project.subjects_1500);
-fix = Fixmat(subjects,4);
+subjects = intersect(find(mask),Project.subjects_600);
+mask = p.getMask('PMF');
+subjects = intersect(find(sum(mask,2)==4),subjects);
+fix = Fixmat(subjects,1);
 fix.getsubmaps;
 fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 
@@ -1664,7 +1667,10 @@ invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:end)= NaN;
 
-[branch_id,ids] = fix.dendrogram(3,mean(mat(:,[1 3]),2));
+for nc = 11
+    [branch_id,ids] = fix.dendrogram(2,mean(mat(:,nc),2));
+    supertitle(tags(nc),1,'interpreter','none');
+end
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
 %% plot the relevant parameters for cluster 1 and 2
 %bars alpha
@@ -1811,7 +1817,7 @@ EqualizeSubPlotYlim(gcf)
 clear all
 p = Project;
 mask = p.getMask('ET_discr');
-subjects = intersect(find(mask),[Project.subjects_1500]);
+subjects = intersect(find(mask),[Project.subjects_600]);
 mask = p.getMask('PMF');
 subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
@@ -1852,7 +1858,7 @@ subjects        = intersect(find(mask),Project.subjects_1500);
 fix = Fixmat(subjects,[2 4]);
 %
 [a,b] = fix.histogram;
-close;
+close all;
 for pc = [1 2]%phase count
 histmat(:,:,pc) = zscore(a(:,1:8,pc)')';
 subplot(1,2,pc)
@@ -2138,3 +2144,51 @@ for sub = unique(fix.subject)
 end
 fix.maps = mean(maps,3);
 fix.plot
+%% 5 x 27 Matrix - subject similarity within phases
+clear all
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_600);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+fix = Fixmat(subjects,1:5);
+
+pc = 0;
+c=0;
+        v = [];
+for ph = unique(fix.phase)
+    pc = pc+1;
+    sc=0;
+    for sub = subjects(:)'
+            c    = c+1;
+            v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+    end
+end
+ fix.getmaps(v{:});
+ rmat = fix.corr;
+ imagesc(rmat(1:length(subjects),:));
+%% phase similarity within subjects
+clear all
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('ET_feargen');
+subjects        = intersect(find(mask),subjects);
+fix = Fixmat(subjects,1:5);
+
+sc = 0;
+c=0;
+
+for sub = subjects(:)'
+    sc = sc+1;
+    pc=0;
+    v=[];
+    for ph = unique(fix.phase)
+            pc    = pc+1;
+            v{pc} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+    end
+ fix.getmaps(v{:});
+ fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+ rmat(:,:,sc) = fix.corr;
+end
+imagesc(mean(rmat,3))
