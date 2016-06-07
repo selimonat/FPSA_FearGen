@@ -277,7 +277,7 @@ c    = 0;
 for ph = [1 2 3 4 5]
     for subs = unique(fix.subject);
         c    = c+1;
-        v{c} = {'phase', ph , 'deltacsp' [0 180 18000] 'subject' subs};
+        v{c} = {'phase', ph , 'deltacsp' fix.realcond 'subject' subs};
     end
 end
 fix.getmaps(v{:});
@@ -1662,7 +1662,7 @@ invalid_r = ~ismember(subjects,find(mask));
 mask = p.getMask('PMF');
 invalid_a = ~ismember(subjects,find(sum(mask,2)==4)); 
 mat(invalid_a,1:11) = NaN;
-mat(invalid_r,12:14)= NaN;
+mat(invalid_r,12:end)= NaN;
 
 [branch_id,ids] = fix.dendrogram(3,mean(mat(:,[1 3]),2));
 %[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
