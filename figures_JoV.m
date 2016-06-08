@@ -34,51 +34,55 @@ fix.plot
 % behavioral results
 %%%%%%%%%%%%%
 %histogram of alpha and kappa for both durations
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
 clf
-yticks = 0:5:20;
-xticks = [2 14];
-subplot(3,2,1)%kappa cond 1500
-hist(mat(subs15,12),9);
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+ind = subs15;
+sp = [2 4];
+subplot(sp(1),sp(2),1)%FWHM
+y = ksdensity(mat(ind,18),'bandwidth',20);
+plot(y,'b','LineWidth',2);hold on;
+y = ksdensity(mat(ind,19),'bandwidth',20);
+plot(y,'k','LineWidth',2)
 axis square;box off
-xlim([0 15])
-set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-xlabel('kappa cond')
-title('1500 ms')
-subplot(3,2,2)%kappa cond 600
-hist(mat(subs6,12),9);
+% set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+ylabel('density')
+title('FWHM')
+subplot(sp(1),sp(2),2)%MU
+y = ksdensity(abs(mat(ind,15)),'bandwidth',7);
+plot(y,'b','LineWidth',2);hold on;
+y = ksdensity(abs(mat(ind,16)),'bandwidth',7);
+plot(y,'k','LineWidth',2)
+legend('Conditioning','Generalization')
+legend boxoff
 axis square;box off
-xlim([0 15])
-set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-xlabel('kappa cond')
-title('600 ms')
-subplot(3,2,3)%kappa test 1500
-hist(mat(subs15,13),9);
-axis square;box off
-xlim([0 15])
-set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-xlabel('kappa test')
-subplot(3,2,4)%kappa test 600
-hist(mat(subs6,13),9);
-axis square;box off
-xlim([0 15])
-set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-xlabel('kappa test')
-EqualizeSubPlotYlim(gcf);
-
-subplot(3,2,5)%alpha 1500
-hist(mean(mat(subs15,[1 3]),2),9);
-axis square;box off
-xlabel('alpha before')
-ylim([0 7]);
-subplot(3,2,6)%alpha 600
-hist(mean(mat(subs6,[1 3]),2),9);
-axis square;box off
-xlabel('alpha before')
-ylim([0 7]);
-
-
-
+% set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+ylabel('density')
+title('MU')
+hold off
+%
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\max4.mat')
+subplot(sp(1),sp(2),5)%alpha results
+b = bar([1 2 4 5],mean(mat6(:,1:4)));
+SetFearGenBarColors(b,[1 0 0;.8 0 0;0 1 1;0 .8 .8]')
+line([1 2],[72 72],'Color','k','LineWidth',2)
+text(1,75,'***','FontSize',16)
+hold on;
+e = errorbar([1 2 4 5],mean(mat6(:,1:4)),std(mat6(:,1:4))./sqrt(length(mat6)),'k.');
+set(e,'LineWidth',2)
+set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'})
+set(e,'LineWidth',2)
+axis square;box off;
+xlim([0 6])
+subplot(sp(1),sp(2),6)%csp improvement shifters vs no shifters
+b = bar([1 4],[mean(mat6(max4,11)) mean(mat6(~max4,11))]);
+set(b,'BarWidth',1)
+hold on;box off
+e = errorbar([1 4],[mean(mat6(max4,11)) mean(mat6(~max4,11))],[std(mat6(max4,11))./sqrt(sum(max4)) std(mat6(~max4,11))./sqrt(sum(~max4))],'k.','LineWidth',1.5);
+axis square
+xlim([-2 7])
+set(gca,'XTick',[1 4],'XTicklabel',{'CS+ centered' 'shifted'})
+hold off;
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
 linewidth = 3;
@@ -86,55 +90,9 @@ x_pos = [1.05:1:3.05;.95:1:2.95;1.05:1:3.05;.95:1:2.95];
 % bin perception, plot kappa
 clf
 subplot(1,2,1)
-% 1500ms
 col = [1 3];
-mat = mat15;
 p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 
-outcome_m = [];outcome_s=[];
-for n = 1:length(p)-1
-    i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i)
-    binalpha(1,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mean(mat(i,[12 13]),2),2));
-    outcome_s(n) = std(mean(mean(mat(i,[12]),2),2))./sqrt(sum(i));
-end
-
-errorbar(binalpha(1,:),outcome_m,outcome_s,'b','LineWidth',linewidth)
-hold on;
-% 600ms
-mat = mat6;
-p = prctile(mean(mat(:,col),2),linspace(0,100,4));
-
-outcome_m = [];outcome_s=[];
-for n = 1:length(p)-1    
-    i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i)
-    binalpha(2,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mean(mat(i,[12 13]),2),2));
-    outcome_s(n) = std(mean(mean(mat(i,[12]),2),2))./sqrt(sum(i));
-end
-errorbar(binalpha(2,:),outcome_m,outcome_s,'k','LineWidth',linewidth)
-legend('1500 ms','600 ms')
-legend boxoff
-%
-subplot(1,2,2)
-title('Test Phase')
-% 1500ms
-col = [1 3];
-mat = mat15;
-p = prctile(mean(mat(:,col),2),linspace(0,100,4));
-
-outcome_m = [];outcome_s=[];
-for n = 1:length(p)-1
-    i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i)
-    binalpha(3,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mat(i,[13]),2));
-    outcome_s(n) = std(mean(mat(i,[13]),2))./sqrt(sum(i));
-end
-errorbar(binalpha(3,:),outcome_m,outcome_s,'b','LineWidth',linewidth)
-hold on;
 % 600ms
 mat = mat6;
 p = prctile(mean(mat(:,col),2),linspace(0,100,4));
