@@ -33,25 +33,51 @@ fix.plot
 %%%%%%%%%%%%%
 % behavioral results
 %%%%%%%%%%%%%
-%histogram of alpha and kappa
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
-subplot(2,2,1)
+%histogram of alpha and kappa for both durations
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+clf
+yticks = 0:5:20;
+xticks = [2 14];
+subplot(3,2,1)%kappa cond 1500
+hist(mat(subs15,12),9);
+axis square;box off
+xlim([0 15])
+set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+xlabel('kappa cond')
+title('1500 ms')
+subplot(3,2,2)%kappa cond 600
+hist(mat(subs6,12),9);
+axis square;box off
+xlim([0 15])
+set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+xlabel('kappa cond')
+title('600 ms')
+subplot(3,2,3)%kappa test 1500
+hist(mat(subs15,13),9);
+axis square;box off
+xlim([0 15])
+set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+xlabel('kappa test')
+subplot(3,2,4)%kappa test 600
+hist(mat(subs6,13),9);
+axis square;box off
+xlim([0 15])
+set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
+xlabel('kappa test')
+EqualizeSubPlotYlim(gcf);
 
-subplot(2,2,2)
-hist(mean(mat15(:,[1 3]),2),9);
+subplot(3,2,5)%alpha 1500
+hist(mean(mat(subs15,[1 3]),2),9);
 axis square;box off
 xlabel('alpha before')
-subplot(2,2,3)
-hist(mat15(:,12),9);
+ylim([0 7]);
+subplot(3,2,6)%alpha 600
+hist(mean(mat(subs6,[1 3]),2),9);
 axis square;box off
-set(gca,'YTick',0:5:10)
-xlabel('kappa cond')
-subplot(2,2,4)
-hist(mat15(:,13),9);
-axis square;box off
-set(gca,'YTick',0:5:10)
-xlabel('kappa test')
-EqualizeSubPlotYlim(gcf)
+xlabel('alpha before')
+ylim([0 7]);
+
+
 
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
@@ -68,13 +94,13 @@ p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];
 for n = 1:length(p)-1
     i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i);
+    sum(i)
     binalpha(1,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mat(i,[12]),2));
-    outcome_s(n) = std(mean(mat(i,[12]),2))./sqrt(sum(i));
+    outcome_m(n) = mean(mean(mean(mat(i,[12 13]),2),2));
+    outcome_s(n) = std(mean(mean(mat(i,[12]),2),2))./sqrt(sum(i));
 end
 
-errorbar(x_pos(1,:),outcome_m,outcome_s,':','LineWidth',linewidth)
+errorbar(binalpha(1,:),outcome_m,outcome_s,'b','LineWidth',linewidth)
 hold on;
 % 600ms
 mat = mat6;
@@ -83,12 +109,12 @@ p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];
 for n = 1:length(p)-1    
     i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i);
+    sum(i)
     binalpha(2,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mat(i,[12]),2));
-    outcome_s(n) = std(mean(mat(i,[12]),2))./sqrt(sum(i)); 
+    outcome_m(n) = mean(mean(mean(mat(i,[12 13]),2),2));
+    outcome_s(n) = std(mean(mean(mat(i,[12]),2),2))./sqrt(sum(i));
 end
-errorbar(x_pos(2,:),outcome_m,outcome_s,'LineWidth',linewidth)
+errorbar(binalpha(2,:),outcome_m,outcome_s,'k','LineWidth',linewidth)
 legend('1500 ms','600 ms')
 legend boxoff
 %
@@ -102,12 +128,12 @@ p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];
 for n = 1:length(p)-1
     i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i);
+    sum(i)
     binalpha(3,n) = mean(mean(mat(i,[1 3]),2));
     outcome_m(n) = mean(mean(mat(i,[13]),2));
     outcome_s(n) = std(mean(mat(i,[13]),2))./sqrt(sum(i));
 end
-errorbar(x_pos(3,:),outcome_m,outcome_s,':','LineWidth',linewidth)
+errorbar(binalpha(3,:),outcome_m,outcome_s,'b','LineWidth',linewidth)
 hold on;
 % 600ms
 mat = mat6;
@@ -116,17 +142,17 @@ p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];
 for n = 1:length(p)-1    
     i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
-    sum(i);
+    sum(i)
     binalpha(4,n) = mean(mean(mat(i,[1 3]),2));
     outcome_m(n) = mean(mean(mat(i,[13]),2));
     outcome_s(n) = std(mean(mat(i,[13]),2))./sqrt(sum(i)); 
 end
-errorbar(x_pos(4,:),outcome_m,outcome_s,'LineWidth',linewidth)
+errorbar(binalpha(4,:),outcome_m,outcome_s,'k','LineWidth',linewidth)
 legend('1500 ms','600 ms')
 legend boxoff
 for n=1:2
 subplot(1,2,n)
-set(gca,'XTick',1:3,'XTicklabel',{'good','medium','bad'},'YTick',2:2:10);
+% set(gca,'XTick',1:3,'XTicklabel',{'good','medium','bad'},'YTick',2:2:10);
 ylim([0 10])
 ylabel('FearGen specificity (kappa)')
 xlabel('Discrimination performance')
