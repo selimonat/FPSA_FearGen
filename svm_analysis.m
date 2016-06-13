@@ -27,7 +27,7 @@ path = setPath;
 
 
 % nbootstrap    = 100;
-cmd           = '-t 0 -c 1 -q'; %t 0: linear, -c 1: criterion, -q: quiet
+cmd           = '-t 0 -c 1 -q -w1 1 -w0 1'; %t 0: linear, -c 1: criterion, -q: quiet
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
 numtrials     = [400 120 124 240 400];
@@ -279,30 +279,38 @@ elseif analysis_type == 6
         end
     end
 elseif analysis_type == 7
-    name_analysis = 'conditions_1vsrest'; %classify conditions in FG
+    name_analysis = 'conditions_1vsrest_weighted_test'; %classify conditions in FG
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result = nan(8,nbootstrap,nsub,2);
+    w = nan(size(data,2),nsub,nbootstrap,2);
     pc = 0;
     for ph = [2 4]
         indph = labels.phase == ph;
         pc = pc+1;
-        for sub = 1:nsub;
+        for sub = 1%:nsub;
              ind  = logical(ismember(labels.easy_sub,sub).*indph);
              Ybin = double(labels.csp(ind))';%binary labelling here
+             Ybin0 = Ybin;
              Ycond = double(labels.cond(ind))';
              X = data(ind,:);
              for n = 1:nbootstrap
+                 if r == 1
+                     Ybin  = Shuffle(Ybin);%randi(2,[1 length(labels.csp(ind))])-1;
+                 end
                  P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
                  model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+                 try
+                     w(:,sub,n,pc)          = model.SVs'*model.sv_coef;
+                 end
                  cc=0;
                  for cond = unique(Ycond)'
                      cc=cc+1;
                      if sum(Ycond == cond) ~= 0;
                          fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
                          i              = logical(P.test.*(Ycond==cond));
-                         [predicted]    = svmpredict(Ybin(i), X(i,:), model);
-                         result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp  acc(cc,n,sub,pc) = accuracy(1);
+                         [predicted]    = svmpredict(Ybin0(i), X(i,:), model);
+                         result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
                      else
                          fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
                      end
@@ -310,6 +318,51 @@ elseif analysis_type == 7
              end
         end
     end
+elseif analysis_type == 77
+    name_analysis = 'conditions_CSPvsCSN_test'; %classify conditions in FG
+    warning('this needs debugging...Press any key to run anyway.')
+    pause
+    fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+    PrepareSavePath;
+    result = nan(8,nbootstrap,nsub,2);
+    w = nan(size(data,2),nsub,nbootstrap,2);
+    pc = 0;
+    for ph = [2 4]
+        indph = labels.phase == ph;
+        pc = pc+1;
+        for sub = 1:nsub;
+            ind  = logical(ismember(labels.easy_sub,sub).*indph);
+            Ycond = double(labels.cond(ind))';
+            X = data(ind,:);
+            for n = 1:nbootstrap
+                P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
+                cspcsnind = logical(ismember(Ycond,[0 180]));
+                Ybin = nan(length(Ycond),1);
+                Ybin(Ycond==0) = 1;
+                Ybin(Ycond==1) = 0;
+                if r == 1
+                    Ybin  = Shuffle(Ybin);%randi(2,[1 length(labels.csp(ind))])-1;
+                end
+                model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+                try
+                    w(:,sub,n,pc)          = model.SVs'*model.sv_coef;
+                end
+                cc=0;
+                for cond = unique(Ycond)'
+                    cc=cc+1;
+                    if sum(Ycond == cond) ~= 0;
+                        fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
+                        i              = logical(P.test.*(Ycond==cond));
+                        [predicted]    = svmpredict(Ybin0(i), X(i,:), model);
+                        result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
+                    else
+                        fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
+                    end
+                end
+            end
+        end
+    end
+    
 elseif analysis_type == 8
     warning('this is a test version, probably needs debugging...Press any key to run anyway.')
     pause
@@ -440,7 +493,7 @@ elseif analysis_type == 11
         end
     end
 elseif analysis_type == 12
-    name_analysis = 'CSP_CSN_insubj'; %classify CSP vs CSN
+    name_analysis = 'CSP_CSN_insubj_test'; %classify CSP vs CSN
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result      = [];
@@ -562,7 +615,7 @@ end
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
          elseif ispc
             t = datestr(now,30);
-            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160217';
+            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160531';
             mkdir(path)
             addpath('C:\Users\user\Documents\GitHub\libsvm\matlab\')
         elseif isunix
