@@ -85,7 +85,7 @@ eigen = fliplr(e);
 % n where explained variance is > 95%
 num = min(find((cumsum(dv)./sum(dv))>.95));
 %collect loadings of every trial
-trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
+trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%whitened (https://en.wikipedia.org/wiki/Whitening_transformation)
 
 
 %% Discrimination
