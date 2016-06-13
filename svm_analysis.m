@@ -1,4 +1,4 @@
-function [result,model,w] = svm_analysis(analysis_type,data,labels,r,nbootstrap)
+function [result,model,w] = svm_analysis(analysis_type,data,labels,r,nbootstrap,neig)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -295,6 +295,7 @@ elseif analysis_type == 7
              Ycond = double(labels.cond(ind))';
              X = data(ind,:);
              for n = 1:nbootstrap
+                 keyboard
                  if r == 1
                      Ybin  = Shuffle(Ybin);%randi(2,[1 length(labels.csp(ind))])-1;
                  end
@@ -312,6 +313,7 @@ elseif analysis_type == 7
                          [predicted]    = svmpredict(Ybin0(i), X(i,:), model);
                          result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
                      else
+                         
                          fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
                      end
                  end
@@ -319,45 +321,40 @@ elseif analysis_type == 7
         end
     end
 elseif analysis_type == 77
+    
     name_analysis = 'conditions_CSPvsCSN_test'; %classify conditions in FG
-    warning('No randomization implemented yet - press key to run anyway.')
-    pause
+    warning('No randomization implemented yet - press key to run anyway.')    
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
-    result = nan(8,nbootstrap,nsub,2);
-    w = nan(size(data,2),nsub,nbootstrap,2);
+    result      = nan(8,nbootstrap,nsub,1);
+    w           = nan(neig,nsub,nbootstrap,1);
     pc = 0;
-    for ph = [2 4]
-        indph = labels.phase == ph;
-        pc = pc+1;
-        for sub = 1:nsub;
-            ind  = logical(ismember(labels.easy_sub,sub).*indph);
-            Ycond = double(labels.cond(ind))';
-            Ybin =  double(labels.csp(ind))';
-            X = data(ind,:);
-            for n = 1:nbootstrap
-                P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
-                cspcsnind = logical(ismember(Ycond,[0 180]));
-                trainindex = logical(P.training.*cspcsnind);%we only take CSP/CSN of P.training set.
-                if (sub ==1 && n == 1)
-                    figure;subplot(1,4,1);imagesc(Ycond);title('Ycond');subplot(1,4,2);imagesc(Ybin);title('Ybin');subplot(1,4,3);imagesc(cspcsnind);title('CSP/CSN');subplot(1,4,4);imagesc(P.test);title('P.test')
-                end
-                model   = svmtrain(Ybin(trainindex), X(trainindex,:), cmd);
+    for ph = 4
+        indph = labels.phase == ph;%indices of this phase.
+        pc = pc+1;%increament the phase counter
+        for sub = 1:27;
+            ind_all  = logical(ismember(labels.easy_sub,sub).*indph);%this subject, this phase.
+            Ycond    = double(labels.cond(ind_all))';%labels of the fixation maps for this subject in this phase.
+            X        = data(ind_all,1:neig);%fixation maps of this subject in this phase.
+            for n = 1:nbootstrap%
+                P       = cvpartition(Ycond,'Holdout',.5); % divide training and test datasets respecting conditions                         
+                i       = logical(P.training.*ismember(Ycond,[0 180]));%train using only the CS+ and CS? conditions.
+                model   = svmtrain(Ycond(i), X(i,:), cmd);%TRAIN!
+                %%
                 try
                     w(:,sub,n,pc)          = model.SVs'*model.sv_coef;
+                catch
+                    keyboard
                 end
+                %%
                 cc=0;
                 for cond = unique(Ycond)'
-                    cc=cc+1;
-                    if sum(Ycond == cond) ~= 0;
-                        fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
-                        i              = logical(P.test.*(Ycond==cond));
-                        [predicted]    = svmpredict(Ybin(i), X(i,:), model);
-                        result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
-                    else
-                        fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
-                    end
-                end
+                    cc                          = cc+1;
+                    i                           = logical(P.test.*ismember(Ycond,cond));%find all indices that were not used for training belonging to COND.
+                    dummy                       = svmpredict(Ycond(i), X(i,:), model);%get the predictions
+                    dummy                       = dummy == 0;%binarize: 1=CS+, 0=Not CS+
+                    result(cc,n,sub)            = sum(dummy)/length(dummy);
+                end                  
             end
         end
     end
@@ -609,7 +606,7 @@ end
     function [path] = setPath
         if ismac
             [~,version] = GetGit(fileparts(which(mfilename)));
-            path = fullfile(homedir,'Google Drive','EthnoMaster','data','midlevel','svm_analysis',['version' version]);
+            path = fullfile('/Volumes/feargen2/project_fearcloud/','data','midlevel','svm_analysis',['version' version]);
             mkdir(path)
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
          elseif ispc
