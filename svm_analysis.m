@@ -320,7 +320,7 @@ elseif analysis_type == 7
     end
 elseif analysis_type == 77
     name_analysis = 'conditions_CSPvsCSN_test'; %classify conditions in FG
-    warning('this needs debugging...Press any key to run anyway.')
+    warning('No randomization implemented yet - press key to run anyway.')
     pause
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
@@ -333,17 +333,16 @@ elseif analysis_type == 77
         for sub = 1:nsub;
             ind  = logical(ismember(labels.easy_sub,sub).*indph);
             Ycond = double(labels.cond(ind))';
+            Ybin =  double(labels.csp(ind))';
             X = data(ind,:);
             for n = 1:nbootstrap
                 P = cvpartition(Ycond,'Holdout',.5); % respecting conditions
                 cspcsnind = logical(ismember(Ycond,[0 180]));
-                Ybin = nan(length(Ycond),1);
-                Ybin(Ycond==0) = 1;
-                Ybin(Ycond==1) = 0;
-                if r == 1
-                    Ybin  = Shuffle(Ybin);%randi(2,[1 length(labels.csp(ind))])-1;
+                trainindex = logical(P.training.*cspcsnind);%we only take CSP/CSN of P.training set.
+                if (sub ==1 && n == 1)
+                    figure;subplot(1,4,1);imagesc(Ycond);title('Ycond');subplot(1,4,2);imagesc(Ybin);title('Ybin');subplot(1,4,3);imagesc(cspcsnind);title('CSP/CSN');subplot(1,4,4);imagesc(P.test);title('P.test')
                 end
-                model   = svmtrain(Ybin(P.training), X(P.training,:), cmd);
+                model   = svmtrain(Ybin(trainindex), X(trainindex,:), cmd);
                 try
                     w(:,sub,n,pc)          = model.SVs'*model.sv_coef;
                 end
@@ -353,7 +352,7 @@ elseif analysis_type == 77
                     if sum(Ycond == cond) ~= 0;
                         fprintf('Analysis %s, Phase %d, Sub %d Run %d - Classifying cond %d... \n',name_analysis,ph,sub,n,cond);
                         i              = logical(P.test.*(Ycond==cond));
-                        [predicted]    = svmpredict(Ybin0(i), X(i,:), model);
+                        [predicted]    = svmpredict(Ybin(i), X(i,:), model);
                         result(cc,n,sub,pc)  = sum(predicted)./length(predicted);%predicted as csp
                     else
                         fprintf('SKIPPING THIS CLASSIFICATION due to lack of data!!!!!\n');
