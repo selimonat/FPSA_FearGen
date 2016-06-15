@@ -585,17 +585,24 @@ gscatter(a(:,1),g.sigma_test,a(:,2));
 % end
 % colorbar
 % caxis([0 1])
-
+%%
 % plot 8cond "classified as csp" (svm_analysis method 7) 
 figure;
-subplot(1,2,1); [h(1),e(1)] = barwitherr(std(mean(result(:,:,:,1),2),0,3),mean(mean(result(:,:,:,1),2),3));
+subplot(1,2,1); [h(1),e(1)] = barwitherr(std(mean(result(:,:,:,1),2),0,3)./sqrt(size(result,3)),mean(mean(result(:,:,:,1),2),3));
 title('baseline');ylabel('Classified as CSP')
-subplot(1,2,2); [h(2) e(2)] = barwitherr(std(mean(result(:,:,:,2),2),0,3),mean(mean(result(:,:,:,2),2),3));
+box off
+axis square
+set(gca,'XTick',[4 8],'XTickLabel',{'CS+','CS-'})
+subplot(1,2,2); [h(2) e(2)] = barwitherr(std(mean(result(:,:,:,2),2),0,3)./sqrt(size(result,3)),mean(mean(result(:,:,:,2),2),3));
 title('testphase');ylabel('Classified as CSP')
 axH = findall(gcf,'type','axes');
-set(axH,'ylim',[0 .25])
+% set(axH,'ylim',[0 .25])
 SetFearGenBarColors(h(2));
 set(e,'LineWidth',2);
+box off
+axis square
+set(gca,'XTick',[4 8],'XTickLabel',{'CS+','CS-'})
+%%
 
 %subjects:
 [row col] = GetSubplotNumber(size(result,3));
@@ -721,3 +728,18 @@ labels.fix(:,todelete)=[];
 %% 
 a = squeeze(mean(result,3));%bootstraps
 scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,5]);%scale by rowsums
+%%
+%insubject:
+w0 = w;
+w = squeeze(mean(w0(:,:,:,4),3));
+num=60;
+% fix.getsubmaps;
+% fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+% meanmap = Scale(mean(fix.maps,3));
+
+for n = 1:size(w,2);
+    hp(:,:,n) = squeeze(eigen(:,1:num)*w(:,n));
+end
+% for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
+for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]).*meanmap;end
+for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
