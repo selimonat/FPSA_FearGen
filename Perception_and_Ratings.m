@@ -3,19 +3,22 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 p = Project;
 mask = p.getMask('RATE');
-subs = intersect(find(mask),Project.subjects_1500);
+subs = intersect(find(mask),Project.subjects_600);
 g = Group(subs);
-[ratings sds]= g.getRatings(2:4);
-%%
+%[ratings sds]= g.getRatings(2:4);
+g.getSI(3);
+%% big figure for behavioral results
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\ratings_600.mat','ratings');
+sp = [2 5];
 clf
-c = 0;
+c = 6;
 for n = 2:4
     c = c+1;
-    subpl(c) =  subplot(3,3,c);
+    subpl(c) =  subplot(sp(1),sp(2),c);
     b = bar(-135:45:180,mean(ratings(:,:,n)));
     hold on;
     e = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
-    set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
+    set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10])
     SetFearGenBarColors(b)
     set(e,'LineWidth',2,'Color','k')
     ylim([0 10])
@@ -23,26 +26,30 @@ for n = 2:4
     axis square
     box off
 end
-subplot(3,3,1);ylabel('Rating of p(shock)')
+subplot(sp(1),sp(2),7);ylabel('Rating of p(shock)')
 %add Groupfit line
 params = [5.1801 0.7288 deg2rad(0.8714) 1.8312; 4.4396 1.1171 deg2rad(-0.0598) 1.9506]; %600ms cond;test
 % params = [5.4473,1.3072,deg2rad(-8.0356),1.7061;4.6438,2.2963,deg2rad(-1.4574),1.9557] %1500 cond;test
 x = -150:0.1:195;
-subplot(3,3,1);
-plot(x,mean(mean(ratings(:,:,2))),'k-','LineWidth',1.5)
-subplot(3,3,2);
+subplot(sp(1),sp(2),7);
+plot(x,mean(mean(ratings(:,:,2))),'k-','LineWidth',3.5)
+subplot(sp(1),sp(2),8);
 plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',1.5)
-subplot(3,3,3);
+line([0 180],[9 9],'Color','k','LineWidth',1.3)
+text(45,9,'***','FontSize',20)
+subplot(sp(1),sp(2),9);
 plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',1.5)
+line([0 180],[9 9],'Color','k','LineWidth',1.3)
+text(45,9,'***','FontSize',20)
 
 %%scr 
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scrbars2555_1500_N27.mat','scr_bars','subjects')
-ylims = [0.3 1.1];%600 0.3 1.1  %1500: 0.7
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600BCT.mat','scr_bars','subjects')
+ylims = [0.3 .9];%600 0.3 1.1  %1500: 0.7
 Yticks = [0.3 0.6 0.9];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
 
 % plot
 for n = [1 3]
-subpl(3+n) = subplot(3,3,3+n);
+subplot(sp(1),sp(2),n+1);
 b = bar(-135:45:180,mean(scr_bars(:,1:8,n)));
 hold on;
 ylim(ylims)
@@ -54,11 +61,13 @@ set(e,'LineWidth',2,'Color','k')
 axis square
 box off
 end
-
-subplot(3,3,4);ylabel('SCR [muS]')
+subplot(sp(1),sp(2),2);ylabel('SCR [muS]')
+title('Free Viewing')
+subplot(sp(1),sp(2),4)
+title('Generalization')
 %cond special treatment
-subpl(5) = subplot(3,3,5);
-
+subplot(sp(1),sp(2),3);
+title('Conditioning')
 b(1) = bar(4,mean(scr_bars(:,4,2)));
 hold on;
 e(1) = errorbar(4,mean(scr_bars(:,4,2)),std(scr_bars(:,4,2))./sqrt(size(scr_bars,1)),'k.');
@@ -72,41 +81,28 @@ set(e,'LineWidth',2,'Color','k');
 axis square
 box off
 xlim([0 9])
+line([4 8],[.85 0.85],'Color','k','LineWidth',1.3)
+text(5.7,.85,'*','FontSize',20)
+
 try
     for n = 1:size(scr_bars,3)
-        subplot(3,3,3+n)
+        subplot(sp(1),sp(2),1+n)
         line([-180 225],repmat(mean(scr_bars(:,9,n)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':')
     end
 end
+% 
+% % add von mises groupfit curve to SCR bars @testphase
+subplot(sp(1),sp(2),2);
+plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',3.5)
+subplot(sp(1),sp(2),4);
+plot(x,mean(mean(scr_bars(:,1:8,3))),'k-','LineWidth',3.5)
 
-% add von mises groupfit curve to SCR bars @testphase
-subplot(3,3,6);
-plot(x,VonMises(deg2rad(x),0.1678,2.2181,deg2rad(-5.0893),0.2204),'k-','LineWidth',1.5)
-subplot(3,3,4)
-plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',1.5)
-% single subject example
-sub = 18; %(subs(13))
-g2 = Group(sub); g2.ModelRatings(2,8);g2.ModelRatings(3,8);g2.ModelRatings(4,8);
-[rate sds] = g2.getRatings(2:4);
+% 
 
-
-for n = [8 9]
-    subplot(3,3,n)
-    b=bar(-135:45:180,rate(:,:,n-5));
-    SetFearGenBarColors(b);
-    hold on;
-    errorbar(-135:45:180,rate(:,:,n-5),sds(:,:,n-5)./sqrt(2),'k.','LineWidth',2)
-    set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0,5,10])
-    params = g2.tunings.rate{n-5}.singlesubject{1}.Est(1:4);
-    plot(x,VonMises(deg2rad(x),params(1),params(2),deg2rad(params(3)),params(4)),'k-','LineWidth',1.5)
-    ylim([0 11])
-    axis square
-    box off
-end
-%plot baseline with nullfit line
-subplot(3,3,n)
-plot(x,mean(mean(ratings(13,:,2))),'k-','LineWidth',1.5)
-
+%% which fit is better, von mises or gaussian
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\fitcorr_vM_G.mat');
+ifisherz(mean(fisherz([rg(:,3); rg(:,4)])))
+ifisherz(mean(fisherz([rvm(:,3); rvm(:,4)])))
 %% anova kapp
 group = cat(2,repmat(subs15,[2,1]),[ones(54,1);zeros(54,1)])
 p = anovan([mat(:,12);mat(:,13)],group,'model','interaction','varnames',{'duration','phase'})
@@ -312,14 +308,14 @@ subs = intersect(subs,find(sum(mask,2)==4));
 %% peakshift histograms
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
-subs15 = ismember(subjects,Project.subjects_1500);
+subs6 = ismember(subjects,Project.subjects_600);
 clf
-ind = subs15;
+ind = subs6;
 bins = 8;
-subplot(2,2,1);hist(abs(mat(ind,12)),bins);hold on;plot(mat(13,12),14,'bo');axis square;ylim([0 20]);
-subplot(2,2,2);hist(abs(mat(ind,13)),bins);hold on;plot(mat(13,13),14,'bo');axis square;ylim([0 20]);
-subplot(2,2,3);hist(abs(mat(ind,15)),bins);hold on;plot(abs(mat(13,15)),11,'bo');axis square;ylim([0 12]);
-subplot(2,2,4);hist(abs(mat(ind,16)),bins);hold on;plot(abs(mat(13,16)),11,'bo');axis square;ylim([0 12]);
+subplot(2,2,1);[y x] = hist(abs(mat(ind,12)),bins);bar(x,y,.5,'k');hold on;plot(mat(13,12),14,'bo');axis square;ylim([0 20]);hold on;
+subplot(2,2,1);[y x] =hist(abs(mat(ind,13)),bins);bar(x+.5,y,.5,'b');hold on;plot(mat(13,13),14,'bo');axis square;ylim([0 20]);
+subplot(2,2,3);[y x] =hist(abs(mat(ind,15)),bins);bar(x,y,1,'k');hold on;plot(abs(mat(13,15)),11,'bo');axis square;ylim([0 12]);
+subplot(2,2,4);[y x] =hist(abs(mat(ind,16)),bins);bar(x,y,1,'k');hold on;plot(abs(mat(13,16)),11,'bo');axis square;ylim([0 12]);
 labels = {'Kappa Cond' 'Kappa Test' 'abs(mu) Cond' 'abs(mu) test'};
 for n=1:4
     subplot(2,2,n)
@@ -401,7 +397,7 @@ ylabel('mean improvement CS+>CS-')
 %% check where ratings peak on CS+
 p = Project;
 mask = p.getMask('PMF');
-subs = intersect(find(sum(mask,2)==4),[Project.subjects_1500 Project.subjects_600]);
+subs = intersect(find(sum(mask,2)==4),[Project.subjects_600]);
 g = Group(subs);ratings = g.getRatings(2:4);[mat tags] = g.parameterMat;clear g;
 [~,ind] = max(ratings(:,:,4),[],2);
 max4=ind==4;
@@ -644,22 +640,33 @@ VerticalXlabel(tags,'interpreter','none')
 
 %% bin perception, plot kappa
 col = [1 3];
-mat = mat6;
+mat = mat15;
 p = prctile(mean(mat(:,col),2),linspace(0,100,4));
-
-alpha_m = [];alpha_s=[];
-for n = 1:length(p)-1    
-    i = (mean(mat(:,col),2) > p(n)) & (mean(mat(:,col),2) <= p(n+1));
+% bin = [2 3 2 2 3 2 1 2 3 1 3 2 1 3 2 1 1 3 2 1 2 3 1 1 3];
+outcome_m = [];outcome_sem=[]; bin_m = []; bin_s = [];
+for n = 1:length(p)-1
+    i = (mean(mat(:,col),2) >= p(n)) & (mean(mat(:,col),2) <= p(n+1));
+%     i = bin==n;
     sum(i)
-    alpha_m(n) = mean(mean(mat(i,[12 13]),2)) ;
-    alpha_s(n) = std(mean(mat(i,[12 13]),2))./sqrt(sum(i)); 
+    bin_m(n) = mean(mean(mat(i,col),2));
+    bin_s(n) = std(mean(mat(i,col),2));
+    outcome_m(n) = mean(mean(mat(i,[18 19]),2)) ;
+    outcome_sem(n) = std(mean(mat(i,[18 19]),2))./sqrt(sum(i)); 
 end
-% bar([1 3.5 6],alpha_m)
-% hold on;
-% errorbar([1 3.5 6],alpha_m,alpha_s,'k.','LineWidth',1.5)
-bar([2 4.5 7],alpha_m)
+bar(outcome_m)
 hold on;
-errorbar([2 4.5 7],alpha_m,alpha_s,'k.','LineWidth',1.5)
-set(gca,'XTick',[1.5 4 6.5],'XTickLabel',{'good' 'moderate' 'bad'})
-
+errorbar(1:3,outcome_m,outcome_sem,'k.','LineWidth',1.5)
+set(gca,'XTickLabel',{'good' 'moderate' 'bad'})
+hold off
+% hold on;
+% errorbar([1 3.5 6],outcome_m,outcome_s,'k.','LineWidth',1.5)
+% 
+% bar([1 3.5 6],outcome_m)
+% hold on;
+% errorbar([1 3.5 6],outcome_m,outcome_s,'k.','LineWidth',1.5)
+% % bar([2 4.5 7],outcome_m)
+% % hold on;
+% % errorbar([2 4.5 7],outcome_m,outcome_s,'k.','LineWidth',1.5)
+% set(gca,'XTick',[1.5 4 6.5],'XTickLabel',{'good' 'moderate' 'bad'})
+% 
 
