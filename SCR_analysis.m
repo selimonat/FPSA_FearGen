@@ -217,24 +217,42 @@ for sub = subjects(:)'
     scr_data1(:,[4 8 9],sc) = s.scr.ledalab.mean(1:800,1:3);    
 end
 %% plot single fits
-for n = 1:length(g.ids)
-    subplot(floor(sqrt(length(g.ids))),ceil(sqrt(length(g.ids))),n);
-    b=bar(g.tunings.scr.x(n,:),g.tunings.scr.y(n,:));
-    SetFearGenBarColors(b);
-    hold on;
-    x_HD = linspace(min(g.tunings.scr.x(n,:)),max(g.tunings.scr.x(n,:)),1000);
-    title(sprintf('Sub: %i, p = %5.5g',g.ids(n),g.tunings.scr.singlesubject{n}.pval));
-    hold on;
-    plot(x_HD,g.tunings.scr.singlesubject{n}.fitfun(x_HD,g.tunings.scr.singlesubject{n}.Est),'k-','linewidth',3);
-    
+nsub = length(scr_bars);
+x = -135:45:180;
+for n = 1:nsub
+    clear data;
+    data.x = x;
+    data.y = scr_bars(n,1:8,3);
+    data.ids = n;
+    tuning = Tuning(data);
+    tuning.SingleSubjectFit(8);
+    fit{n} = tuning.singlesubject{1};
+    signif(n) = fit{n}.pval > -log10(0.05);
 end
-% EqualizeSubPlotYlim(gcf)
-for n = 1:length(g.ids);valid(n) = g.tunings.scr.singlesubject{n}.pval > -log10(0.05);end
-for n = find(valid)
-subplot(5,6,n)
-bla = ylim;
-text(135,bla(2)*0.8,'X','FontSize',20)
+%plot the bars plus curves where significant
+for n = 1:nsub
+subplot(floor(sqrt(nsub)),ceil(sqrt(nsub)),n);
+b = bar(x,scr_bars(n,1:8,3));
+SetFearGenBarColors(b);
+set(gca,'XTick',[0 180],'XTickLabel',{'CS+','CS-'})
+hold on;
+x_HD = linspace(min(x),max(x),1000);
+if signif
+    plot(x_HD,fit{n}.fitfun(x_HD,fit{n}.Est),'k-','linewidth',2);
 end
+end
+%groupfit the tuned people
+data.x = repmat(x,[sum(signif) 1]);
+data.y = scr_bars(logical(signif),1:8,3);
+data.ids = subjects(logical(signif));
+
+% % EqualizeSubPlotYlim(gcf)
+% for n = 1:length(g.ids);valid(n) = g.tunings.scr.singlesubject{n}.pval > -log10(0.05);end
+% for n = find(valid)
+% subplot(5,6,n)
+% bla = ylim;
+% text(135,bla(2)*0.8,'X','FontSize',20)
+% end
 %% make Groupfit and plot it
 g.tunings.scr.GroupFit(8)
 % ylims = [0 0.55];%1500
