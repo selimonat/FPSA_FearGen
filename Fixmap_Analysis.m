@@ -672,6 +672,7 @@ subjmaps = fix.vectorize_maps;
 
 %normal correlation
 param       = mat(:,13);%kappa test
+for n  = 1:25; param(n,1) = vM2FWHM(mat(n,13));end
 
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',param);
@@ -1821,7 +1822,7 @@ EqualizeSubPlotYlim(gcf)
 clear all
 p = Project;
 mask = p.getMask('ET_discr');
-subjects = intersect(find(mask),[Project.subjects_600]);
+subjects = intersect(find(mask),[Project.subjects_1500]);
 mask = p.getMask('PMF');
 subjects = intersect(find(sum(mask,2)==4),subjects);
 g = Group(subjects);
@@ -1839,20 +1840,6 @@ for n = 1:length(submaps)
 end
 fix.maps = reshape(r,[50 50]);
 fix.plot
-%% weighted correlation
-clear all
-p = Project;
-mask = p.getMask('ET_discr');
-subjects = intersect(find(mask),[Project.subjects_1500]);
-mask = p.getMask('PMF');
-subjects = intersect(find(sum(mask,2)==4),subjects);
-g = Group(subjects);
-[mat tags] = g.parameterMat;
-
-fix = Fixmat(subjects,1);
-fix.getsubmaps;
-fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
-w = mean(fix.maps,3);w=w(:);
 
 %% freezing behavior?
 clear all
@@ -2153,25 +2140,31 @@ fix.plot
 clear all
 p               = Project;
 mask            = p.getMask('ET_discr');
-subjects        = intersect(find(mask),Project.subjects_600);
+subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),subjects);
 fix = Fixmat(subjects,1:5);
 
 pc = 0;
-c=0;
-        v = [];
 for ph = unique(fix.phase)
     pc = pc+1;
-    sc=0;
+    v = [];
+    c=0;
     for sub = subjects(:)'
-            c    = c+1;
-            v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+        c    = c+1;
+        v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
     end
+    fix.getmaps(v{:});
+    rmat(:,:,pc) = fix.corr;
+    rmat_f(:,:,pc) = reshape(fisherz(fix.corr),[27 27]);
 end
- fix.getmaps(v{:});
- rmat = fix.corr;
- imagesc(rmat(1:length(subjects),:));
+ind = logical(CancelDiagonals(triu(ones(27,27)),0));
+for n = 1:5
+    dummy = rmat_f(:,:,n);
+    corrs(:,n) = dummy(ind);
+end
+ifisherz(mean(mean(corrs)))%should give .53 
+
 %% phase similarity within subjects
 clear all
 p               = Project;
@@ -2183,7 +2176,6 @@ fix = Fixmat(subjects,1:5);
 
 sc = 0;
 c=0;
-
 for sub = subjects(:)'
     sc = sc+1;
     pc=0;
@@ -2193,7 +2185,17 @@ for sub = subjects(:)'
             v{pc} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
     end
  fix.getmaps(v{:});
- fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+%  fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
  rmat(:,:,sc) = fix.corr;
 end
-imagesc(mean(rmat,3))
+
+rmat_f  = nan(5,5,27);
+for n = 1:27; 
+    rmat_f(:,:,n) = reshape(fisherz(rmat(:,:,n)),[5 5 1]);
+end
+rmat_mean = CancelDiagonals(reshape(ifisherz(mean(rmat_f,3)),[5 5]),1); % average across the subjects, take the mean, inv fisher it...
+imagesc(rmat_mean)
+
+ind = logical(CancelDiagonals(triu(ones(5,5)),0));
+for n = 1:27;dummy = rmat(:,:,n);corrs(:,n) = dummy(ind);end
+ifisherz(mean(fisherz(corrs))) % gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals
