@@ -192,7 +192,6 @@ subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('RATE');
 subjects        = intersect(find(mask),subjects);
 g               = Group(subjects);
-g.getSI(8);
 [mat,tag] = g.parameterMat;
 clear g;
 subs_goodsigma = subjects(mat(:,13)  >=median(mat(:,13)));
@@ -510,10 +509,11 @@ clear all
 p               = Project;
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),Project.subjects_1500);
-fix = Fixmat(subjects,4);
-phases = 4;
+phases = [2 4];
+fix = Fixmat(subjects,phases);
 
-deltacsp = [0 180];
+
+deltacsp = -135:45:180;
 % fix.kernel_fwhm = 36;
 % collect single trials
 scale            = .1;%use .1 to have the typical 2500 pixel maps
@@ -594,7 +594,6 @@ num=60;
 %collect loadings of every trial
 trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 
-
 %% subject identificatino
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\versionABCDEFG\subjects_rand0\result.mat')
 a = result;
@@ -603,4 +602,199 @@ subplot(1,2,1);imagesc(mean(scaled,3))
 axis square
 subplot(1,2,2);a = CancelDiagonals(mean(scaled,3),0);imagesc(a);
 axis square
+
+%% cross validation. Discrimination data / feargen parameter
+
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('RATE');
+subjects        = intersect(find(mask),subjects);
+g               = Group(subjects);
+[mat] = g.parameterMat; mises = g.loadmises; mat = [mat mises];
+for n = 1:length(mat)
+    mat(n,18) = vM2FWHM(mat(n,12));
+    mat(n,19) = vM2FWHM(mat(n,13));
+end
+tags{18} = 'FWHM_cond';
+tags{19} = 'FWHM_test';
+clear g
+
+%good feargen, bad feargen
+col = 19;
+crit = median(mat(:,col));
+%%%%CAVE: FWHM < but kappa >
+sub_good = subjects(mat(:,col)<=crit);
+
+%prepare fixmaps
+phases =1;
+fix = Fixmat(subjects,phases);
+% collect single trials
+scale            = .1;%use .1 to have the typical 2500 pixel maps
+final_size       = prod(fix.rect(end-1:end).*scale);
+trialnumber      = [400 120 124 240 400];
+ttrial           = length(subjects)*sum(trialnumber(phases));
+datamatrix       = NaN(final_size,ttrial);
+labels.sub       = NaN(1,ttrial);
+labels.phase     = NaN(1,ttrial);
+labels.trial     = NaN(1,ttrial);
+labels.cond      = NaN(1,ttrial);
+labels.pos       = NaN(1,ttrial);
+labels.kappa     = NaN(1,ttrial);
+v = [];
+c=0;
+deletecount = 0;
+for sub = subjects(:)'
+    for ph = phases
+        for tr = 1:max(fix.trialid(fix.phase == ph))
+            v = {'subject' sub, 'phase' ph 'trialid' tr 'deltacsp' fix.realcond};
+            fprintf('subject %d phase %d trial %d\n',sub,ph,tr);
+            fix.getmaps(v);
+            if ~any(isnan(fix.maps(:)))                
+                c                   = c+1;
+                %scale it if necessary
+                if scale ~= 1
+                    fix.maps        = imresize(fix.maps,scale,'method','bilinear');
+                end                                
+                datamatrix(:,c)     = fix.vectorize_maps;
+                labels.sub(c)       = sub;
+                labels.phase(c)     = ph;
+                labels.trial(c)     = tr;
+                labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                labels.kappa(c)     = ismember(sub,sub_good);
+                if ismember(ph,[1 5])
+                    labels.pos(c)   = mod(tr,2);%1 is 1st, 0 is 2nd
+                else
+                    labels.pos(c)   = NaN;
+                end
+            else
+                deletecount = deletecount +1;
+            end
+        end
+    end
+end
+
+%cut the nans
+todelete = isnan(sum(datamatrix));
+fprintf('Will delete %g trials...\n',sum(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+labels.kappa(:,todelete)=[];
+
+c = 0;
+for l = unique(labels.sub)
+    c = c + 1;
+    labels.easy_sub(labels.sub == l) = c;
+end
+
+fprintf('starting covariance computation\n')
+covmat=cov(datamatrix');
+fprintf('done\n')
+fprintf('starting eigenvector computation\n')
+[e dv] = eig(covmat);
+fprintf('done\n')
+dv = sort(diag(dv),'descend');
+plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
+eigen = fliplr(e);
+% n where explained variance is > 95%
+num = 60;%min(find((cumsum(dv)./sum(dv))>.95));
+%collect loadings of every trial
+trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
+%% cross validation. Test phase data / discrimination parameter
+
+p               = Project;
+mask            = p.getMask('ET_discr');
+subjects        = intersect(find(mask),Project.subjects_1500);
+mask            = p.getMask('PMF');
+subjects        = intersect(find(sum(mask,2)==4),subjects);
+g               = Group(subjects);
+[mat] = g.parameterMat;
+clear g
+
+%good discr, bad discr
+crit = median(mean(mat(:,[1 3]),2));
+sub_good = subjects(mean(mat(:,[1 3]),2)<=crit);
+
+%prepare fixmaps
+phases =4;
+fix = Fixmat(subjects,phases);
+% collect single trials
+scale            = .1;%use .1 to have the typical 2500 pixel maps
+final_size       = prod(fix.rect(end-1:end).*scale);
+trialnumber      = [400 120 124 240 400];
+ttrial           = length(subjects)*sum(trialnumber(phases));
+datamatrix       = NaN(final_size,ttrial);
+labels.sub       = NaN(1,ttrial);
+labels.phase     = NaN(1,ttrial);
+labels.trial     = NaN(1,ttrial);
+labels.cond      = NaN(1,ttrial);
+labels.pos       = NaN(1,ttrial);
+labels.discr     = NaN(1,ttrial);
+v = [];
+c=0;
+deletecount = 0;
+for sub = subjects(:)'
+    for ph = phases
+        for tr = 1:max(fix.trialid(fix.phase == ph))
+            v = {'subject' sub, 'phase' ph 'trialid' tr 'deltacsp' fix.realcond};
+            fprintf('subject %d phase %d trial %d\n',sub,ph,tr);
+            fix.getmaps(v);
+            if ~any(isnan(fix.maps(:)))                
+                c                   = c+1;
+                %scale it if necessary
+                if scale ~= 1
+                    fix.maps        = imresize(fix.maps,scale,'method','bilinear');
+                end                                
+                datamatrix(:,c)     = fix.vectorize_maps;
+                labels.sub(c)       = sub;
+                labels.phase(c)     = ph;
+                labels.trial(c)     = tr;
+                labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                labels.discr(c)     = ismember(sub,sub_good);
+                if ismember(ph,[1 5])
+                    labels.pos(c)   = mod(tr,2);%1 is 1st, 0 is 2nd
+                else
+                    labels.pos(c)   = NaN;
+                end
+            else
+                deletecount = deletecount +1;
+            end
+        end
+    end
+end
+
+%cut the nans
+todelete = isnan(sum(datamatrix));
+fprintf('Will delete %g trials...\n',sum(todelete));
+datamatrix(:,todelete)=[];
+labels.sub(:,todelete)=[];
+labels.phase(:,todelete)=[];
+labels.trial(:,todelete)=[];
+labels.cond(:,todelete)=[];
+labels.pos(:,todelete)=[];
+labels.discr(:,todelete)=[];
+
+c = 0;
+for l = unique(labels.sub)
+    c = c + 1;
+    labels.easy_sub(labels.sub == l) = c;
+end
+
+fprintf('starting covariance computation\n')
+covmat=cov(datamatrix');
+fprintf('done\n')
+fprintf('starting eigenvector computation\n')
+[e dv] = eig(covmat);
+fprintf('done\n')
+dv = sort(diag(dv),'descend');
+plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);
+eigen = fliplr(e);
+% n where explained variance is > 95%
+num = 60;%min(find((cumsum(dv)./sum(dv))>.95));
+%collect loadings of every trial
+trialload = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 

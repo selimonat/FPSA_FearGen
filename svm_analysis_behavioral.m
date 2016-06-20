@@ -1,4 +1,4 @@
-function [result,w,reals,classes] = svm_analysis_behavioral(analysis_type,data,labels,r,nbootstrap)
+function [result,w] = svm_analysis_behavioral(analysis_type,data,labels,r,nbootstrap)
 %SVM_ANALYSIS allows different types of analysis classifying subjects,
 %phases, conditions,...
 %
@@ -14,15 +14,16 @@ function [result,w,reals,classes] = svm_analysis_behavioral(analysis_type,data,l
 % which can be found here:
 % .../data/midlevel/singletrialfixmaps/1500\SI_N24\phase4\trialload.mat
 % as well as labels, found here:
+%                                              
 % .../data/midlevel/singletrialfixmaps\1500\SI_N24\phase4\labels.mat
 
 path = setPath;
-
-% r=0; %so far no randomization implemented
+                                                                                                                    
+% r=0; %so far no randomization implemented                
 
 % nbootstrap    = 100;
-balance       = 1;
-cmd           = '-t 0 -c 1 -q '; %t 0: linear, -c 1: criterion, -q: quiet   -w1 1.0715 -w0 1
+balance       = 0; %method: balance=1: cut trials. balance = 2: adjust weights.
+cmd           = '-t 0 -c 1 -q -w0 1.0426 -w1 1'; %t 0: linear, -c 1: criterion, -q: quiet   -w1 1.0715 -w0 1
 ids           = unique(labels.easy_sub);
 nsub          = length(ids);
 phases        = 1:5;
@@ -31,7 +32,7 @@ savepath      = [];
 model         = [];
 
 if analysis_type == 1
-    name_analysis = 'subjects_by_SI1213'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_gaussSI'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -56,7 +57,7 @@ if analysis_type == 1
     end
     
 elseif analysis_type == 2
-    name_analysis = 'subjects_by_alpha'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_ph4alpha'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
@@ -77,14 +78,14 @@ elseif analysis_type == 2
         w(:,n)          = model.SVs'*model.sv_coef;
     end
 elseif analysis_type == 3
-    name_analysis = 'subjects_by_kappa1213'; %classify subjects, collapse phases
+    name_analysis = 'subjects_by_ph1kappa'; %classify subjects, collapse phases
     fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
     PrepareSavePath;
     result        = [];
     w             = [];
     for n = 1:nbootstrap
         Init;
-        Y         = labels.sigma';
+        Y         = labels.kappa';
         X         = data;
         balanceclasses;
         randomizeifwanted;
@@ -102,7 +103,7 @@ elseif analysis_type == 3
 end
 
 
-% save(fullfile(savepath,'result.mat'),'result','model','w')
+save(fullfile(savepath,'result.mat'),'result','model','w')
 
     function Classify
         model                           = svmtrain(Y(P.training), X(P.training,:), cmd);
@@ -117,7 +118,7 @@ end
         end
     end
     function balanceclasses
-        if balance == 1;
+        if balance == 1
             classtocut = mode(Y);
             numbers = hist(Y,[0 1]);
             maxtrials = min(numbers);
@@ -146,7 +147,7 @@ end
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
         elseif ispc
             t = datestr(now,30);
-            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160217';
+            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160531';
             mkdir(path)
             addpath('C:\Users\user\Documents\GitHub\libsvm\matlab\')
         elseif isunix

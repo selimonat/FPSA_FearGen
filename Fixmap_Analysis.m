@@ -248,19 +248,23 @@ SaveFigure('/Users/onat/Desktop/SimilarityOFConditionsFixByFix','-r150');
 %% compare Single subject across task similarity
 sub_c = 0;
 tsub  = length(unique(fix.subject));
-cormat = nan(5,5,tsub)
+cormat = nan(5,5,tsub);
 for subs = unique(fix.subject);    
     sub_c = sub_c+1;
     v    = [];
     c    = 0;
     for ph = [1 2 3 4 5]
         c    = c+1;
-        v{c} = {'phase', ph , 'deltacsp' [0 180 18000] 'subject' subs};
+        v{c} = {'phase', ph , 'deltacsp' fix.realcond 'subject' subs};
     end
     fix.getmaps(v{:});    
-%     fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+    fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
     cormat(:,:,sub_c) = fix.corr;
 end
+mat = reshape(ifisherz(mean(reshape(fisherz(cormat),[5 5 27]),3)),[5 5]);
+mat = CancelDiagonals(mat,1);
+imagesc(mat)
+colorbar
 %% COMPARE FIXATION PATTERNS ACROSS THE 5 PHASES (MEGASUBJECT)
 sub_c  = 0;
 v      = [];
@@ -656,7 +660,7 @@ fix.plot
 clear all
 p           = Project;
 mask        = find(p.getMask('ET_feargen').*p.getMask('RATE'));
-subjects    = intersect([Project.subjects_600],mask);%subjects
+subjects    = intersect([Project.subjects_1500],mask);%subjects
 g           = Group(subjects);%get the data for these subjects
 [mat tags]  = g.parameterMat;
 mises = g.loadmises; mat = [mat mises];
@@ -1890,15 +1894,16 @@ subplot(1,2,2);imagesc(histmat(i,:));
 w0 = w;
 w = mean(w0,3);
 num=60;
-fix.getsubmaps;
-fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
-meanmap = Scale(mean(fix.maps,3));
+% fix.getsubmaps;
+% fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+% meanmap = Scale(mean(fix.maps,3));
 
 for n = 1:size(w,2);
     hp(:,:,n) = squeeze(eigen(:,1:num)*w(:,n));
 end
 % for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
 for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]).*meanmap;end
+for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
 fix.plot
 
 a = mean(result,4);
