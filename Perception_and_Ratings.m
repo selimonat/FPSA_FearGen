@@ -514,7 +514,17 @@ hist(mat15(SCR_crit15(:,1)>SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)>SCR_crit15(:
 hold on
 hist(mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10),20,'Color','r')
 [h,p,ci,stats]= ttest2(mat15(SCR_crit15(:,1)>SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)>SCR_crit15(:,2),10),mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10))
-
+%% overall PMF, collect responses
+p = Project;
+subjects = intersect(find(sum(p.getMask('PMF'),2)==4),Project.subjects_600);
+pdiff = nan(17,2,length(subjects),2);
+sc = 0;
+for sub = subjects(:)'
+    sc = sc + 1;
+    s = Subject(sub);
+    pdiff(:,:,sc,1) = squeeze(nanmean(s.load_paradigm(1).psi.log.xrounded,2));
+    pdiff(:,:,sc,2) = squeeze(nanmean(s.load_paradigm(5).psi.log.xrounded,2));
+end
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
