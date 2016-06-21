@@ -118,16 +118,71 @@ end
 %comparison 45 vs. -135. However the effect gets weaker if
 %differences between 45 vs. 135 is compared to 45 vs. -135.
 
-%% correlation matrix decomposition
+%% collect covariance matrices for each fixation and each subject. in the next cell we will test 
+% different exploration strategies on these matrices.
+for kernel_fwhm = 45
+    M = [];
+    C               = [];
+    fix.kernel_fwhm = kernel_fwhm;
+    c_sub           = 0;
+    for ns = subjects(:)'
+        c_sub   = c_sub +1
+        counter = 0;
+        v       = [];
+        for phase = [2 4]
+            for nfix = 1:4
+                for ncond = [-135:45:180];
+                    counter      = counter + 1;
+                    %                     trials = unique(fix.trialid((fix.deltacsp == ncond).*(fix.phase == phase).*(fix.subject == ns)==1));
+                    v{counter}   = {'phase' phase 'deltacsp' ncond 'subject' ns 'fix' nfix(:)'};%, 'trialid', trials(1:end)};
+                end
+            end
+        end
+        fix.getmaps(v{:});
+        fix.maps(:,:,1:32)      = fix.maps(:,:,1:32)   - repmat(mean(fix.maps(:,:,1:32),3),[ 1 1 32]);
+        fix.maps(:,:,33:end)    = fix.maps(:,:,33:end) - repmat(mean(fix.maps(:,:,33:end),3),[ 1 1 32]);        
+        M(:,:,:,c_sub)          = fix.maps;
+        C(:,:,c_sub)            = fix.cov;
+    end   
+end
+%% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
+%_constant component: this models the correlation (or covariance) that is
+%common to all faces. Basically this is the one that is mostly affected
+%when doing the cocktail blank corrections. 
+%_gaussian component centered on the CS+. This models the generalization of
+%explorations strategies towards neighboring faces that are not accounted
+%by the circular component.
+%_diagonal component: This is just the variance of fixation maps. When
+%fixations are all over the place there will be low variance, where as when
+%all the fixations are located at the same location this will generate high
+%probabilitiy values and thus high variance. For the fit to work nicely it needs to be included.
+%_circular component: This is our interesting finding of circular
+%similarity of fixation maps. I am still not sure what it really means. It
+%would be desirable to find a name for this covariance hypothesis (besides
+%circularity). It could be highly interesting to see whether this is
+%related to discrimination or feargen performance (we have these weights on
+%a subject by subject basis).
 [X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
 xdata         = [X(:) Y(:)]-2.3562;
-
 block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-Y             = block_extract(CC,6,6,1);
-
-[model]=FitCorrMat(Y)
-
-
+% the code above creates a function handle to extract blocks from the
+% covariance matrices
+clear amp_*
+for db = 1:8%diagonal blocks
+    Y                  = block_extract(nanmean(C,3),db,db,1);
+    [bla, param]       = fitcorrmat(Y,'gradient');
+    amp_circ(db,:)     = param(1,:);
+    amp_gau(db,:)      = param(2,:);
+    amp_const(db,:)    = param(3,:);
+    amp_diag(db,:)     = param(4,:);
+end
+%%
+%results saved in Dropbox/CovarianceAnalysis.
+figure(2);
+subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component')
+subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component')
+subplot(4,1,3);bar(nanmean(amp_gau,2));title('gaussian component');
+subplot(4,1,4);bar(nanmean(amp_diag,2));title('diagonal component');
 
 
 
