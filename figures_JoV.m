@@ -150,48 +150,48 @@ legend('CS-','CS+','location','southeast')
 legend boxoff
 hold off
 %% histogram of alpha and kappa for both durations
-clf
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
-ind = subs15;
+ind = subs6;
 sp = [2 4];
 crit = 22.5; % for later noshifter vs shifter improvement
 
+clf
 subplot(sp(1),sp(2),1)%FWHM
-[y,xi] = ksdensity(mat(ind,18),'bandwidth',10);
-plot(xi,y,'b','LineWidth',2);hold on;
-[y,xi] = ksdensity(mat(ind,19),'bandwidth',10);
-plot(xi,y,'k','LineWidth',2)
+v = 6;
+% [n1,p1]=hist(mat(ind,18),v);
+% [n2,p2]=hist(mat(ind,19),v);
+% bar(p1,n1,'facecolor','k');hold on; 
+% bar(p2,n2,'facecolor','b')
+histf(mat(ind,18),v,'FaceColor','b','EdgeColor','none','FaceAlpha',.6)
+hold on;
+histf(mat(ind,19),v,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
 axis square;box off
 hold off
-% xlim([min(abs(mat(ind,16))) max(abs(mat(:,16)))])\
-xlim([0 180])
-% set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-ylabel('density')
+ylabel('counts')
 title('FWHM')
 text(10,7.8e-3,'A','FontSize',20);
+ylim([0 15])
 subplot(sp(1),sp(2),2)%MU
-[y,xi] = ksdensity(abs(mat(ind,15)),'bandwidth',7);
-plot(xi,y,'b','LineWidth',2);hold on;
-[y,xi] = ksdensity(abs(mat(ind,16)),'bandwidth',7);
-plot(xi,y,'k','LineWidth',2)
-legend('Conditioning','Generalization')
-legend boxoff
+v = 6;
+histf(abs(mat(ind,15)),v,'FaceColor','b','EdgeColor','none','FaceAlpha',.6)
+hold on;
+histf(abs(mat(ind,16)),v+2,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
 axis square;box off
-xlim([min(abs(mat(ind,16))) max(abs(mat(:,16)))])
-% set(gca,'YTick',yticks,'XTick',xticks,'XTickLabel',{'wide' 'sharp'})
-ylabel('density')
-title('MU')
-line([crit crit],ylim,'Color','k')
 hold off
+ylabel('counts')
+title('abs(Mu)')
+hold off
+ylim([0 15])
+legend('Conditioning','Generalization','orientation','vertical','location','best')
+legend boxoff
 %
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\max4.mat')
 ind = logical(abs(mat6(:,16))<= crit);
 subplot(sp(1),sp(2),5)%alpha results
-text(.5,78,'B','FontSize',20);
 ylabel('threshold alpha (deg)')
 b = bar([1 2 4 5],mean(mat6(:,1:4)));
-SetFearGenBarColors(b,[1 0 0;.8 0 0;0 1 1;0 .8 .8]')
+SetFearGenBarColors(b,[1 0 0;.6 0 0;0 1 1;0 .6 .6]')
 line([1 2],[72 72],'Color','k','LineWidth',2)
 text(1,75,'***','FontSize',16)
 hold on;
@@ -212,9 +212,21 @@ xlim([0 3])
 set(gca,'XTick',[1 2],'XTicklabel',{'CS+ centered' 'shifted'})
 ylim([-5 20])
 ylabel('corrected improvement (deg)')
+text(.5,78,'B','FontSize',20);
 hold off;
+%% correlation
+subplot(sp(1),sp(2),[3 4 7 8])
+text(20,180,'C','FontSize',20);
+hold on;
+plot(mat6(:,17),mat6(:,18),'bo','MarkerFaceColor','b','MarkerSize',10)
+l = lsline;set(l,'LineWidth',2)
+box off
+xlabel('initial alpha')
+ylabel('FWHM Cond')
+hold off
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+sp = [2 4];
 linewidth = 3;
 subplot(sp(1),sp(2),[3 4 7 8])
 text(.5,5.5,'C','FontSize',20);
@@ -231,13 +243,14 @@ for n = 1:length(p)-1
         i = (mean(mat(:,col),2) >= p(n)) & (mean(mat(:,col),2) <= p(n+1));
     end
     sum(i)
+    ii(:,n) = i;
     mean(mean(mat(i,[1 3]),2))   
-    binalpha(4,n) = mean(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mat(i,[12]),2));
-    outcome_s(n) = std(mean(mat(i,[12]),2))./sqrt(sum(i)); 
+    binalpha(n) = mean(mean(mat(i,[1 3]),2));
+    outcome_m(n) = mean(mean(mat(i,[18]),2));
+    outcome_s(n) = std(mean(mat(i,[18]),2))./sqrt(sum(i)); 
 end
-bar(1:3,outcome_m,'FaceColor','r');hold on;
-bar(1:3,[2.59 .995 .147],'FaceColor',[.3 .3 .3])
+bar(1:3,binalpha,'FaceColor',[.7 .7 .7],'EdgeColor','none')%bar(1:3,[2.59 .995 .147],'FaceColor',[.3 .3 .3])
+bar(1:3,outcome_m,'FaceColor','w');hold on;
 errorbar(1:3,outcome_m,outcome_s,'k.','LineWidth',linewidth)
 set(gca,'XTickLabel',{'good','moderate','weak'})
 xlabel('discrimination performance')
@@ -246,6 +259,14 @@ axis square
 box off
 xlim([0 4])
 hold off
+
+%
+for n=1:length(ii)
+    group(n) = find(ii(n,:));
+end
+figure
+boxplot(mat6(:,18))
+
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Fig 2 - beneficial locations
@@ -334,7 +355,6 @@ mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),Project.subjects_1500);
 fix             = Fixmat(subjects,4);
 
-
 % get the data
 g = Group(subjects);
 [mat tags] = g.parameterMat;
@@ -348,104 +368,106 @@ clear g
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 [branch_id,order] = fix.dendrogram(3,mat(:,13));
+%% 
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\dendro_branch_id_subjects.mat')
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\mat_N27_for_dendro.mat')
+g1 = Group(sub1);
+g2 = Group(sub2);
+mat1 = g1.loadmises;
+mat2 = g2.loadmises;
+%% DENDROGRAM BEHAVIORAL CLUSTER OUTCOMES
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\mat_N27_for_dendro.mat','mat','mat1','mat2','sub1','sub2','subjects','tags','branch_id')
+fonts = 12;
+clf
+subplot(4,2,1:2);
+errorbar([nanmean(mat1(:,2)) nanmean(mat2(:,2))],[nanstd(mat1(:,2))./sqrt(sum(~isnan(mat1(:,2)))) nanstd(mat2(:,2))./sqrt(sum(~isnan(mat2(:,2))))],'k','LineWidth',2)
 
-
+% for n = 1:8;  fwhm1(n) = vM2FWHM(mat1(n,2));end
+% for n = 1:17; fwhm2(n) = vM2FWHM(mat2(n,2));end
+% subplot(4,2,1:2);
+% errorbar([nanmean(fwhm1) nanmean(fwhm2)],[nanstd(fwhm1)./sqrt(sum(~isnan(mat1(:,2)))) nanstd(fwhm2)./sqrt(sum(~isnan(mat2(:,2))))],'k','LineWidth',2)
+set(gca,'XTick',1:2,'XTickLabel',{'Cluster 1' 'Cluster 2'},'YTick',0:5:15,'FontSize',fonts)
+ylabel('Fear Specificity (Kappa)','FontSize',fonts)
+box off
+line([2.1 2.1],[nanmean(mat1(:,2)) nanmean(mat2(:,2))],'LineWidth',2)
+text(2.15,mean([nanmean(mat1(:,2)) nanmean(mat2(:,2))]),'*','FontSize',30);
 %% SCR for dendrogram
-clf
-scr1 = scr_data2(:,1:8,1:8);% -repmat(scr_data2(:,9,1:8),[1 8 1]);
-scr2 = scr_data2(:,1:8,9:end);% -repmat(scr_data2(:,9,9:end),[1 8 1]);
+load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_cut_fordendro.mat','scr_data_cut','scr_data','subjects','mask')
+scr1 = scr_data(:,1:8,ismember(subjects,sub1));% -repmat(scr_data_cut(:,9,ismember(subjects,sub1)),[1 8 1]);
+scr2 = scr_data(:,1:8,ismember(subjects,sub2));% -repmat(scr_data_cut(:,9,ismember(subjects,sub2)),[1 8 1]);
 
-subplot(2,2,1);
+subplot(4,2,3);
 SetFearGenColors;
 plot(mean(scr1,3),'LineWidth',2)
-xlim([150 700])
+hold on;
+plot(squeeze(mean(scr_data(:,9,ismember(subjects,sub1)),3)),'k:','LineWidth',2)
 ylim([0 1])
 axis square;box off;
-ylabel('SCR [muS]')
-set(gca,'XTick',[250 550],'XTickLabel',{'2.5','5.5'},'YTick',[0 .5 1],'FontSize',12)
+ylabel('SCR [muS]','FontSize',fonts)
+set(gca,'XTick',[0 250 550],'XTickLabel',{'0','2.5','5.5'},'YTick',[0 .5 1],'FontSize',fonts)
+line([250 250],[0 1],'LineStyle','--','Color',[.2 .2 .2],'LineWidth',1.5)
+line([550 550],[0 1],'LineStyle','--','Color',[.2 .2 .2],'LineWidth',1.5)
+xlim([150 650])
 
-subplot(2,2,2)
+subplot(4,2,4)
 SetFearGenColors;
 plot(mean(scr2,3),'LineWidth',2)
-xlim([150 700])
+hold on;
+plot(squeeze(mean(scr_data(:,9,ismember(subjects,sub2)),3)),'k:','LineWidth',2)
 ylim([0 1])
 axis square;box off;
-set(gca,'XTick',[250 550],'XTickLabel',{'2.5','5.5'},'YTick',[0 .5 1],'FontSize',12)
+set(gca,'XTick',[0 250 550],'XTickLabel',{'0','2.5','5.5'},'YTick',[0 .5 1],'FontSize',fonts)
+line([250 250],[0 1],'LineStyle','--','Color',[.2 .2 .2],'LineWidth',1.5)
+line([550 550],[0 1],'LineStyle','--','Color',[.2 .2 .2],'LineWidth',1.5)
+xlim([150 650])
 
+scr1 = squeeze(mean(scr_data_cut(:,1:8,ismember(subjects,sub1))))';
+scr2 = squeeze(mean(scr_data_cut(:,1:8,ismember(subjects,sub2))))';
 
-scr1 = scr_bars(1:length(sub1),1:8,3);%-repmat(scr_bars(1:length(sub1),9,3),[1 8]);
-scr2 = scr_bars(9:end,1:8,3);%-repmat(scr_bars(9:end,9,3),[1 8]);
-
-subplot(2,2,3);
-b = bar(1:8,mean(scr1));SetFearGenBarColors(b);
+subplot(4,2,5);
+b = bar(-135:45:180,mean(scr1));SetFearGenBarColors(b);
 hold on;
-e = errorbar(1:8,mean(scr1),std(scr1)./sqrt(length(scr1)),'k.','LineWidth',1.5);
+e = errorbar(-135:45:180,mean(scr1),std(scr1)./sqrt(length(scr1)),'k.','LineWidth',1.5);
+x = linspace(-135,180,1000);
+plot(x,Tuning.VonMises(x,0.1395,2.2234,1.4489,0.1292),'k','LineWidth',1.5)
 axis square;box off;
-line(xlim,repmat(mean(scr_bars(1:8,9,3)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':');
+line(xlim,repmat(mean(mean(scr_data_cut(:,9,ismember(subjects,sub1)))),[2 1]),'Color','k','LineWidth',1.5,'LineStyle',':');
 ylim([0 .6])
-ylabel('SCR tuning [muS]')
-set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',[0 .3 .6],'FontSize',12)
+xlim([-185 230])
+ylabel('SCR tuning [muS]','FontSize',fonts)
+set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'YTick',[0 .3 .6],'FontSize',fonts)
 
 
-subplot(2,2,4);
-b = bar(1:8,mean(scr2));SetFearGenBarColors(b);
+subplot(4,2,6);
+b = bar(-135:45:180,mean(scr2));SetFearGenBarColors(b);
 hold on;
-e = errorbar(1:8,mean(scr2),std(scr2)./sqrt(length(scr2)),'k.','LineWidth',1.5);
+e = errorbar(-135:45:180,mean(scr2),std(scr2)./sqrt(length(scr2)),'k.','LineWidth',1.5);
+x = linspace(-135,180,1000);
+plot(x,Tuning.VonMises(x,0.1798,2.5709,-6.3190,.2803),'k','LineWidth',1.5)
 axis square;box off;
-line(xlim,repmat(mean(scr_bars(9:end,9,3)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':');
+line(xlim,repmat(mean(mean(scr_data_cut(:,9,ismember(subjects,sub2)))),[2 1]),'Color','k','LineWidth',1.5,'LineStyle',':');
 ylim([0 .6])
-set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',[0 .3 .6],'FontSize',12)
+xlim([-185 230])
+set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'YTick',[0 .3 .6],'FontSize',fonts)
 
-
-%% SCR for dendrogram (not nulltrial corrected)
-scr1 = scr_bars(1:length(sub1),1:8,3);
-scr2 = scr_bars(9:end,1:8,3);
-
-clf
-subplot(3,2,1);
-b = bar(1:8,mean(scr1));SetFearGenBarColors(b);
-hold on;
-e = errorbar(1:8,mean(scr1),std(scr1)./sqrt(length(scr1)),'k.','LineWidth',1.5);
-axis square;box off;
-set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'})
-
-subplot(3,2,2);
-b = bar(1:8,mean(scr2));SetFearGenBarColors(b);
-hold on;
-e = errorbar(1:8,mean(scr2),std(scr2)./sqrt(length(scr2)),'k.','LineWidth',1.5);
-axis square;box off;
-set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'})
-EqualizeSubPlotYlim(gcf)
-
-
-scr1 = scr_data2(:,1:8,1:8);
-scr2 = scr_data2(:,1:8,9:end);
-
-subplot(3,2,3);
-SetFearGenColors;
-plot(mean(scr1,3),'LineWidth',2)
-xlim([0 800])
-axis square;box off;
-
-subplot(3,2,4)
-SetFearGenColors;
-plot(mean(scr2,3),'LineWidth',2)
-xlim([0 800])
-axis square;box off;
-
-subplot(3,2,5)
-b = bar(1:8,mean(mean(scr1,1),3));
-hold on;
-SetFearGenBarColors(b);
-e = errorbar(1:8,mean(mean(scr1,1),3),std(mean(scr1,1))./sqrt(16),'k.','LineWidth',1.5);
-axis square;box off;
-subplot(3,2,6)
-b = bar(1:8,mean(mean(scr2,1),3));
-hold on;
-SetFearGenBarColors(b);
-e = errorbar(1:8,mean(mean(scr2,1),3),squeeze(std(mean(scr2,1)))./sqrt(16),'k.','LineWidth',1.5);
-
-
+%% alpha
+p = Project;
+alphmat1 = g1.parameterMat;
+alphmat2 = g2.parameterMat;
+invalid_pmf1 = ~ismember(g1.ids,find(sum(p.getMask('PMF'),2)==4));
+alphmat1(invalid_pmf1,1:11) = nan;
+invalid_pmf2 = ~ismember(g2.ids,find(sum(p.getMask('PMF'),2)==4));
+alphmat2(invalid_pmf2,1:11) = nan;
+alpha1 = mean(alphmat1(~invalid_pmf1,[1 3]),2);
+alpha2 = mean(alphmat2(~invalid_pmf2,[1 3]),2);
+subplot(4,2,7:8)
+errorbar([mean(alpha1) mean(alpha2)],[std(alpha1)./sqrt(length(alpha1)) std(alpha2)./sqrt(length(alpha2))],'k','LineWidth',2)
+set(gca,'XTick',1:2,'XTickLabel',{'Cluster 1' 'Cluster 2'},'FontSize',fonts)
+ylabel('initial alpha [deg]','FontSize',fonts)
+box off
+[h,p,ci,stats] = ttest2(alpha1,alpha2,'tail','right')
+line([2.1 2.1],[mean(alpha1) mean(alpha2)],'Color','k','LineWidth',2)
+text(2.15,mean([mean(alpha1) mean(alpha2)]),'*','Color','k','FontSize',30);
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Fig X - RSA
