@@ -9,12 +9,10 @@ g = Group(subs);
 g.getSI(3);
 %% big figure for behavioral results
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\ratings_600.mat','ratings');
-sp = [2 5];
+sp = [1 5];
 clf
-c = 6;
 for n = 2:4
-    c = c+1;
-    subpl(c) =  subplot(sp(1),sp(2),c);
+    subpl(n) =  subplot(sp(1),sp(2),n);
     b = bar(-135:45:180,mean(ratings(:,:,n)));
     hold on;
     e = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
@@ -26,77 +24,77 @@ for n = 2:4
     axis square
     box off
 end
-subplot(sp(1),sp(2),7);ylabel('Rating of p(shock)')
+subplot(sp(1),sp(2),2);ylabel('Rating of p(shock)')
 %add Groupfit line
 params = [5.1801 0.7288 deg2rad(0.8714) 1.8312; 4.4396 1.1171 deg2rad(-0.0598) 1.9506]; %600ms cond;test
 % params = [5.4473,1.3072,deg2rad(-8.0356),1.7061;4.6438,2.2963,deg2rad(-1.4574),1.9557] %1500 cond;test
 x = -150:0.1:195;
-subplot(sp(1),sp(2),7);
+subplot(sp(1),sp(2),2);
 plot(x,mean(mean(ratings(:,:,2))),'k-','LineWidth',3.5)
-subplot(sp(1),sp(2),8);
+subplot(sp(1),sp(2),3);
 plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',1.5)
 line([0 180],[9 9],'Color','k','LineWidth',1.3)
 text(45,9,'***','FontSize',20)
-subplot(sp(1),sp(2),9);
+subplot(sp(1),sp(2),4);
 plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',1.5)
 line([0 180],[9 9],'Color','k','LineWidth',1.3)
 text(45,9,'***','FontSize',20)
 
-%%scr 
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600BCT.mat','scr_bars','subjects')
-ylims = [0.3 .9];%600 0.3 1.1  %1500: 0.7
-Yticks = [0.3 0.6 0.9];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
-
-% plot
-for n = [1 3]
-subplot(sp(1),sp(2),n+1);
-b = bar(-135:45:180,mean(scr_bars(:,1:8,n)));
-hold on;
-ylim(ylims)
-xlim([-180 225])
-e = errorbar(-135:45:180,mean(scr_bars(:,1:8,n)),std(scr_bars(:,1:8,n))./sqrt(size(scr_bars,1)),'k.');
-set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks)
-SetFearGenBarColors(b)
-set(e,'LineWidth',2,'Color','k')
-axis square
-box off
-end
-subplot(sp(1),sp(2),2);ylabel('SCR [muS]')
-title('Free Viewing')
-subplot(sp(1),sp(2),4)
-title('Generalization')
-%cond special treatment
-subplot(sp(1),sp(2),3);
-title('Conditioning')
-b(1) = bar(4,mean(scr_bars(:,4,2)));
-hold on;
-e(1) = errorbar(4,mean(scr_bars(:,4,2)),std(scr_bars(:,4,2))./sqrt(size(scr_bars,1)),'k.');
-ylim(ylims)
-set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks);
-b(2) =  bar(8,mean(scr_bars(:,8,2)));
-e(2) = errorbar(8,mean(scr_bars(:,8,2)),std(scr_bars(:,8,2))./sqrt(size(scr_bars,1)));
-set(b(1),'FaceColor',[1 0 0],'EdgeColor','w');
-set(b(2),'FaceColor','c','EdgeColor','w');
-set(e,'LineWidth',2,'Color','k');
-axis square
-box off
-xlim([0 9])
-line([4 8],[.85 0.85],'Color','k','LineWidth',1.3)
-text(5.7,.85,'*','FontSize',20)
-
-try
-    for n = 1:size(scr_bars,3)
-        subplot(sp(1),sp(2),1+n)
-        line([-180 225],repmat(mean(scr_bars(:,9,n)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':')
-    end
-end
+% %%scr 
+% load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600BCT.mat','scr_bars','subjects')
+% ylims = [0.3 .9];%600 0.3 1.1  %1500: 0.7
+% Yticks = [0.3 0.6 0.9];%600 [0.3 0.6 0.9], %1500: [0 0.3 0.6]
 % 
-% % add von mises groupfit curve to SCR bars @testphase
-subplot(sp(1),sp(2),2);
-plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',3.5)
-subplot(sp(1),sp(2),4);
-plot(x,mean(mean(scr_bars(:,1:8,3))),'k-','LineWidth',3.5)
-
+% % plot
+% for n = [1 3]
+% subplot(sp(1),sp(2),n+1);
+% b = bar(-135:45:180,mean(scr_bars(:,1:8,n)));
+% hold on;
+% ylim(ylims)
+% xlim([-180 225])
+% e = errorbar(-135:45:180,mean(scr_bars(:,1:8,n)),std(scr_bars(:,1:8,n))./sqrt(size(scr_bars,1)),'k.');
+% set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks)
+% SetFearGenBarColors(b)
+% set(e,'LineWidth',2,'Color','k')
+% axis square
+% box off
+% end
+% subplot(sp(1),sp(2),2);ylabel('SCR [muS]')
+% title('Free Viewing')
+% subplot(sp(1),sp(2),4)
+% title('Generalization')
+% %cond special treatment
+% subplot(sp(1),sp(2),3);
+% title('Conditioning')
+% b(1) = bar(4,mean(scr_bars(:,4,2)));
+% hold on;
+% e(1) = errorbar(4,mean(scr_bars(:,4,2)),std(scr_bars(:,4,2))./sqrt(size(scr_bars,1)),'k.');
+% ylim(ylims)
+% set(gca,'XTick',1:8,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks);
+% b(2) =  bar(8,mean(scr_bars(:,8,2)));
+% e(2) = errorbar(8,mean(scr_bars(:,8,2)),std(scr_bars(:,8,2))./sqrt(size(scr_bars,1)));
+% set(b(1),'FaceColor',[1 0 0],'EdgeColor','w');
+% set(b(2),'FaceColor','c','EdgeColor','w');
+% set(e,'LineWidth',2,'Color','k');
+% axis square
+% box off
+% xlim([0 9])
+% line([4 8],[.85 0.85],'Color','k','LineWidth',1.3)
+% text(5.7,.85,'*','FontSize',20)
+% 
+% try
+%     for n = 1:size(scr_bars,3)
+%         subplot(sp(1),sp(2),1+n)
+%         line([-180 225],repmat(mean(scr_bars(:,9,n)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':')
+%     end
+% end
+% 
+% % % add von mises groupfit curve to SCR bars @testphase
+% subplot(sp(1),sp(2),2);
+% plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',3.5)
+% subplot(sp(1),sp(2),4);
+% plot(x,mean(mean(scr_bars(:,1:8,3))),'k-','LineWidth',3.5)
+% 
 % 
 
 %% which fit is better, von mises or gaussian
@@ -515,17 +513,107 @@ hold on
 hist(mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10),20,'Color','r')
 [h,p,ci,stats]= ttest2(mat15(SCR_crit15(:,1)>SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)>SCR_crit15(:,2),10),mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),9)-mat15(SCR_crit15(:,1)<=SCR_crit15(:,2),10))
 %% overall PMF, collect responses
+clear all
 p = Project;
 subjects = intersect(find(sum(p.getMask('PMF'),2)==4),Project.subjects_600);
-pdiff = nan(17,2,length(subjects),2);
+tsubs = length(subjects);
+% pdiff = nan(16,2,tsubs,2);
+NumPos = nan(16,2,tsubs,2);
+OutOfNum = nan(16,2,tsubs,2);
+
 sc = 0;
 for sub = subjects(:)'
     sc = sc + 1;
+    fprintf('Working on Subject No %d, %d / %d...\n',sub,sc,tsubs)
     s = Subject(sub);
-    pdiff(:,:,sc,1) = squeeze(nanmean(s.load_paradigm(1).psi.log.xrounded,2));
-    pdiff(:,:,sc,2) = squeeze(nanmean(s.load_paradigm(5).psi.log.xrounded,2));
+    pc = 0;
+    for ph = [1 5]
+        pc = pc +1;
+        for chain = 1:2
+            i = ~isnan(s.load_paradigm(ph).psi.log.xrounded(1:16,1,chain));
+            NumPos(i,chain,sc,pc) = nansum(s.load_paradigm(ph).psi.log.xrounded(i,:,chain),2);
+            OutOfNum(i,chain,sc,pc)  = nansum(~isnan(s.load_paradigm(ph).psi.log.xrounded(i,:,chain)),2);
+%             pdiff(:,chain,sc,pc) = NumPos(:,chain,sc,pc)./OutOfNum(:,chain,sc,pc);
+        end
+    end
 end
+clf
+minn = 5;
+maxn = 80;
+dotsize  = squeeze(Scale(nansum(OutOfNum,3))*(maxn-minn)+minn);
+% marksize = squeeze((nansum(nums,3).*50)./repmat(max(nansum(nums,3)),[17 1])); %scales markersize to given maximal size
+x = 0:11.25:170;%leaves out the last one, because empty (180 deg)
+subi = [1 2];
+for n = 1:2
+    subplot(1,2,subi(n))
+    xc = 0;
+    for xx = x(:)'
+        xc = xc + 1;
+        errorbar(xx,nanmean(pdiff(xc,1,:,n),3),nanstd(pdiff(xc,1,:,n),0,3)./sqrt(tsubs),'r.','LineWidth',2,'MarkerSize',dotsize(xc,1,n))
+        hold on;
+%         plot(xx,(nansum(NumPos(xc,1,:,n),3)./nansum(OutOfNum(xc,1,:,n),3)),'k.','LineWidth',2,'MarkerSize',10)
+        errorbar(xx,nanmean(pdiff(xc,2,:,n),3),nanstd(pdiff(xc,2,:,n),0,3)./sqrt(tsubs),'c.','LineWidth',2,'MarkerSize',dotsize(xc,2,n))
+    end
+    axis square
+    box off
+    xlabel('delta X [deg]')
+    ylabel('p(different)')
+end
+%% overall PMF, collect responses from fitted Weibull
+clear all
+p = Project;
+subjects = intersect(find(sum(p.getMask('PMF'),2)==4),Project.subjects_600);
+ns = 0;
+for sub = subjects(:)'
+    ns = ns+1;
+    s = Subject(sub);
+    params = s.pmf.params1;       %1/ CS+ before %2/ CS- before  %3/ CS+ after  %4/ CS- after
+    x = 0:11.25:170;
+    for count = 1:4
+    pdiff(:,count,ns) = PAL_Weibull(params(count,:),x);
+    end
+    pc = 0;
+    for ph = [1 5]
+        pc = pc +1;
+        for chain = 1:2
+            i = ~isnan(s.load_paradigm(ph).psi.log.xrounded(1:16,1,chain));
+            NumPos(i,chain,ns,pc) = nansum(s.load_paradigm(ph).psi.log.xrounded(i,:,chain),2);
+            OutOfNum(i,chain,ns,pc)  = nansum(~isnan(s.load_paradigm(ph).psi.log.xrounded(i,:,chain)),2);
+        end
+    end
+end
+clf
+minn = 5;
+maxn = 50;
+dotsize  = squeeze(Scale(nansum(OutOfNum,3))*(maxn-minn)+minn);
 
+pdiffgroup = mean(pdiff,3);
+sdgroup = std(pdiff,0,3)./sqrt(size(pdiff,3));
+figure
+xc = 0;
+for x = 0:11.25:170;
+    xc = xc+1;
+subplot(1,5,1)
+errorbar(x,pdiffgroup(xc,2),sdgroup(xc,2),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,1))
+hold on
+errorbar(x,pdiffgroup(xc,1),sdgroup(xc,1),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,1))
+axis square
+box off
+xlim([-10 180])
+set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
+ylabel('p(different)','FontSize',12)
+xlabel('delta X [deg]')
+subplot(1,5,5)
+errorbar(x,pdiffgroup(xc,4),sdgroup(xc,4),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,2))
+hold on
+errorbar(x,pdiffgroup(xc,3),sdgroup(xc,3),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,2))
+axis square
+box off
+xlim([-10 180])
+set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
+ylabel('p(different)','FontSize',12)
+xlabel('delta X [deg]')
+end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % RATE
