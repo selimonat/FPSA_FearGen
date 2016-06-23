@@ -1,19 +1,21 @@
 %% 
-%this script provides results that could be used to complement the
-%super-complex hyperplan analysis by doing basically down to earth
-%comparisons of amount of fixation counts. The question it tries to answer
-%is whether and where there are more fixations on the face in CS+ vs. CS?
-%conditions. The simple comparison for 0 vs. 180 gives nice results which
-%are in line with the hyperplane analysis. However one needs to have a
-%control and here also the best control is to check whether 90 vs. -90
-%gives similar results. The idea would be that if these differences are
-%induces purely by differences of the images, it should also be present in
-%any combination of opposite faces.
+% this script provides results that could be used to complement the
+% super-complex hyperplan analysis by doing basically down to earth
+% comparisons of amount of fixation counts. The question it tries to answer
+% is whether and where there are more fixations on the face in CS+ vs. CS?
+% conditions. The simple comparison for 0 vs. 180 gives nice results which
+% are in line with the hyperplane analysis. However one needs to have a
+% control and here also the best control is to check whether 90 vs. -90
+% gives similar results. The idea would be that if these differences are
+% induces purely by differences of the images, it should also be present in
+% any combination of opposite faces.
+
 fix             = Fixmat(setdiff(Project.subjects_1500,7),[2 4]);
 p = Project;
 subjects        = intersect(find(p.getMask('ET_feargen')),p.subjects_1500)';%22 has to be kicked for svm
 %% similarity of fixation maps
 cmat  =[];
+pval  = [];
 sub_c = 0;
 v = [];
 correct  = 1;
@@ -33,8 +35,13 @@ for ns = setdiff(Project.subjects_1500,[20 22 7]);
         fix.maps(:,:,9:end) = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);
     end
     cmat(:,:,sub_c) = CancelDiagonals(  fix.corr,NaN);
+    [~,pval(:,:,sub_c)] = corr(fix.vectorize_maps);
 end
-imagesc(fisherz_inverse(   mean(fisherz( cmat),3)))
+medmat = reshape(ifisherz(median(reshape(fisherz( cmat),[16 16 26]),3)),[16 16]);
+imagesc(medmat)
+box off
+axis square
+set(gca,'XTick',[4 8 12 16],'XTickLabel',{'CS+' 'CS-' 'CS+' 'CS-'},'YTick',[4 8 12 16],'YTickLabel',{'CS+' 'CS-' 'CS+' 'CS-'},'FontSize',12)
 %this shows that similar faces generate similar fixation patterns i.e.
 %fixation patterns are also circularly organized. Furthermore there is also
 %circular similarity between baseline and test phases, which suggests that
@@ -45,6 +52,36 @@ imagesc(fisherz_inverse(   mean(fisherz( cmat),3)))
 %is predicted by pure dissimilarity based on circularity. So let's look at
 %what is different between CS+ and CS? faces.
 %
+%% same for single fixations
+cmat  =[];
+pval  = [];
+sub_c = 0;
+v = [];
+correct  = 0;
+tfix     = 5;
+
+for ns = setdiff(Project.subjects_1500,[20 22 7]);
+    ns
+    sub_c = sub_c + 1;cond_c = 0;
+    for phase = [2 4]
+        for nfix = 1:tfix
+            for ncond = -135:45:180
+                cond_c = cond_c + 1;
+                v{cond_c} = {'subject' ns 'phase' phase 'deltacsp' [ncond] 'fix' nfix};
+            end            
+        end
+    end
+    fix.getmaps(v{:})
+            if correct == 1
+                %correct phase specific cocktail blank
+                fix.maps(:,:,1:8) = fix.maps(:,:,1:8) - repmat(mean(fix.maps(:,:,1:8),3),[1 1 8]);
+                fix.maps(:,:,9:end) = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);
+            end
+     cmat(:,:,sub_c) = CancelDiagonals(  fix.corr,NaN);
+     [~,pval(:,:,sub_c)] = corr(fix.vectorize_maps);
+end
+medmat = reshape(ifisherz(median(reshape(fisherz( cmat),[80 80 26]),3)),[80 80]);
+imagesc(medmat)
 %% differences of fixation maps
 cmat     = [];
 v        = [];
