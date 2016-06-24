@@ -57,7 +57,7 @@ cmat  =[];
 pval  = [];
 sub_c = 0;
 v = [];
-correct  = 0;
+correct  = 1;
 tfix     = 5;
 
 for ns = setdiff(Project.subjects_1500,[20 22 7]);
@@ -74,13 +74,13 @@ for ns = setdiff(Project.subjects_1500,[20 22 7]);
     fix.getmaps(v{:})
             if correct == 1
                 %correct phase specific cocktail blank
-                fix.maps(:,:,1:8) = fix.maps(:,:,1:8) - repmat(mean(fix.maps(:,:,1:8),3),[1 1 8]);
-                fix.maps(:,:,9:end) = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);
+                fix.maps(:,:,1:40) = fix.maps(:,:,1:40) - repmat(mean(fix.maps(:,:,1:40),3),[1 1 40]);
+                fix.maps(:,:,41:end) = fix.maps(:,:,41:end) - repmat(mean(fix.maps(:,:,41:end),3),[1 1 40]);
             end
      cmat(:,:,sub_c) = CancelDiagonals(  fix.corr,NaN);
      [~,pval(:,:,sub_c)] = corr(fix.vectorize_maps);
 end
-medmat = reshape(ifisherz(median(reshape(fisherz( cmat),[80 80 26]),3)),[80 80]);
+medmat = fisherz_inverse(nanmedian(fisherz( cmat),3));
 imagesc(medmat)
 %% differences of fixation maps
 cmat     = [];
@@ -157,7 +157,7 @@ end
 
 %% collect covariance matrices for each fixation and each subject. in the next cell we will test 
 % different exploration strategies on these matrices.
-for kernel_fwhm = 45
+for kernel_fwhm = 30
     M = [];
     C               = [];
     fix.kernel_fwhm = kernel_fwhm;
