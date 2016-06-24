@@ -95,7 +95,7 @@ end
 bar(nanmean(rr-rrc))
 
 %% where is the most information in V1?
-path2v1 = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data_local\V1\';
+path2v1 = 'C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\V1\';
 dummy           = dir([path2v1 '*.mat']);
 v1files         = [repmat([fileparts(path2v1) filesep],length(dummy),1) vertcat(dummy(:).name)];
 v1files         = v1files([1,5,9,13,17,21,25,29],:);
@@ -107,7 +107,19 @@ for i = 1:tfiles
     im(:,:,i)   = dummy.v1;
 end
 
-modulohelper = [8 2; 1 3;2 4; 3 5; 4 6; 5 7; 6 8; 7 1];
+%correlation matrix
+imagesc(corr(reshape(im,[400*400,8])));
+axis square
+box off
+colormap(flipud(gray(256)));
+cbh=colorbar('eastoutside');
+set(cbh,'YTick',.96:.01:1)
+set(gca,'FontSize',12)
+ylabel('Face Number','FontSize',12)
+xlabel('Face Number','FontSize',12)
+ 
+
+ modulohelper = [8 2; 1 3;2 4; 3 5; 4 6; 5 7; 6 8; 7 1];
 for a = 1:size(im,3)
     diff(:,:,a) = abs(im(:,:,a)-mean(im(:,:,modulohelper(a,:)),3));
 end
