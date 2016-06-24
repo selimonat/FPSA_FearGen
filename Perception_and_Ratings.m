@@ -8,7 +8,7 @@ g = Group(subs);
 %[ratings sds]= g.getRatings(2:4);
 g.getSI(3);
 %% big figure for behavioral results
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\ratings_600.mat','ratings');
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\ratings_600.mat','ratings');
 sp = [1 5];
 clf
 for n = 2:4
@@ -589,7 +589,6 @@ dotsize  = squeeze(Scale(nansum(OutOfNum,3))*(maxn-minn)+minn);
 
 pdiffgroup = mean(pdiff,3);
 sdgroup = std(pdiff,0,3)./sqrt(size(pdiff,3));
-figure
 xc = 0;
 for x = 0:11.25:170;
     xc = xc+1;
@@ -718,7 +717,7 @@ xlabel(sprintf(sprintf('Sharpening Index')))
 axis square
 set(gca,'fontsize',20)
 
-%% 
+%% correlate all parameters
 clf
 [r,pval]=corr(mat);
 hold off
@@ -767,4 +766,28 @@ hold off
 % % errorbar([2 4.5 7],outcome_m,outcome_s,'k.','LineWidth',1.5)
 % set(gca,'XTick',[1.5 4 6.5],'XTickLabel',{'good' 'moderate' 'bad'})
 % 
-
+%% bootstrap regression alpha x fwhm
+clear all
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+nbootstrp =  50;
+X = mat6(:,17); %initial alpha
+Y = mat6(:,18); %FWHM cond
+plot(X,Y,'bo','MarkerFaceColor','b')
+Xm = [ones(length(X),1) X];
+l = lsline;set(l,'Color','k','LineWidth',3)
+bootfun = @regress;
+[coeffs,bootsam] = bootstrp(nbootstrp,bootfun,Y,Xm);
+x = linspace(min(X),max(X),1000);
+hold on;
+% for n = 1:nbootstrp
+% plot(x,coeffs(n,1)+coeffs(n,2)*x,'Color',[n/nbootstrp 0 1-(n/nbootstrp)])
+% end
+plot(x,max(coeffs(:,1))+min(coeffs(:,2))*x,'r')
+plot(x,min(coeffs(:,2))+max(coeffs(:,2))*x,'g')
+%
+modelspec = 'Y ~ 1 + X';
+mdl = LinearModel.fit(X,Y,modelspec);
+plot(mdl)
+hold on;
+DrawIdentityLine(gca);
+xlim([min(X)-10 max(X)+10])
