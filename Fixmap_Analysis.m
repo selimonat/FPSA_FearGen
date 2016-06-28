@@ -2152,18 +2152,26 @@ for ph = unique(fix.phase)
     c=0;
     for sub = subjects(:)'
         c    = c+1;
-        v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+        v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph}; % like this, we have 27x27x5
     end
     fix.getmaps(v{:});
     rmat(:,:,pc) = fix.corr;
     rmat_f(:,:,pc) = reshape(fisherz(fix.corr),[27 27]);
 end
 ind = logical(CancelDiagonals(triu(ones(27,27)),0));
+subplot(1,2,1)
+imagesc(rmat(:,:,1))
+axis square
+subplot(1,2,2)
+ind = logical(CancelDiagonals(triu(ones(27,27)),0));
+imagesc(ind)
+axis square
 for n = 1:5
     dummy = rmat_f(:,:,n);
     corrs(:,n) = dummy(ind);
 end
 ifisherz(mean(mean(corrs)))%should give .53 
+figure; bar(ifisherz(mean(corrs)))
 
 %% phase similarity within subjects
 clear all
@@ -2189,13 +2197,47 @@ for sub = subjects(:)'
  rmat(:,:,sc) = fix.corr;
 end
 
+%% plot this mat
+clf
+cd('C:\Users\Lea\Documents\GitHub\globalfunctions\')
+avemat = fisherz_inverse(mean(fisherz(rmat),3));
+imagesc(avemat)
+axis square
+box off
+cmap = zeros(256,3);
+cmap(:,1) = linspace(0,1,256);
+colormap(cmap)
+caxis([min(avemat(:)) max(avemat(:))])
+labels = {'Discrimination pre','Free viewing','Conditioning','Generalization','Discrimination post'};
+set(gca,'XTick',1:5,'YTick',1:5,'YTickLabel',labels,'XTickLabel',{'D','F','C','G','D'},'FontSize',12)
+cbh = colorbar;
+set(cbh,'YTick',.8:.1:1,'FontSize',12)
+%% compute means
 rmat_f  = nan(5,5,27);
 for n = 1:27; 
     rmat_f(:,:,n) = reshape(fisherz(rmat(:,:,n)),[5 5 1]);
 end
-rmat_mean = CancelDiagonals(reshape(ifisherz(mean(rmat_f,3)),[5 5]),1); % average across the subjects, take the mean, inv fisher it...
-imagesc(rmat_mean)
+% rmat_mean = CancelDiagonals(reshape(ifisherz(mean(rmat_f,3)),[5 5]),1); % average across the subjects, take the mean, inv fisher it...
+% imagesc(rmat_mean)
 
 ind = logical(CancelDiagonals(triu(ones(5,5)),0));
-for n = 1:27;dummy = rmat(:,:,n);corrs(:,n) = dummy(ind);end
-ifisherz(mean(fisherz(corrs))) % gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals
+for n = 1:27;
+    dummy = rmat(:,:,n);
+    corrs(:,n) = dummy(ind);%this is then size (sum(1:5)-5 x 27)
+end
+
+ifisherz(mean(mean(fisherz(corrs)))) % gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals
+figure;bar(ifisherz(mean(fisherz(corrs))))
+%% can this be related to feargen sharpness or sth?
+gendiscr = squeeze(rmat(4,5,:));
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\misesmat.mat');
+params = misesmat(unique(fix.subject),:);
+fwhm = nan(27,1);
+for n = 1:27; 
+    if ~isnan(params(n,2))
+    fwhm(n) = vM2FWHM(params(n,2));
+    else
+        fprintf('isnan, skipping  %d \n',n)
+    end
+end
+[rho,pval] = corr(gendiscr(~isnan(fwhm)),fwhm(~isnan(fwhm)))
