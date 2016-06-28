@@ -106,14 +106,15 @@ for i = 1:tfiles
     dummy       = load(v1files(i,:)); 
     im(:,:,i)   = dummy.v1;
 end
-
+im = im  - repmat(mean(im,3),[1 1 8]);
 %correlation matrix
 imagesc(corr(reshape(im,[400*400,8])));
 axis square
 box off
-colormap(flipud(gray(256)));
+% colormap(flipud(gray(256)));
+colormap(colormapper([1 0 -1]));
 cbh=colorbar('eastoutside');
-set(cbh,'YTick',.96:.01:1)
+% set(cbh,'YTick',.96:.01:1)
 set(gca,'FontSize',12)
 ylabel('Face Number','FontSize',12)
 xlabel('Face Number','FontSize',12)
