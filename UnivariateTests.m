@@ -120,9 +120,10 @@ end
 
 %% collect covariance matrices for each fixation and each subject. in the next cell we will test 
 % different exploration strategies on these matrices.
-for kernel_fwhm = 45
+for kernel_fwhm = 29
     M = [];
     C               = [];
+    Cr              = [];
     fix.kernel_fwhm = kernel_fwhm;
     c_sub           = 0;
     for ns = subjects(:)'
@@ -143,6 +144,7 @@ for kernel_fwhm = 45
         fix.maps(:,:,33:end)    = fix.maps(:,:,33:end) - repmat(mean(fix.maps(:,:,33:end),3),[ 1 1 32]);        
         M(:,:,:,c_sub)          = fix.maps;
         C(:,:,c_sub)            = fix.cov;
+        Cr(:,:,c_sub)           = fix.corr;
     end   
 end
 %% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
@@ -169,7 +171,7 @@ block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 % covariance matrices
 clear amp_*
 for db = 1:8%diagonal blocks
-    Y                  = block_extract(nanmean(C,3),db,db,1);
+    Y                  = block_extract(C,db,db,1:size(C,3));
     [bla, param]       = fitcorrmat(Y,'gradient');
     amp_circ(db,:)     = param(1,:);
     amp_gau(db,:)      = param(2,:);
