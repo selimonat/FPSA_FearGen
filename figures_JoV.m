@@ -228,6 +228,31 @@ xlabel('Discrimination (alpha [deg])')
 ylabel('FWHM Conditioning')
 axis square
 box off
+%% new way (tobe worked on)
+%%
+x  = (rand(30,1));
+y  = (rand(30,1));
+figure(1);
+hold off
+plot(x,y,'o')
+hold on;
+%
+i = [1:30];
+for n = 1:1000
+    ii     = randsample(i,30,1);
+    B(:,n) = [x(ii) ones(30,1)]\y(ii);
+end
+%
+X2 = [linspace(0,1,100)' ones(100,1)];
+Y = X2*B;
+Y = Y';
+YY = prctile(Y,[.5 99.5])';
+hold on;
+plot(X2(:,1),YY(:,1))
+plot(X2(:,1),YY(:,2),'r')
+hold off;
+
+
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
 sp = [2 4];
