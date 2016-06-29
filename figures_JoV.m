@@ -18,18 +18,7 @@ for ph = [1 4]
 end
 fix.getmaps(v{:});
 fix.plot('linear',[2 1])
-%three exemplary subjects / discr
-v = [];
-c = 0;
-for ph = [1 4]
-    for sub = [6 15 31]
-        c = c+1;
-        v{c} = {'subject' sub 'phase' ph};
-    end
-end
-fix.getmaps(v{:});
-fix.plot
-%%
+
 %%%%%%%%%%%%%
 % behavioral results 
 %%%%%%%%%%%%%
@@ -149,43 +138,42 @@ xlim([0 120]);
 legend('CS-','CS+','location','southeast')
 legend boxoff
 hold off
-%% histogram of alpha and kappa for both durations
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
+%% histogram of alpha and kappa
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
 ind = subs6;
 sp = [2 4];
 crit = 22.5; % for later noshifter vs shifter improvement
 
 clf
 subplot(sp(1),sp(2),1)%FWHM
-v = 6;
-% [n1,p1]=hist(mat(ind,18),v);
-% [n2,p2]=hist(mat(ind,19),v);
-% bar(p1,n1,'facecolor','k');hold on; 
-% bar(p2,n2,'facecolor','b')
-histf(mat(ind,18),v,'FaceColor','b','EdgeColor','none','FaceAlpha',.6)
+hold off
+b = linspace(20,180,6);
+histf(mat(ind,18),b,'FaceColor','b','EdgeColor','none','FaceAlpha',.6);
 hold on;
-histf(mat(ind,19),v,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
+histf(mat(ind,19),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
 axis square;box off
 hold off
 ylabel('counts')
 title('FWHM')
 text(10,7.8e-3,'A','FontSize',20);
-ylim([0 15])
+ylim([0 5])
 subplot(sp(1),sp(2),2)%MU
-v = 6;
-histf(abs(mat(ind,15)),v,'FaceColor','b','EdgeColor','none','FaceAlpha',.6)
+hold off
+b = linspace(0,40,6);
+histf(abs(mat(ind,15)),b,'FaceColor','b','EdgeColor','none','FaceAlpha',.6);
 hold on;
-histf(abs(mat(ind,16)),v+2,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
+histf(abs(mat(ind,16)),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
 axis square;box off
 hold off
 ylabel('counts')
 title('abs(Mu)')
 hold off
-ylim([0 15])
+ylim([0 5])
 legend('Conditioning','Generalization','orientation','vertical','location','best')
 legend boxoff
+xlim([0 40])
 %
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
 % load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\max4.mat')
 ind = logical(abs(mat6(:,16))<= crit);
 subplot(sp(1),sp(2),5)%alpha results
@@ -223,7 +211,23 @@ l = lsline;set(l,'LineWidth',2)
 box off
 xlabel('initial alpha')
 ylabel('FWHM Cond')
-hold off
+% regression
+X = mat6(:,17); %initial alpha
+Y = mat6(:,18); %FWHM cond
+mdl = LinearModel.fit(X,Y);
+plot(mdl)
+legend({'Data' 'Fit' 'Confidence Interval' '' 'Identity Line'},'location','best')
+legend boxoff
+set(gca,'XTick',20:20:110,'YTick',20:20:180)
+ylim([20 180])
+DrawIdentityLine(gca);
+xlim([20 110])
+title('Discrimination x Generalization', 'FontSize',14)
+set(gca,'FontSize',12)
+xlabel('Discrimination (alpha [deg])')
+ylabel('FWHM Conditioning')
+axis square
+box off
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
 sp = [2 4];
@@ -269,7 +273,39 @@ boxplot(mat6(:,18))
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Fig 2 - beneficial locations
+% Fig 2 - Task Demands x Subject Idiosyncrasy
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear all
+p           = Project;
+mask = p.getMask('ET_discr');
+subjects = intersect([Project.subjects_1500],find(mask));
+mask = p.getMask('PMF');
+subjects = intersect(subjects,find(sum(mask,2)==4));
+fix = Fixmat(subjects,1:5);
+v = [];
+c = 0;
+for ph = 1:5
+    c = c+1;
+    v{c} = {'phase' ph};
+end
+fix.getmaps(v{:});
+fix.plot
+fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+fix.plot
+v = [];
+c = 0;
+for sub = [6 15 31]
+    for ph = 1:5
+        c = c+1;
+        v{c} = {'subject' sub 'phase' ph 'deltacsp' fix.realcond};
+    end
+end
+fix.getmaps(v{:});
+fix.plot
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Fig 3 - beneficial locations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% discrimination
 clear all

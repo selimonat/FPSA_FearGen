@@ -1,4 +1,4 @@
-function [R AVE]=SVM_simulations(phase)
+function [R AVE result HP]=SVM_simulations(phase)
 %% 
 %This script is about SVM training CS+ vs. CS- for phases 2 and 4 based on
 %our discussions. It collects the data and computes the eigenvalues on the
@@ -15,12 +15,13 @@ subject_exlusion = [20 22 7];%these people do not have much trials so kick them 
 tbootstrap       = 100;%number of bootstraps
 % phase            = 2;%baseline or test
 holdout_ratio    = [NaN .5 NaN .25];%see above
-teig             = 100;%how many eigenvalues do you want to include for each run.
+teig             = 18;%how many eigenvalues do you want to include for each run.
 fwhm             = 0;%counter
 R                = [];%result storage
 AVE              = [];%result storate
+HP               = [];
 %%
-for kernel_fwhm = 10:10:100;
+for kernel_fwhm = 50;%10:10:100;
     fwhm            = fwhm  + 1;
     %
     fix             = Fixmat(setdiff(Project.subjects_1500,7),phase);%get the data
@@ -75,7 +76,7 @@ for kernel_fwhm = 10:10:100;
     %collect loadings of every trial
     trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
     %% LIBSVM business    
-    for neig    = 1:teig%test different numbers of eigenvectors
+    for neig    = teig;%1:teig%test different numbers of eigenvectors
         sub_counter = 0;
         result      = [];
         w           = [];        
@@ -110,6 +111,7 @@ for kernel_fwhm = 10:10:100;
         %once the data is there compute 2 important metrics: 
         R(:,neig,fwhm)      = mean(mean(result,2),3);%average across bootstaps the classification results
         AVE(:,:,neig,fwhm)  = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average the hyperplans
+        HP = reshape(eigen(:,1:neig)*mean(w,3),[50 50 26]);
     end
     figure(1000);imagesc(R(:,:,fwhm));
     figure(1001);plot(R(4,:,fwhm)-R(end,:,fwhm),'o-');
