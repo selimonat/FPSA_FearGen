@@ -493,7 +493,7 @@ fix.plot
 p        = Project;
 mask     = find(p.getMask('ET_feargen').*prod(p.getMask('RATE'),2));
 subjects = intersect([Project.subjects_1500],mask);%subjects
-subjects = setdiff(subjects,9)
+% subjects = setdiff(subjects,9)
 fix      = Fixmat(subjects,4);
 %
 g        = Group(subjects);%get the data for these subjects
@@ -514,9 +514,11 @@ fix.getmaps(v{:});
 M = fix.vectorize_maps';
 for i = 1:size(M,2)
     if sum(abs(M(:,i))) ~= 0
-        r(i) = corr2(M(:,i),param);
+        [r(i),pval(i)]= corr(M(:,i),param);
+        
     else
         r(i) = 0;
+        pval(i) = nan;
     end
 end
 fix.maps = reshape(r,size(fix.maps,1),size(fix.maps,2));
@@ -607,13 +609,16 @@ fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
 
+
+param = mean(mat(:,[1 3]),2);
 %normal correlation
 for n = 1:length(subjmaps)
-    [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2));
+    [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Spearman');
 end
-imagesc(reshape(r,[50 50]),[-1.5 1.5])
-for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
-fix.maps = reshape(r,[50 50]);
+clf
+imagesc(reshape(r,[size(fix.maps,1),size(fix.maps,2)]),[-1 1])
+for n = find(pval<0.05);[y x] = ind2sub([size(fix.maps,1),size(fix.maps,2)],n);text(x,y,'x','FontSize',10);end
+fix.maps = reshape(r,[size(fix.maps,1),size(fix.maps,2)]);
 fix.plot
 
 %bootstrap
@@ -1701,11 +1706,11 @@ ylabel('kappa test')
 set(gca,'XTick',[])
 %SCR Graphs
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_fordendroN27.mat')
-pl(1)=subplot(4,2,5);
+pl(1)=subplot(1,2,1);
 SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==1),3),'LineWidth',2);axis square
 xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
 ylabel('SCR [\muS]')
-pl(2)=subplot(4,2,6);
+pl(2)=subplot(1,2,2);
 SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==2),3),'LineWidth',2);axis square
 xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
 
@@ -1774,7 +1779,7 @@ mat(invalid_r,12:14)= NaN;
 fix.getsubmaps; 
 fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat')
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat')
 scr_crit = (scr_bars(:,4,3)-scr_bars(:,8,3))./(scr_bars(:,4,3)+scr_bars(:,8,3));
 [branch_id,ids] = fix.dendrogram(2,scr_crit);
 
@@ -1831,7 +1836,7 @@ clear g
 
 fix = Fixmat(subjects,1);
 fix.getsubmaps;
-fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+% fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 submaps = fix.vectorize_maps;
 r = NaN(length(submaps),1);
 pval = NaN(length(submaps),1);
@@ -2204,14 +2209,15 @@ avemat = fisherz_inverse(mean(fisherz(rmat),3));
 imagesc(avemat)
 axis square
 box off
-cmap = zeros(256,3);
-cmap(:,1) = linspace(0,1,256);
-colormap(cmap)
-caxis([min(avemat(:)) max(avemat(:))])
+% cmap = zeros(256,3);
+% cmap(:,1) = linspace(0,1,256);
+colormap(colormapper([1 0 -1]))
+maxave = max(max(CancelDiagonals(avemat,0)));
+caxis([min(avemat(:)) maxave ])
 labels = {'Discrimination pre','Free viewing','Conditioning','Generalization','Discrimination post'};
 set(gca,'XTick',1:5,'YTick',1:5,'YTickLabel',labels,'XTickLabel',{'D','F','C','G','D'},'FontSize',12)
 cbh = colorbar;
-set(cbh,'YTick',.8:.1:1,'FontSize',12)
+set(cbh,'YTick',.7:.05:.9,'FontSize',12)
 %% compute means
 rmat_f  = nan(5,5,27);
 for n = 1:27; 
