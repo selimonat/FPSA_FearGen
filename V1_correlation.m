@@ -96,20 +96,23 @@ bar(nanmean(rr-rrc))
 
 %% where is the most information in V1?
 % path2v1 = 'C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\V1\';
-path2v1 = 'C:\Users\Lea\Documents\Documents\FearCloud\figures\stimuli\8stimexpfolder\V1responses\';
+path2v1 = 'C:\Users\Lea\Documents\Documents\FearCloud\figures\stimuli\8stimexpfolder\V1responses\V1_*';
 dummy           = dir([path2v1 '*.mat']);
 v1files         = [repmat([fileparts(path2v1) filesep],length(dummy),1) vertcat(dummy(:).name)];
-v1files         = v1files([1,5,9,13,17,21,25,29],:);
-
+% v1files         = v1files([1,5,9,13,17,21,25,29],:);
+%
 tfiles          = size(v1files,1);
 im              = [];
-for i = 1:tfiles
+c =0;
+for i = 1:4:tfiles
+    c = c+1;
     dummy       = load(v1files(i,:)); 
-    im(:,:,i)   = dummy.v1;
+    im(:,:,c)   = dummy.v1;
 end
-% im = im  - repmat(mean(im,3),[1 1 8]);
+% im = im  - repmat(mean(im,3),[1 1 32]);
 %correlation matrix
-imagesc(corr(reshape(im,[1000*1000,8])));
+figure
+imagesc(corr(reshape(im,[400*400,8])));
 axis square
 box off
 % colormap(flipud(gray(256)));
