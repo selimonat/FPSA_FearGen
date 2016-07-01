@@ -438,6 +438,24 @@ errorbar(2,mean(improvement(~noshift)),std(improvement(~noshift))./sqrt(sum(~nos
 set(gca,'XTick',1:2,'XTickLabel',{'no peakshift','peakshift'},'YTick',0:5:10)
 xlim([0 3])
 axis square; box off
+
+%%
+g = Group(intersect(Project.subjects_600,find(g.getMask('RATE'))));
+ratings = g.getRatings(4);
+for n=1:24;subplot(4,6,n);b=bar(ratings(n,:,4));SetFearGenBarColors(b);end
+ for n = 1:24
+     subplot(4,6,n)
+     if abs(mat6(n,16))<=22.5
+         text(8,6,'X','FontSize',14);
+     end
+ end
+ 
+ c=0;
+ for crit = 5:35;
+     c=c+1;
+     ind = logical(abs(mat6(:,16))<= crit);
+     [h,p(c)] = ttest(mat6(ind,11),0,'tail','right');
+ end
 %% SCR for noshifter vs shifter
 figure;
 SetFearGenColors;
