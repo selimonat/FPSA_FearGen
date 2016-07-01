@@ -139,119 +139,153 @@ legend('CS-','CS+','location','southeast')
 legend boxoff
 hold off
 %% histogram of alpha and kappa
+fontsize = 12;
+
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
 ind = subs6;
 sp = [2 4];
-crit = 22.5; % for later noshifter vs shifter improvement
+crit = 25; % for later noshifter vs shifter improvement
+binsize = 8;
 
 clf
 subplot(sp(1),sp(2),1)%FWHM
 hold off
-b = linspace(20,180,6);
+b = linspace(0,180,binsize);
 histf(mat(ind,18),b,'FaceColor','b','EdgeColor','none','FaceAlpha',.6);
 hold on;
-histf(mat(ind,19),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
+histf(mat(ind,19),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6);
 axis square;box off
 hold off
-ylabel('counts')
-title('FWHM')
-text(10,7.8e-3,'A','FontSize',20);
-ylim([0 5])
+legend('Conditioning','Generalization','orientation','vertical','location','best')
+ylabel('counts','FontSize',fontsize)
+title('FWHM','FontSize',fontsize+2)
+text(10,7.8e-3,'A','FontSize',fontsize+8);
+xlim([0 200])
+xlabel('deg','FontSize',fontsize)
+set(gca,'YTick',[0 5 10],'FontSize',fontsize)
+
 subplot(sp(1),sp(2),2)%MU
 hold off
-b = linspace(0,40,6);
+b = linspace(0,40,binsize-1);
 histf(abs(mat(ind,15)),b,'FaceColor','b','EdgeColor','none','FaceAlpha',.6);
 hold on;
-histf(abs(mat(ind,16)),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6)
+histf(abs(mat(ind,16)),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6);
 axis square;box off
 hold off
-ylabel('counts')
-title('abs(Mu)')
+ylabel('counts','FontSize',fontsize)
+title('abs(Mu)','FontSize',fontsize+2)
 hold off
-ylim([0 5])
-legend('Conditioning','Generalization','orientation','vertical','location','best')
-legend boxoff
-xlim([0 40])
-%
+xlim([-5 45])
+xlabel('deg','FontSize',fontsize)
+set(gca,'YTick',[0 5 10],'FontSize',fontsize)
+
+%% second row - thresholds and improvement
+fontsize = 12;
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
-% load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\max4.mat')
+
 ind = logical(abs(mat6(:,16))<= crit);
+
 subplot(sp(1),sp(2),5)%alpha results
-ylabel('threshold alpha (deg)')
+ylabel('threshold alpha (deg)','FontSize',fontsize)
 b = bar([1 2 4 5],mean(mat6(:,1:4)));
+title('discrimination thresholds','FontSize',fontsize+2)
 SetFearGenBarColors(b,[1 0 0;.6 0 0;0 1 1;0 .6 .6]')
 line([1 2],[72 72],'Color','k','LineWidth',2)
-text(1,75,'***','FontSize',16)
+text(1,75,'***','FontSize',fontsize+4)
 hold on;
 e = errorbar([1 2 4 5],mean(mat6(:,1:4)),std(mat6(:,1:4))./sqrt(length(mat6)),'k.');
 set(e,'LineWidth',2)
-set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'})
+set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'},'FontSize',fontsize)
 set(e,'LineWidth',2)
 axis square;box off;
 xlim([0 6])
+text(0,70,'C','FontSize',fontsize+8);
+
 subplot(sp(1),sp(2),6)%csp improvement shifters vs no shifters
 b = bar(1:2,[mean(mat6(ind,11)) mean(mat6(~ind,11))]);
 set(b,'BarWidth',.5,'FaceColor','k')
+title('discrimination improvement','FontSize',fontsize+2)
 hold on;box off
 e = errorbar(1:2,[mean(mat6(ind,11)) mean(mat6(~ind,11))],[std(mat6(ind,11))./sqrt(sum(ind)) std(mat6(~ind,11))./sqrt(sum(~ind))],'k.','LineWidth',1.5);
 e = errorbar(1,mean(mat6(ind,11)),std(mat6(ind,11))./sqrt(sum(ind)),0,'w.','LineWidth',1.5);
 axis square
 xlim([0 3])
-set(gca,'XTick',[1 2],'XTicklabel',{'CS+ centered' 'shifted'})
-ylim([-5 20])
-ylabel('corrected improvement (deg)')
-text(.5,78,'B','FontSize',20);
-hold off;
-%% correlation
-subplot(sp(1),sp(2),[3 4 7 8])
-text(20,180,'C','FontSize',20);
-hold on;
-plot(mat6(:,17),mat6(:,18),'bo','MarkerFaceColor','b','MarkerSize',10)
-l = lsline;set(l,'LineWidth',2)
-box off
-xlabel('initial alpha')
-ylabel('FWHM Cond')
-% regression
-X = mat6(:,17); %initial alpha
-Y = mat6(:,18); %FWHM cond
-mdl = LinearModel.fit(X,Y);
-plot(mdl)
-legend({'Data' 'Fit' 'Confidence Interval' '' 'Identity Line'},'location','best')
-legend boxoff
-set(gca,'XTick',20:20:110,'YTick',20:20:180)
-ylim([20 180])
-DrawIdentityLine(gca);
-xlim([20 110])
-title('Discrimination x Generalization', 'FontSize',14)
-set(gca,'FontSize',12)
-xlabel('Discrimination (alpha [deg])')
-ylabel('FWHM Conditioning')
-axis square
-box off
-%% new way (tobe worked on)
-%%
-x  = (rand(30,1));
-y  = (rand(30,1));
-figure(1);
-hold off
-plot(x,y,'o')
-hold on;
-%
-i = [1:30];
-for n = 1:1000
-    ii     = randsample(i,30,1);
-    B(:,n) = [x(ii) ones(30,1)]\y(ii);
-end
-%
-X2 = [linspace(0,1,100)' ones(100,1)];
-Y = X2*B;
-Y = Y';
-YY = prctile(Y,[.5 99.5])';
-hold on;
-plot(X2(:,1),YY(:,1))
-plot(X2(:,1),YY(:,2),'r')
+set(gca,'XTick',[1 2],'XTicklabel',{'centered' 'shifted'},'YTick',-10:10:20,'FontSize',fontsize)
+ylim([-10 20])
+ylabel('corrected improvement (deg)','FontSize',fontsize)
+text(.5,78,'C','FontSize',20);
 hold off;
 
+subplot(sp(1),sp(2),2)%MU
+l=line([crit crit],[0 10]);set(l,'Color','r','LineWidth',1.5);
+
+%% correlation
+% subplot(sp(1),sp(2),[3 4 7 8])
+% text(20,180,'C','FontSize',20);
+% hold on;
+% plot(mat6(:,17),mat6(:,18),'bo','MarkerFaceColor','b','MarkerSize',10)
+% l = lsline;set(l,'LineWidth',2)
+% box off
+% xlabel('initial alpha')
+% ylabel('FWHM Cond')
+% % regression
+% X = mat6(:,17); %initial alpha
+% Y = mat6(:,18); %FWHM cond
+% mdl = LinearModel.fit(X,Y);
+% plot(mdl)
+% legend({'Data' 'Fit' 'Confidence Interval' '' 'Identity Line'},'location','best')
+% legend boxoff
+% set(gca,'XTick',20:20:110,'YTick',20:20:180)
+% ylim([20 180])
+% DrawIdentityLine(gca);
+% xlim([20 110])
+% title('Discrimination x Generalization', 'FontSize',14)
+% set(gca,'FontSize',12)
+% xlabel('Discrimination (alpha [deg])')
+% ylabel('FWHM Conditioning')
+% axis square
+% box off
+%% new way (bootrstrapped regression)
+clear all
+sp = [2 4];
+fontsize = 12;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+x  = mat6(:,17);
+y  = mat6(:,18);
+subplot(sp(1),sp(2),[3 4 7 8])
+plot(x,y,'o','MarkerFaceColor','b')
+hold on;
+%
+i = 1:length(x);
+for n = 1:10000
+    ii     = randsample(i,length(x),1);
+    B(:,n) = [x(ii) ones(length(x),1)]\y(ii);
+end
+%
+X2 = [linspace(min(x),max(x),100)' ones(100,1)];
+plot(X2(:,1),X2*mean(B,2),'r','LineWidth',2)
+Y = X2*B;
+Y = Y';
+YY = prctile(Y,[2.5 97.5])';
+% plot(X2(:,1),YY(:,1),'r')
+% plot(X2(:,1),YY(:,2),'r')
+plot(linspace(min(x),max(x),100),linspace(min(x),max(x),100),'b','LineWidth',2)
+xlim([min(x)-5 max(x)+5])
+ylim([20 210])
+%shaded area
+x1 = X2(:,1)';
+y1 = YY(:,1)';
+x2 = X2(:,1)';
+y2 = YY(:,2)';
+fill([x1 fliplr(x2)],[y1 fliplr(y2)],'r','FaceAlpha',.5,'EdgeColor','none')
+text(30,190,'B','FontSize',fontsize+8);
+ylabel('FWHM Cond [deg]','FontSize',fontsize)
+xlabel('Initial Alpha [deg]','FontSize',fontsize)
+title('Discrimination x Fear Generalization','FontSize',fontsize+2)
+box off
+
+set(gca,'XTick',30:20:100,'YTick',20:40:200,'FontSize',fontsize)
+hold off
 
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
