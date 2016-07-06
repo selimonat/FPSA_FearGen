@@ -5,7 +5,7 @@ function [R, AVE]=SVM_simulations_alpha(subjects,alpha)
 %eigenvalues). This script will run train-test cycles for different smootheness levels and
 %with different numbers of eigenvectors (up to TEIG).
 % subject_exlusion = [20 22 7];%these people do not have much trials so kick them out.
-tbootstrap       = 100;%number of bootstraps
+tbootstrap       = 5;%number of bootstraps
 % phase            = 2;%baseline or test
 holdout_ratio    = .2;%see above
 teig             = 100;%how many eigenvalues do you want to include for each run.
@@ -73,13 +73,13 @@ trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
 %% LIBSVM business
 
 for neig    = 1:teig%test different numbers of eigenvectors
-    fprintf('Eig:%d - Smooth:%d\n',neig,fwhm);%this subject, this phase.
+    fprintf('Eig:%d - Smooth:%d at Time: %s\n',neig,fwhm,datestr(now,'HH:MM:SS'));%this subject, this phase.
     %
     result      = [];
     w           = [];
     confmats    = [];
     for n = 1:tbootstrap%
-        
+%         fprintf('Starting Bootstrap %d at %s \n',n,datestr(now,'HH:MM:SS'))
         Y       = double(labels.discr)';%labels of the fixation maps for this subject in this phase.
         X       = trialload(:,1:neig);%fixation maps of this subject in this phase.
         P       = cvpartition(Y,'Holdout',holdout_ratio); %divide training and test datasets respecting conditions
@@ -106,5 +106,5 @@ for neig    = 1:teig%test different numbers of eigenvectors
 end
 end
 try
-    save('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\SVM_simulations_alpha.mat','confmats','R','AVE')
+    save(sprintf('C:%sUsers%sLea%sDocuments%sExperiments%sFearCloud_Eyelab%sdata%smidlevel%ssvm_analysis%sSVM_simulations_alpha_NEV_%g_FWHM_%g.mat',filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,neig,fwhm),'result','confmats','R','AVE')
 end
