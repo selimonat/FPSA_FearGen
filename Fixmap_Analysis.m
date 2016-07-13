@@ -76,14 +76,8 @@ end
 % compute single subject correlation matrices
 %% plot and save single subject fixations maps RSA
 tsub = length(unique(fix.subject));
-out  = [];
-% for k = Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
-fix.kernel_fwhm = 25;
-fix.kernel_fwhm = 37*0.8;
-cormat_t = nan(8,8,tsub);
-cormat_b = nan(8,8,tsub);
-pval_t = nan(8,8,tsub);
-pval_b = nan(8,8,tsub);
+cormat = nan(16,16,tsub);
+pval = nan(16,16,tsub);
 subc            = 0;
 for subject = unique(fix.subject);
     subc = subc + 1
@@ -99,50 +93,67 @@ for subject = unique(fix.subject);
     % plot and save fixation maps
     fix.getmaps(v{:});
     maps = fix.maps;
-%     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline
-    fix.maps   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average    
-    %         fix.plot
-    %         SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    %         saveas(gcf,sprintf('C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/baselineANDMeancorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
-    [cormat_t(:,:,subc) pval_t(:,:,subc)] = fix.corr;
-    fix.maps   = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
-    [cormat_b(:,:,subc) pval_b(:,:,subc)] = fix.corr;
+    fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
+    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average    
+    [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
-% end
 %% RSA plot
 figure
 subplot(1,2,1);
-imagesc(median(cormat_b,3),[-.1 .1]);
+imagesc(median(cormat,3),[-.1 .1]);
 axis square;colorbar;
 set(gca,'fontsize',15)
 axis off
 subplot(1,2,2);
-imagesc(median(cormat_t,3),[-.1 .1])
+imagesc(median(cormat,3),[-.1 .1])
 axis square;colorbar
 set(gca,'fontsize',15)
 axis off
 
 %% RSA plot but fisherz transformed
-for n = 1:27
-    cormat_tz(:,:,n) = reshape(fisherz(cormat_t(:,:,n)),[8 8 1]);
-    cormat_bz(:,:,n) = reshape(fisherz(cormat_b(:,:,n)),[8 8 1]);
-end
-base = reshape(ifisherz(median(cormat_bz,3)),[8 8 1]);
-base(logical(eye(8,8))) = 1;
-test = reshape(ifisherz(median(cormat_tz,3)),[8 8 1]);
-test(logical(eye(8,8))) = 1;
+cormatz = fisherz_inverse(median(fisherz(cormat),3));
+cormatz = CancelDiagonals(cormatz,0);
 figure
-subplot(1,2,1);
-imagesc(base,[-.1 .1]);
+imagesc(cormatz)
 axis square;colorbar;
 set(gca,'fontsize',15)
 axis off
-subplot(1,2,2);
-imagesc(test,[-.1 .1]);
-axis square;colorbar
-set(gca,'fontsize',15)
-axis off
+%% big corrmat (single fixations)
+p = Project;
+subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
+fix = Fixmat(subs,[2 4]);
 
+correct = 1;
+tfix = 5;
+corrmat = nan(80,80,length(subs));
+
+sc = 0;
+for sub = unique(fix.subject)
+    sc = sc+1;
+    v = [];
+    c = 0;
+    for ph = unique(fix.phase)
+        for nfix = 1:tfix
+            for cond = fix.realcond
+                c = c+1;
+                v{c} = {'subject' sub 'phase' ph 'deltacsp' cond 'fix' nfix};
+            end
+        end
+    end
+    fix.getmaps(v{:})
+     if correct == 1
+        %correct phase specific cocktail blank
+        fix.maps(:,:,1:40) = fix.maps(:,:,1:40) - repmat(nanmean(fix.maps(:,:,1:40),3),[1 1 40]);
+        fix.maps(:,:,41:end) = fix.maps(:,:,41:end) - repmat(nanmean(fix.maps(:,:,41:end),3),[1 1 40]);
+    end
+    corrmat(:,:,sc) = fix.corr;
+end
+
+imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.35 .6])
+axis square
+box off
+set(gca,'XTick',[4:8:80],'XTickLabel',{'1' '2' '3' '4' '5' '1' '2' '3' '4' '5'})
+set(gca,'YTick',[4:8:80],'YTickLabel',{'1' '2' '3' '4' '5' '1' '2' '3' '4' '5'})
 %% try the same as MDS
 tsub = length(unique(fix.subject));
 dismat_t = zeros(8,8,tsub);
@@ -672,7 +683,7 @@ mises = g.loadmises; mat = [mat mises];
 clear g;
 fix         = Fixmat(subjects,4);
 fix.getsubmaps;
-fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+% fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
 
 %normal correlation
@@ -680,11 +691,11 @@ param       = mat(:,13);%kappa test
 for n  = 1:25; param(n,1) = vM2FWHM(mat(n,13));end
 
 for n = 1:length(subjmaps)
-    [r(n),pval(n)] = corr(subjmaps(n,:)',param);
+    [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Spearman');
 end
 imagesc(reshape(r,[50 50]),[-1 1])
 fix.maps = reshape(r,[50 50]);fix.plot
-for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',20);end
+for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',8);end
 fix.maps = reshape(r,[50 50]);
 fix.plot
 
@@ -705,9 +716,9 @@ end
 
 %mask: multiply with average fixmap
 fix.getsubmaps;
-fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+% fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 fix.maps = Scale(mean(fix.maps,3));
-fix.maps = reshape(r,[50 50]).*fix.maps;
+fix.maps = reshape(r,[500 500]).*fix.maps;
 fix.plot
 %binary mask
 fix.getsubmaps;
@@ -1657,15 +1668,15 @@ end
 valid = prod([g.tunings.rate{3}.pval;g.tunings.rate{4}.pval] > -log10(0.05));
 mat((ismember(unique(fix.subject),subjects)==0),[1:11]) = nan;
 mat((ismember(unique(fix.subject),subjects)==0),[12:14])= nan;
-%% latest dendrogram, k=3 clusters
+%% latest dendrogram, k=2 clusters
 p = Project;
 mask = p.getMask('ET_feargen');
-subjects = intersect(find(mask),Project.subjects_600);
-mask = p.getMask('PMF');
-subjects = intersect(find(sum(mask,2)==4),subjects);
-fix = Fixmat(subjects,1);
+subjects = intersect(find(mask),Project.subjects_1500);
+mask = p.getMask('ET_discr');
+subjects = intersect(find(mask),subjects);
+fix = Fixmat(subjects,[1 3 4 5]);
 fix.getsubmaps;
-fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+% fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 
 g = Group(subjects);[mat tags]=g.parameterMat;mises = g.loadmises;clear g;mat = [mat mises];
 
@@ -1677,66 +1688,115 @@ invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:end)= NaN;
 
-for nc = 11
-    [branch_id,ids] = fix.dendrogram(2,mean(mat(:,nc),2));
-    supertitle(tags(nc),1,'interpreter','none');
+mat(:,17) = mean(mat(:,[1 3]),2);
+for n = 1:length(subjects)
+    mat(n,18) = vM2FWHM(mat(n,12));
+    mat(n,19) = vM2FWHM(mat(n,13));
+    mat(n,20) = mat(n,18)-mat(n,19);
 end
-%[h p stats] = ttest2(mat(branch_id==1,14),mat(branch_id==2,14)) % gives p = 0.045
+mat(invalid_a,[1:11 17]) = NaN;
+mat(invalid_r,[12:16 18:20])= NaN;
+
+crit = mat(:,19);
+[branch_id,ids] = fix.dendrogram(2,crit);
+
+[h p stats] = ttest2(crit(branch_id==1),crit(branch_id==2)) % gives p = 0.045
 %% plot the relevant parameters for cluster 1 and 2
-%bars alpha
+fix.maps = cat(3,mean(fix.maps(:,:,branch_id==1),3),mean(fix.maps(:,:,branch_id==2),3));
+fix.plot
+%graph alpha
 subplot(4,2,1:2);
-for n=1:2
-bar(n,nanmean(mean(mat(branch_id==n,[1 3]),2)));
-hold on;
-errorbar(n,nanmean(mean(mat(branch_id==n,[1 3]),2)),nanstd(mean(mat(branch_id==n,[1 3]),2))./sqrt(sum(branch_id==n)),'k.','LineWidth',2);
-end
-xlim([0.5 2.5])
+m = [nanmean(mat(branch_id==1,17)) nanmean(mat(branch_id==2,17))];
+s = [nanstd(mat(branch_id==1,17))./sqrt(sum(branch_id==1)) nanstd(mat(branch_id==2,17))./sqrt(sum(branch_id==2))];
+errorbar(1:2,m,s,'k.-','LineWidth',2);
+xlim([0.6 2.4])
 ylabel('initial alpha')
 ylim([40 70])
 set(gca,'XTick',[],'XTicklabel',[]);box off;
+line([2.2 2.2],[m(2) m(1)],'Color','black','LineWidth',2)
+text(2.2,mean(m),'*','FontSize',20)
 %bars kappa
 subplot(4,2,3:4);
-for n=1:2
-bar(n,nanmean(mat(branch_id==n,13)));
-hold on;
-errorbar(n,nanmean(mat(branch_id==n,13)),nanstd(mat(branch_id==n,13))./sqrt(sum(branch_id==n)),'k.','LineWidth',2);
-end
-xlim([0.5 2.5]);box off;
-ylabel('kappa test')
-set(gca,'XTick',[])
+m = [nanmean(mat(branch_id==1,19)) nanmean(mat(branch_id==2,19))];
+s = [nanstd(mat(branch_id==1,19))./sqrt(sum(branch_id==1)) nanstd(mat(branch_id==2,19))./sqrt(sum(branch_id==2))];
+errorbar(1:2,m,s,'k.-','LineWidth',2);
+xlim([0.6 2.4])
+ylabel('FWHM Generalization')
+ylim([60 120])
+set(gca,'XTick',[],'XTicklabel',[]);box off;
 %SCR Graphs
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_fordendroN27.mat')
-pl(1)=subplot(1,2,1);
-SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==1),3),'LineWidth',2);axis square
-xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_test_dendro1345.mat');
+pl(1)=subplot(4,2,5);
+SetFearGenColors; plot(nanmean(scr_data(:,1:8,branch_id==1),3),'LineWidth',2);axis square
+xlim([150 650]);ylim([0 1]);box off;
+line([250 250],ylim,'Color','k','LineWidth',2)
+line([550 550],ylim,'Color','k','LineWidth',2)
+set(gca,'XTick',[250 550],'XTickLabel',{'2.5' '5.5'})
 ylabel('SCR [\muS]')
-pl(2)=subplot(1,2,2);
-SetFearGenColors; plot(nanmean(scr_datac(:,1:8,branch_id==2),3),'LineWidth',2);axis square
-xlim([0 800]);ylim([-.2 1]);box off;set(gca,'XTick',[]);
+pl(2)=subplot(4,2,6);
+SetFearGenColors; plot(nanmean(scr_data(:,1:8,branch_id==2),3),'LineWidth',2);axis square
+xlim([150 650]);ylim([0 1]);box off;
+line([250 250],ylim,'Color','k','LineWidth',2)
+line([550 550],ylim,'Color','k','LineWidth',2)
+set(gca,'XTick',[250 550],'XTickLabel',{'2.5' '5.5'})
 
-scr_datac = scr_data(:,1:8,:)-repmat(scr_data(:,9,:),[1 8 1]);
 %SCR tunings
+scr_bars = squeeze(mean(scr_data_cut))';
+% scr_bars = zscore(scr_bars')';
 pl(3)=subplot(4,2,7);
-b=bar(1:8,squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1)));SetFearGenBarColors(b);
+b=bar(-135:45:180,squeeze(nanmean(scr_bars(branch_id==1,1:8),1)));SetFearGenBarColors(b);
 hold on;
-errorbar(1:8,squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1)),...
-    squeeze(nanmean(scr_bars(branch_id==1,1:8,3),1))./sqrt(sum(branch_id==1)),'k.','LineWidth',1.5)
+errorbar(-135:45:180,squeeze(nanmean(scr_bars(branch_id==1,1:8),1)),...
+    squeeze(nanmean(scr_bars(branch_id==1,1:8),1))./sqrt(sum(branch_id==1)),'k.','LineWidth',1.5)
 ylim([0 1]);
+xlim([-180 225])
 ylabel('SCR [\muS]')
 axis square; box off
 set(gca,'XTick',[4 8],'XTicklabel',{'CS+' 'CS-'})
 pl(4)=subplot(4,2,8);
-b=bar(1:8,squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1)));SetFearGenBarColors(b);
+b=bar(-135:45:180,squeeze(nanmean(scr_bars(branch_id==2,1:8),1)));SetFearGenBarColors(b);
 hold on;
-errorbar(1:8,squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1)),...
-    squeeze(nanmean(scr_bars(branch_id==2,1:8,3),1))./sqrt(sum(branch_id==2)),'k.','LineWidth',1.5)
+errorbar(-135:45:180,squeeze(nanmean(scr_bars(branch_id==2,1:8),1)),...
+    squeeze(nanmean(scr_bars(branch_id==2,1:8),1))./sqrt(sum(branch_id==2)-1),'k.','LineWidth',1.5)
 axis square;box off
 ylim([0 1]);
+xlim([-180 225])
 set(gca,'XTick',[4 8],'XTicklabel',{'CS+' 'CS-'})
 
+%% plot curves onto that
+%group (too noisy)
+data1.x = repmat(-135:45:180,[sum(branch_id==1) 1]);
+data1.y = scr_bars(branch_id==1,1:8);
+data1.ids = subjects(branch_id ==1);
+data2.x = repmat(-135:45:180,[sum(branch_id==2)-1 1]); 
+data2.y = scr_bars(branch_id==2,1:8);
+data2.y(end,:) = [];
+data2.ids = subjects(branch_id ==2);
+data2.ids(end)=[];
+tuning1 = Tuning(data1);tuning1.GroupFit(8);
+tuning2 = Tuning(data2);tuning2.GroupFit(8);
+%mean
+data1.x = -135:45:180;
+data1.y = mean(scr_bars(branch_id==1,1:8));
+data1.ids = subjects(branch_id ==1);
+data2.x = -135:45:180;
+dummy = scr_bars(branch_id==2,1:8);
+data2.y = mean(dummy(1:end-1,:));
+data2.ids = subjects(branch_id ==2);
+data2.ids(end)=[];
+tuning1 = Tuning(data1);tuning1.GroupFit(8);
+tuning2 = Tuning(data2);tuning2.GroupFit(8);
 
-
-
+subplot(4,2,7)
+hold on;
+xhd = linspace(-135,180,100);
+params = tuning1.groupfit.Est;
+plot(xhd,VonMises(deg2rad(xhd),params(1,1),params(1,2),deg2rad(params(1,3)),params(1,4)),'k-','LineWidth',2);
+subplot(4,2,8)
+hold on;
+xhd = linspace(-135,180,100);
+params = tuning2.groupfit.Est;
+plot(xhd,VonMises(deg2rad(xhd),params(1,1),params(1,2),deg2rad(params(1,3)),params(1,4)),'k-','LineWidth',2)
 
 %%
 % load('C:\Users\user\Dropbox\feargen_hiwi\dump\m.mat')
@@ -1911,7 +1971,7 @@ fix = Fixmat(subjects,2:4);
 
 subjects = unique(fix.subject);
 pc = 0;
-for ph = unique(fix.phase)
+for ph = 4;%unique(fix.phase)
     pc = pc+1;
     sc=0;
     for sub = subjects(:)'
@@ -1923,7 +1983,7 @@ for ph = unique(fix.phase)
             v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
         end
     fix.getmaps(v{:});
-    maps(:,:,sc,pc) = fix.maps(:,:,1) - fix.maps(:,:,2);%-mean(fix.maps,3);
+%     maps(:,:,sc,pc) = fix.maps(:,:,1) - fix.maps(:,:,2);%-mean(fix.maps,3);
     end
 end
 fix.maps = squeeze(mean(maps,3));%over subjects
