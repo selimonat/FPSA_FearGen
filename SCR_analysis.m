@@ -184,6 +184,25 @@ for ph = 1:3
     end
 end
 %% SCR graphs, not bars
+scr_data = NaN(800,9,length(subjects),3);
+phasenames = {'base$' 'cond$' 'test$'};
+phaseconds = [9 3 9];
+sc = 0;
+for ph = 1:3
+    for sub = subjects(:)'
+        fprintf('Working on subject %d .. \n',sub)
+        sc=sc+1;
+        s = Subject(sub);
+        s.scr.cut(s.scr.findphase(phasenames{ph}));
+        s.scr.run_ledalab;
+        if ismember(ph,[1 3])
+            scr_data(:,:,sc,ph) = s.scr.ledalab.mean(1:800,1:9);
+        else
+            scr_data(:,[4 8 9],sc,ph) = s.scr.ledalab.mean(1:800,1:9);
+        end
+    end
+end
+%% SCR graphs, not bars
 scr_data0 = NaN(800,9,length(subjects));
 sc=0;
 for sub = subjects(:)'
@@ -215,28 +234,24 @@ for sub = subjects(:)'
     s.scr.run_ledalab;
     scr_data1(:,[4 8 9],sc) = s.scr.ledalab.mean(1:800,1:3);    
 end
-%% SCR graphs, not bars
-scr_data = NaN(800,9,length(subjects),3);
-phasenames = {'base$' 'cond$' 'test$'};
-phaseconds = [9 3 9];
-sc = 0;
-for ph = 1:3
-    for sub = subjects(:)'
-        fprintf('Working on subject %d .. \n',sub)
-        sc=sc+1;
-        s = Subject(sub);
-        s.scr.cut(s.scr.findphase(phasenames{ph}));
-        s.scr.run_ledalab;
-        if ismember(ph,[1 3])
-            scr_data(:,:,sc,ph) = s.scr.ledalab.mean(1:800,1:9);
-        else
-            try
-            scr_data(:,[4 8 9],sc,ph) = s.scr.ledalab.mean(1:800,1:9);
-            end
-        end
-    end
-end
 
+scr_data = cat(4,scr_data0,scr_data1,scr_data2);
+
+%check window
+figure;
+SetFearGenColors;
+plot(mean(scr_data(:,1:8,:,3),3),'LineWidth',2);hold on;
+plot(mean(scr_data(:,9,:,3),3),'k','LineWidth',2);
+%cut part that's interesting for mean bars
+scr_data_cut = scr_data(250:550,:,:,:);%take window of 200:500 for 600, and 250:550 for 1500;
+data = squeeze(mean(scr_data_cut(:,1:8,:,:)));
+dataz = nanzscore(data);
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat','scr_data','subjects','scr_data_cut','data','dataz');
+%plot single tunings
+for n=1:length(subjects);subplot(5,6,n);b=bar(dataz(:,n,3));SetFearGenBarColors(b);end
+%plot group
+for n = 1:3;subplot(1,3,n);b=bar(mean(dataz(:,:,n),2));SetFearGenBarColors(b);hold on;errorbar(mean(dataz(:,:,n),2),std(data(:,:,n),0,2)./sqrt(size(dataz,2)),'k.','LineWidth',2');axis square;box off;end
+EqualizeSubPlotYlim(gcf);
 %% plot single fits
 nsub = 29;
 x = -135:45:180;
@@ -311,3 +326,8 @@ g = Group(subs); mat = g.parameterMat;
 crit = (scr_bars(:,4,3)-scr_bars(:,8,3))./(scr_bars(:,4,3)+scr_bars(:,8,3));
 crit = params(:,1);
 [r,pval]=corr(mat(:,11),crit(ismember(subs_scr,subs)))
+
+%% just putting this here
+                i                    = (self.ledalab.x(:,1) >= 2.5)&(self.ledalab.x(:,1) <= 5.5);
+                self.fear_tuning     = mean(self.ledalab.mean(i,:));%take out the average in that window
+                self.fear_tuning = self.fear_tuning(:,conds);
