@@ -98,7 +98,15 @@ text(45,9,'***','FontSize',20)
 % 
 
 %% which fit is better, von mises or gaussian
-load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\fitcorr_vM_G.mat');
+%% 
+g.getSI(8);
+ratings = g.getRatings(2:4);
+for ph=3:4
+    for sub = 1:28
+        rvm(sub,ph) = corr(ratings(sub,:,ph)',g.tunings.rate{ph}.singlesubject{sub}.fit);
+    end
+end
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\fitcorr_vM_G.mat');
 ifisherz(mean(fisherz([rg(:,3); rg(:,4)])))
 ifisherz(mean(fisherz([rvm(:,3); rvm(:,4)])))
 %% anova kapp
@@ -580,7 +588,9 @@ end
 %% overall PMF, collect responses from fitted Weibull
 clear all
 p = Project;
-subjects = intersect(find(sum(p.getMask('PMF'),2)==4),Project.subjects_600);
+subjects = intersect(find(sum(p.getMask('PMF'),2)==4),Project.subjects_1500);
+NumPos = nan(16,2,length(subjects),2);
+OutOfNum = nan(16,2,length(subjects),2);
 ns = 0;
 for sub = subjects(:)'
     ns = ns+1;
@@ -630,6 +640,48 @@ xlim([-10 180])
 set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
 ylabel('p(different)','FontSize',12)
 xlabel('delta X [deg]')
+end
+%% fit Weibull to that
+clf
+for n =1:4
+   
+    StimLevels = 0:11.25:170;
+    x          = linspace(min(StimLevels),max(StimLevels),1000); % for plotting it later
+    
+    PropCorrectData = pdiffgroup(:,n);
+    NumPosG   = round(PropCorrectData*100)';
+    OutOfNumG = repmat(100,[16 1])';
+    searchGrid.alpha = 45;
+    searchGrid.beta  = 2;%10.^pmf.beta(chain);
+    searchGrid.gamma = PropCorrectData(1);% guessing rate at zero
+    searchGrid.lambda = 1-PropCorrectData(end); %1 - final pdiff
+    params0 = [ searchGrid.alpha  searchGrid.beta searchGrid.gamma searchGrid.lambda];
+    PF         = @PAL_Weibull;
+    
+    % run the Fit!
+    options             = PAL_minimize('options');
+    options.MaxIter     = 10.^6;
+    options.MaxFunEvals = 10.^6;
+    options.Display     = 'On';
+    options.TolX        = 10.^-4;
+    options.TolFun      = 10.^-4;
+    
+    funny = @(params) sum(-log (binopdf(NumPosG,OutOfNumG,PF(params,StimLevels))));
+    
+    options         = optimset('Display','iter','maxfunevals',10000,'tolX',10^-12,'tolfun',10^-12,'MaxIter',10000,'Algorithm','interior-point');
+    
+    [o.params1, o.Likelihood, o.ExitFlag]  = fmincon(funny, params0, [],[],[],[],[-Inf -Inf 0 0],[Inf Inf 1 1],[],options);
+    
+    out.params1(n,:)    = o.params1;
+    out.Likelihood(n,1) = o.Likelihood;
+    out.ExitFlag(n,1)   = o.ExitFlag ;
+    
+    % plot the Fit
+    subplot(2,2,n)
+    plot(StimLevels,PropCorrectData,'bo');
+    hold on;
+    Fit = PF(o.params1,x);
+    plot(x,Fit);
 end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -809,3 +861,44 @@ plot(mdl)
 hold on;
 DrawIdentityLine(gca);
 xlim([min(X)-10 max(X)+10])
+
+%% new way (bootstrap regression)
+clear all
+sp = [2 4];
+fontsize = 12;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+x  = mat6(:,17);
+y  = mat6(:,18);
+subplot(sp(1),sp(2),[3 4 7 8])
+plot(x,y,'o','MarkerFaceColor','b')
+hold on;
+%
+i = 1:length(x);
+for n = 1:10000
+    ii     = randsample(i,length(x),1);
+    B(:,n) = [x(ii) ones(length(x),1)]\y(ii);
+end
+%
+X2 = [linspace(min(x),max(x),100)' ones(100,1)];
+plot(X2(:,1),X2*mean(B,2),'r','LineWidth',2)
+Y = X2*B;
+Y = Y';
+YY = prctile(Y,[2.5 97.5])';
+
+%% sigmoid function
+sp = [2 4];
+
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+x  = mat6(:,17);
+y  = mat6(:,18);
+
+subplot(sp(1),sp(2),[3 4 7 8])
+plot(x,y,'o','MarkerFaceColor','b')
+hold on;
+%
+i = 1:length(x);
+for n = 1:10000
+    ii     = randsample(i,length(x),1);
+    B(:,n) = [x(ii) ones(length(x),1)]\y(ii);
+end
+%
