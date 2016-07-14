@@ -114,7 +114,7 @@ for neig    = 1:teig%test different numbers of eigenvectors
 end
 end
 try
-     save(sprintf('%shome%skampermann%sDocuments%sfearcloud%sdata%smidlevel%ssvm_analysis%sfindingparams%sSVM_simulations_fwhm_NEV_%g_FWHM_%g_%s.mat',filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,neig,fwhm,datestr(now,'ddmmyy'),'result','confmats','R','Rbin','AVE','subjects','param'));
+     save(sprintf('%shome%skampermann%sDocuments%sfearcloud%sdata%smidlevel%ssvm_analysis%sfindingparams%sSVM_simulations_fwhm_NEV_%g_FWHM_%g_%s.mat',filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,filesep,100,fwhm,datestr(now,'ddmmyy')),'result','confmats','R','Rbin','AVE','subjects','param');
 catch
     keyboard
 end
