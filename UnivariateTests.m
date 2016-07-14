@@ -157,11 +157,8 @@ end
 
 %% collect covariance matrices for each fixation and each subject. in the next cell we will test 
 % different exploration strategies on these matrices.
-<<<<<<< HEAD
+
 for kernel_fwhm = 29
-=======
-for kernel_fwhm = 30
->>>>>>> 0f1defa4c96a4ff32b1a831011448a8640ac77f5
     M = [];
     C               = [];
     Cr              = [];
