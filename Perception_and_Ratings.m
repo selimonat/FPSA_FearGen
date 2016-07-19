@@ -886,19 +886,70 @@ Y = Y';
 YY = prctile(Y,[2.5 97.5])';
 
 %% sigmoid function
+clear all
+close all
+nboot = 100000;
 sp = [2 4];
-
+fontsize = 12;
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
-x  = mat6(:,17);
-y  = mat6(:,18);
-
-subplot(sp(1),sp(2),[3 4 7 8])
-plot(x,y,'o','MarkerFaceColor','b')
+x0  = mat6(:,17);
+x = x0 - min(x0);
+y0  = mat6(:,18);
+subplot(1,2,1);
+plot(x0,y0,'o','MarkerFaceColor','b')
 hold on;
-%
-i = 1:length(x);
-for n = 1:10000
-    ii     = randsample(i,length(x),1);
-    B(:,n) = [x(ii) ones(length(x),1)]\y(ii);
+y = y0./180;
+subplot(1,2,2);plot(x,y,'o','MarkerFaceColor','k')
+ndata = 1:length(x);
+% run fit
+clear params LL fit;
+for n = 1:nboot
+    fprintf('Bootstrap n = %g. \n',n)
+    ii(:,n)     = randsample(ndata,length(x),1);
+    %[params(:,n) LL(n)] = FitLogsCumNorm(x(ii(:,n)),y(ii(:,n)),1);
+    [o] = FitLogistic_manually(x(ii(:,n)),y(ii(:,n)));
+    fit(:,n)    = o.fitup;
+    LL(:,n)     = o.Likelihood;
+    params(:,n) = o.Est(1:4);
 end
+params1 = params;
+params(1,:) = params(1,:) + min(x0);
+%% transform alpha to 50% threshold
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+g = Group(subjects(subs6));
+
+crit = .5;
+clear alpha
+for sub = 1:length(g.ids)
+    for n = 1:4
+    guess = g.subject{sub}.pmf.params1(n,3);
+    lapse = g.subject{sub}.pmf.params1(n,4);
+    alpha(sub,n) = PAL_Weibull(g.subject{sub}.pmf.params1(n,:),(1-lapse-guess)*crit+guess,'inverse');
+    end
+end
+%sanity check: is this alpha (with crit = .63)
+[r,pval] = corr(alpha(:,1),g.pmf.csp_before_alpha);
+init_alpha = mean(alpha(:,1:2),2);
 %
+nboot = 100000;
+x0  = init_alpha;
+x = x0 - min(x0);
+y0  = mat6(:,18);
+plot(x0,y0,'ro','MarkerFaceColor','r')
+hold on;
+y = y0./180;
+plot(x,y,'ro','MarkerFaceColor','r')
+ndata = 1:length(x);
+% run fit
+clear params LL fit;
+for n = 1:nboot
+    fprintf('Bootstrap n = %g. \n',n)
+    ii(:,n)     = randsample(ndata,length(x),1);
+    %[params(:,n) LL(n)] = FitLogsCumNorm(x(ii(:,n)),y(ii(:,n)),1);
+    [o] = FitLogistic_manually(x(ii(:,n)),y(ii(:,n)));
+    fit(:,n)    = o.fitup;
+    LL(:,n)     = o.Likelihood;
+    params(:,n) = o.Est(1:4);
+end
+params1 = params;
+params(1,:) = params(1,:) + min(x0);
