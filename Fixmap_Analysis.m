@@ -26,17 +26,17 @@ for k = 37;%%Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
     fix.kernel_fwhm = k;
     fix.getmaps(v{:});
     
-%     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline    
-%     fix.maps    = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    %     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:16),3),[1 1 16]);%correct for baseline
+    %     fix.maps    = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
     fix.maps    = fix.maps(:,:,1:8) - repmat(mean(fix.maps(:,:,1:8),3),[1 1 8]);%take out the average
     fix.plot;
     supertitle(mat2str(k),1);
-%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/Maps_Scale_%04.4g.png',k));    
+    %     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/Maps_Scale_%04.4g.png',k));
     out= fix.corr;
     figure(1000);clf
     imagesc(out);colorbar
-%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/CorrMat_Scale_%04.4g.png',k));
-    title(mat2str(k));        
+    %     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/AllFixations/unitize/1500/nocorrection/CorrMat_Scale_%04.4g.png',k));
+    title(mat2str(k));
 end
 %% For a given fwhm, compute fixmaps and cormat for different fixation indices.
 fix.kernel_fwhm = 25;
@@ -50,17 +50,17 @@ for nfix = [1 2 3 4 5 6];%there are about 200 7th fixations (not enough)
             v{c} = {'phase', ph, 'deltacsp' cond 'fix' nfix(:)};
         end
     end
-    % plot and save fixation maps       
+    % plot and save fixation maps
     fix.getmaps(v{:});
     fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-%     fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+    %     fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
     fix.plot;
     supertitle(mat2str(k),1);
-%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Maps_nFix_%02d.png',nfix(1),nfix(2)));
+    %     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Maps_nFix_%02d.png',nfix(1),nfix(2)));
     out = fix.corr;
     figure(10001);
-    imagesc(out(9:end,9:16));colorbar    
-%     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Corrmat_nFix_%02d.png',nfix(1),nfix(2)));
+    imagesc(out(9:end,9:16));colorbar
+    %     SaveFigure(sprintf('/Users/onat/Desktop/fearcloud/MegaSubject/SingleFixations/1500/Corrmat_nFix_%02d.png',nfix(1),nfix(2)));
     title([mat2str(fix.kernel_fwhm) '-' mat2str(nfix)] );
     figure(10002)
     bla(nfix,:) = out(12,9:end);
@@ -94,7 +94,7 @@ for subject = unique(fix.subject);
     fix.getmaps(v{:});
     maps = fix.maps;
     fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
-    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average    
+    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
 %% RSA plot
@@ -141,7 +141,7 @@ for sub = unique(fix.subject)
         end
     end
     fix.getmaps(v{:})
-     if correct == 1
+    if correct == 1
         %correct phase specific cocktail blank
         fix.maps(:,:,1:40) = fix.maps(:,:,1:40) - repmat(nanmean(fix.maps(:,:,1:40),3),[1 1 40]);
         fix.maps(:,:,41:end) = fix.maps(:,:,41:end) - repmat(nanmean(fix.maps(:,:,41:end),3),[1 1 40]);
@@ -219,14 +219,14 @@ for k = 25%Fixmat.PixelPerDegree*logspace(log10(.1),log10(2.7),20);
                     v{c} = {'phase', ph, 'deltacsp' cond 'fix' nfix 'subject' subject};
                 end
             end
-%             figure(10);clf;
+            %             figure(10);clf;
             % plot and save fixation maps
             fix.getmaps(v{:});
             maps                 = fix.maps;
             fix.maps             = maps(:,:,1:8)   - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%correct for baseline
             cormat_b(:,:,subc,nfix)   = fix.corr;
-            fix.maps   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average            
-            cormat_t(:,:,subc,nfix)   = fix.corr;            
+            fix.maps   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
+            cormat_t(:,:,subc,nfix)   = fix.corr;
         end
     end
 end
@@ -260,7 +260,7 @@ SaveFigure('/Users/onat/Desktop/SimilarityOFConditionsFixByFix','-r150');
 sub_c = 0;
 tsub  = length(unique(fix.subject));
 cormat = nan(5,5,tsub);
-for subs = unique(fix.subject);    
+for subs = unique(fix.subject);
     sub_c = sub_c+1;
     v    = [];
     c    = 0;
@@ -268,7 +268,7 @@ for subs = unique(fix.subject);
         c    = c+1;
         v{c} = {'phase', ph , 'deltacsp' fix.realcond 'subject' subs};
     end
-    fix.getmaps(v{:});    
+    fix.getmaps(v{:});
     fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
     cormat(:,:,sub_c) = fix.corr;
 end
@@ -306,7 +306,7 @@ for nx = 1:5
     ix = [1:27]+27*(nx-1);
     for ny = 1:5
         iy = [1:27]+27*(ny-1);
-        bla(ny,nx) = mean(diag(cormat(iy,ix)))        
+        bla(ny,nx) = mean(diag(cormat(iy,ix)))
     end
 end
 
@@ -323,7 +323,7 @@ for np = 1:5
     close all;
     M(1,np)           = mean(squeeze(c(:,ismember(i,[0]),:)));
     M(2,np)           = mean(squeeze(c(:,ismember(i,[180 18000]),:)));
-    S(1,np)           =  std(squeeze(c(:,ismember(i,[0]),:))./sqrt(28));    
+    S(1,np)           =  std(squeeze(c(:,ismember(i,[0]),:))./sqrt(28));
     S(2,np)           =  std(squeeze(c(:,ismember(i,[180 18000]),:))./sqrt(28));
 end
 %
@@ -373,8 +373,8 @@ fix = Fixmat(g.ids,[1 5]);
 c=0;
 v=[];
 for fs = {first second};
-        c=c+1;
-        v{c} = {'trialid' fs{1}};
+    c=c+1;
+    v{c} = {'trialid' fs{1}};
 end
 fix.getmaps(v{:});
 fix.plot
@@ -707,7 +707,7 @@ for n = 1:length(subjmaps)
         [dummy dummy2] = CorrelationMatrix(data, 100,0.05,'bootstrp');
         dummy(isnan(dummy)) = 0;
         cmat(n) = mean(dummy);
-%         pmat(n) = dummy2;
+        %         pmat(n) = dummy2;
     else
         cmat(n) = NaN;
         pmat(n) = 0;
@@ -792,7 +792,7 @@ fix.plot;
 
 
 
-    
+
 
 
 
@@ -830,43 +830,43 @@ good  = g.ids(find(subject_alpha<med));
 %%
 tsub = length(unique(fix.subject));
 k = 20;
-    fix.kernel_fwhm = k;
-    covmat          = nan(16,16,tsub);
-    cormat          = nan(16,16,tsub);
-    subc            = 0;
-    %create the query cell
-    v = [];
-    c = 0;
-    for subjects = {good bad}
-        for ph = [2 4]
-            for cond = -135:45:180
-                c    = c+1;
-                v{c} = {'phase', ph, 'deltacsp' cond 'subject' subjects{1}};
-            end
+fix.kernel_fwhm = k;
+covmat          = nan(16,16,tsub);
+cormat          = nan(16,16,tsub);
+subc            = 0;
+%create the query cell
+v = [];
+c = 0;
+for subjects = {good bad}
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subjects{1}};
         end
     end
-    % plot and save fixation maps
-    fix.getmaps(v{:});
-    %%
-    %for one group only
-    %fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
-    %fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
-   
-    %%
-    %%Good - Bad:
-    %first Baseline correction, but within Group
-    fix.maps(:,:,1:16)             = fix.maps(:,:,1:16)    - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for group_baseline
-    fix.maps(:,:,17:32)            = fix.maps(:,:,17:32)   - repmat(mean(fix.maps(:,:,17:24),3),[1 1 16]);%correct for group_baseline
-    %Mean Testphase correction (within group)
-    fix.maps(:,:,9:16) = fix.maps(:,:,9:16) - repmat(mean(fix.maps(:,:,9:16),3),[1 1 8]);
-    fix.maps(:,:,25:32) = fix.maps(:,:,25:32) - repmat(mean(fix.maps(:,:,25:32),3),[1 1 8]);
-    %take the diff (Good - Bad)
-    fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
-    fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
-    fix.plot
-    t=supertitle('Good - Bad Base&Mean corrected (600ms)',1);
-    set(t,'FontSize',14)
-  %% 
+end
+% plot and save fixation maps
+fix.getmaps(v{:});
+%%
+%for one group only
+%fix.maps             = fix.maps            - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for baseline
+%fix.maps(:,:,9:16)   = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);%take out the average
+
+%%
+%%Good - Bad:
+%first Baseline correction, but within Group
+fix.maps(:,:,1:16)             = fix.maps(:,:,1:16)    - repmat(mean(fix.maps(:,:,1:8),3),[1 1 16]);%correct for group_baseline
+fix.maps(:,:,17:32)            = fix.maps(:,:,17:32)   - repmat(mean(fix.maps(:,:,17:24),3),[1 1 16]);%correct for group_baseline
+%Mean Testphase correction (within group)
+fix.maps(:,:,9:16) = fix.maps(:,:,9:16) - repmat(mean(fix.maps(:,:,9:16),3),[1 1 8]);
+fix.maps(:,:,25:32) = fix.maps(:,:,25:32) - repmat(mean(fix.maps(:,:,25:32),3),[1 1 8]);
+%take the diff (Good - Bad)
+fix.maps(:,:,1:16) = fix.maps(:,:,1:16) - fix.maps(:,:,17:32);
+fix.maps(:,:,17:32) = []; %need 2x8cond for fix.plot
+fix.plot
+t=supertitle('Good - Bad Base&Mean corrected (600ms)',1);
+set(t,'FontSize',14)
+%%
 %SaveFigure(sprintf('/Users/onat/Desktop/fixationmaps/singlesubject/1500/AllFixations/baselinecorrection/Maps_Scale_%04.4g_Subject_%03d.png',k,subject));
 saveas(gcf,'C:/Users/onat/Desktop/Lea/fearcloud_after_Msc/Fixmats/singlesubject/1500/AllFixations/good_vs_bad/within_group_corrected/1500_Good-Bad_k20_baseANDmeancorr.png');
 
@@ -1068,7 +1068,7 @@ end
 % plot and save fixation maps
 fix.getmaps(v{:});
 
-%% 
+%%
 %CS+ vs CS_ after
 %create the query cell
 v = [];
@@ -1093,7 +1093,7 @@ nonimpr   = g.ids(find(alpha_impr<=median(alpha_impr)));
 
 mean_improvers=mean(alpha_impr(ismember(g.ids,improvers)));
 mean_nonimpr=mean(alpha_impr(ismember(g.ids,nonimpr)));
-%% 
+%%
 %create the query cell
 v = [];
 c = 0;
@@ -1124,9 +1124,9 @@ low_guess  = g.ids(find(guess<=med))';
 v = [];
 c = 0;
 for subjects = {high_guess low_guess}
-        c    = c+1;
-        v{c} = {'subject' subjects{1}};
-        v{c}
+    c    = c+1;
+    v{c} = {'subject' subjects{1}};
+    v{c}
 end
 fix.getmaps(v{:});
 fix.plot
@@ -1192,9 +1192,9 @@ bad_imp  = g.ids(find(mat(:,9) <= med));
 % create the query cell
 v = [];
 c = 0;
-for subjects = {good_imp bad_imp} 
-        c    = c+1;
-        v{c} = {'phase', [5], 'deltacsp' [0] 'subject' subjects{1}};
+for subjects = {good_imp bad_imp}
+    c    = c+1;
+    v{c} = {'phase', [5], 'deltacsp' [0] 'subject' subjects{1}};
 end
 % plot and save fixation maps
 fix.getmaps(v{:});
@@ -1204,7 +1204,7 @@ fix.plot
 % create the query cell
 v = [];
 c = 0;
-for sub = subs' 
+for sub = subs'
     for phase = [1]
         c    = c+1;
         v{c} = {'phase', phase, 'deltacsp' [0 18000] 'subject' sub  };
@@ -1216,7 +1216,7 @@ fix.getmaps(v{:});
 m  = fix.vectorize_maps;
 
 for i = 1:size(m,1)
-   r(i)=corr2(m(i,:)',median(mat(:,[1 3]),2));
+    r(i)=corr2(m(i,:)',median(mat(:,[1 3]),2));
 end
 
 fix.maps = reshape(r,[500 500]);
@@ -1243,16 +1243,16 @@ fix.plot
 v = [];
 c = 0;
 for sub = g.ids
-        c    = c+1;
-        v{c} = {'subject' sub};
+    c    = c+1;
+    v{c} = {'subject' sub};
 end
 fix.getmaps(v{:});
 %% phase fixation maps
 v = [];
 c = 0;
 for ph = 1:5
-        c    = c+1;
-        v{c} = {'phase' ph 'subject' 6};
+    c    = c+1;
+    v{c} = {'phase' ph 'subject' 6};
 end
 fix.getmaps(v{:});
 %% Can generalization pattern predict SI?
@@ -1273,8 +1273,8 @@ fix.kernel_fwhm = 37;
 v = [];
 c = 0;
 for sub = unique(fix.subject)
-        c    = c+1;
-        v{c} = {'subject' sub};
+    c    = c+1;
+    v{c} = {'subject' sub};
 end
 fix.getmaps(v{:});
 fix.maps   = imresize(fix.maps,.1,'method','bilinear');
@@ -1306,7 +1306,7 @@ conf41 = squeeze(scaled(4,1,ismember(sub_c,g.ids)));
 [r,p]=corr(conf45,mat(:,14))
 [r,p]=corr(conf41,mat(:,13))
 [r,p]=corr(conf41,mat(:,14))
-%% 
+%%
 p = Project;
 mask = p.getMask('ET_feargen');
 subjects = intersect(find(mask),Project.subjects_1500);
@@ -1493,7 +1493,7 @@ figure;cccc
 
 cluster(1).subs = [10 17 2 4 6 7 19 22 16 21 8 18 12 13];
 cluster(2).subs = [15 11 1 9 3 5 20 14];
-cluster(1).leafs = [1 2 3 4 5 6 8 9 13 14 17 18 20]; 
+cluster(1).leafs = [1 2 3 4 5 6 8 9 13 14 17 18 20];
 cluster(2).leafs = [7 10 11 12 15 16 19];
 %% dendrogram discrimination phase 1
 p = Project;
@@ -1517,7 +1517,7 @@ fix.maps   = imresize(fix.maps,.1,'method','bilinear');
 
 cluster(1).subs = [6 10 15 3 21 11 4 1 12 16 18];
 cluster(2).subs = [7 14 5 2 23 17 8 19 9 22 13 20];
-cluster(1).leafs = [4 7 9 12 14 16 17 18 20 21]; 
+cluster(1).leafs = [4 7 9 12 14 16 17 18 20 21];
 cluster(2).leafs = [1 2 3 5 6 8 10 11 13 15 19];
 %% subjects that we have all the data for
 p = Project;
@@ -1543,13 +1543,13 @@ fix.maps   = imresize(fix.maps,.1,'method','bilinear');
 
 cluster(1).subs = [13 4 2 8 1 10 19 9 14];
 cluster(2).subs = [12 3 21 15 5 16 16 18 20 7 17 11];
-cluster(1).leafs = [4 6 11 12 15 16 17 19]; 
+cluster(1).leafs = [4 6 11 12 15 16 17 19];
 cluster(2).leafs = [1 2 3 5 7 8 9 10 13 14 18];
 %OR
 cluster(1).subs = [4 8 13 2 1 10];
 cluster(2).subs = [12 3 5 19 9 14 16];
 cluster(3).subs = [6 15 21 17 7 20 11 18];
-cluster(1).leafs = [7 10 12 15 18]; 
+cluster(1).leafs = [7 10 12 15 18];
 cluster(2).leafs = [3 5 11 14 16 17];
 cluster(3).leafs = [1 2 4 6 8 9 13];
 %% plot the cluster parameters.
@@ -1584,10 +1584,10 @@ end
 figure;
 for n =1:k
     subplot(1,k,n);
-%     b=bar(mean(g.SI(cluster(n).subs)));
+    %     b=bar(mean(g.SI(cluster(n).subs)));
     b=bar(mean(g.sigma_test(cluster(n).subs)));
     hold on;
-%     e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
+    %     e = errorbar(mean(g.SI(cluster(n).subs)),std(g.SI(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
     e = errorbar(mean(g.sigma_test(cluster(n).subs)),std(g.sigma_test(cluster(n).subs))./sqrt(length(cluster(n).subs)),'.-');
     set(b,'FaceColor',rgbs(n,:));
     set(e,'LineWidth',1.5,'Color','k')
@@ -1624,23 +1624,23 @@ for n=[cluster(1).subs cluster(2).subs];subplot(5,5,n);plot(repmat(g.subject{n}.
 subs = [2 3];%4 is for cluster 1, 3 for cluster 2
 figure;
 for n = 1:k
-subplot(1,k,n)
-plot(repmat(g.subject{subs(n)}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,subs(n)),3),'LineWidth',2.5)
-axis square
-set(gca,'FontSize',14)
-xlim([-1.1 7.1])
+    subplot(1,k,n)
+    plot(repmat(g.subject{subs(n)}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,subs(n)),3),'LineWidth',2.5)
+    axis square
+    set(gca,'FontSize',14)
+    xlim([-1.1 7.1])
 end
 EqualizeSubPlotYlim(1)
 %Group SCR Curve
 figure;
 for n = 1:k
-subplot(1,k,n)
-t0 = find(g.subject{1}.scr.ledalab.x(:,1)==0);
-const     = squeeze(mean(mean(mean(scr(1:t0,:,cluster(n).subs),1),2),3));
-plot(repmat(g.subject{1}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,cluster(n).subs),3),'LineWidth',2.5)
-axis square
-set(gca,'FontSize',14)
-xlim([-1.1 7.1])
+    subplot(1,k,n)
+    t0 = find(g.subject{1}.scr.ledalab.x(:,1)==0);
+    const     = squeeze(mean(mean(mean(scr(1:t0,:,cluster(n).subs),1),2),3));
+    plot(repmat(g.subject{1}.scr.ledalab.x(1:800,1),[1 8]),mean(scr(:,:,cluster(n).subs),3),'LineWidth',2.5)
+    axis square
+    set(gca,'FontSize',14)
+    xlim([-1.1 7.1])
 end
 EqualizeSubPlotYlim(1)
 % SCR mean bar plots
@@ -1661,7 +1661,7 @@ for n =1:k
     set(b,'FaceColor',rgbs(n,:));
     set(e,'LineWidth',1.5,'Color','k')
     axis square
-%     ylim([0 1.5])
+    %     ylim([0 1.5])
     set(gca,'XTicklabel',{''},'YTick',[0 .5 1 1.5],'FontSize',14)
 end
 %% random useful code snippets
@@ -1684,7 +1684,7 @@ g = Group(subjects);[mat tags]=g.parameterMat;mises = g.loadmises;clear g;mat = 
 mask = p.getMask('RATE');
 invalid_r = ~ismember(subjects,find(mask));
 mask = p.getMask('PMF');
-invalid_a = ~ismember(subjects,find(sum(mask,2)==4)); 
+invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:end)= NaN;
 
@@ -1768,7 +1768,7 @@ set(gca,'XTick',[4 8],'XTicklabel',{'CS+' 'CS-'})
 data1.x = repmat(-135:45:180,[sum(branch_id==1) 1]);
 data1.y = scr_bars(branch_id==1,1:8);
 data1.ids = subjects(branch_id ==1);
-data2.x = repmat(-135:45:180,[sum(branch_id==2)-1 1]); 
+data2.x = repmat(-135:45:180,[sum(branch_id==2)-1 1]);
 data2.y = scr_bars(branch_id==2,1:8);
 data2.y(end,:) = [];
 data2.ids = subjects(branch_id ==2);
@@ -1831,12 +1831,12 @@ g = Group(subjects);[mat tags] = g.parameterMat;mises = g.loadmises; mat(:,12:16
 mask = p.getMask('RATE');
 invalid_r = ~ismember(subjects,find(mask));
 mask = p.getMask('PMF');
-invalid_a = ~ismember(subjects,find(sum(mask,2)==4)); 
+invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:14)= NaN;
 
 
-fix.getsubmaps; 
+fix.getsubmaps;
 fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
 
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500BCT.mat')
@@ -1867,14 +1867,14 @@ EqualizeSubPlotYlim(gcf)
 scr_data = NaN(800,11,length(subjects));
 sc=0;
 for sub = subjects(:)'
-        fprintf('Working on subject %d .. \n',sub)
-        sc=sc+1;
-        try
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    try
         s = Subject(sub);
         s.scr.cut(s.scr.findphase('test$'));
         s.scr.run_ledalab;
         scr_data(:,:,sc) = s.scr.ledalab.mean;
-        end
+    end
 end
 
 figure;
@@ -1916,14 +1916,14 @@ fix = Fixmat(subjects,[2 4]);
 [a,b] = fix.histogram;
 close all;
 for pc = [1 2]%phase count
-histmat(:,:,pc) = zscore(a(:,1:8,pc)')';
-subplot(1,2,pc)
-b = bar(mean(histmat(:,:,pc)));
-hold on;
-SetFearGenBarColors(b);
-e = errorbar(mean(histmat(:,:,pc)),std(histmat(:,:,pc))./sqrt(length(histmat)),'k.');
-axis square
-set(gca,'XTicklabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
+    histmat(:,:,pc) = zscore(a(:,1:8,pc)')';
+    subplot(1,2,pc)
+    b = bar(mean(histmat(:,:,pc)));
+    hold on;
+    SetFearGenBarColors(b);
+    e = errorbar(mean(histmat(:,:,pc)),std(histmat(:,:,pc))./sqrt(length(histmat)),'k.');
+    axis square
+    set(gca,'XTicklabel',{'' '' '' 'CS+' '' '' '' 'CS-'})
 end
 subplot(1,2,1)
 ylabel('mean zscore(nfix)')
@@ -1982,8 +1982,8 @@ for ph = 4;%unique(fix.phase)
             c    = c+1;
             v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
         end
-    fix.getmaps(v{:});
-%     maps(:,:,sc,pc) = fix.maps(:,:,1) - fix.maps(:,:,2);%-mean(fix.maps,3);
+        fix.getmaps(v{:});
+        %     maps(:,:,sc,pc) = fix.maps(:,:,1) - fix.maps(:,:,2);%-mean(fix.maps,3);
     end
 end
 fix.maps = squeeze(mean(maps,3));%over subjects
@@ -2016,8 +2016,8 @@ for ph = unique(fix.phase)
             c    = c+1;
             v{c} = {'deltacsp' cs 'subject' sub 'phase' ph};
         end
-    fix.getmaps(v{:});
-    maps(:,:,sc,pc) = mean(fix.maps(:,:,[3 5]),3) - fix.maps(:,:,8);
+        fix.getmaps(v{:});
+        maps(:,:,sc,pc) = mean(fix.maps(:,:,[3 5]),3) - fix.maps(:,:,8);
     end
 end
 fix.maps = squeeze(mean(maps,3));%over subjects
@@ -2235,7 +2235,7 @@ for n = 1:5
     dummy = rmat_f(:,:,n);
     corrs(:,n) = dummy(ind);
 end
-ifisherz(mean(mean(corrs)))%should give .53 
+ifisherz(mean(mean(corrs)))%should give .53
 figure; bar(ifisherz(mean(corrs)))
 
 %% phase similarity within subjects
@@ -2254,12 +2254,12 @@ for sub = subjects(:)'
     pc=0;
     v=[];
     for ph = unique(fix.phase)
-            pc    = pc+1;
-            v{pc} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+        pc    = pc+1;
+        v{pc} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
     end
- fix.getmaps(v{:});
-%  fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
- rmat(:,:,sc) = fix.corr;
+    fix.getmaps(v{:});
+    %  fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+    rmat(:,:,sc) = fix.corr;
 end
 
 %% plot this mat
@@ -2280,7 +2280,7 @@ cbh = colorbar;
 set(cbh,'YTick',.7:.05:.9,'FontSize',12)
 %% compute means
 rmat_f  = nan(5,5,27);
-for n = 1:27; 
+for n = 1:27;
     rmat_f(:,:,n) = reshape(fisherz(rmat(:,:,n)),[5 5 1]);
 end
 % rmat_mean = CancelDiagonals(reshape(ifisherz(mean(rmat_f,3)),[5 5]),1); % average across the subjects, take the mean, inv fisher it...
@@ -2299,11 +2299,50 @@ gendiscr = squeeze(rmat(4,5,:));
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\misesmat.mat');
 params = misesmat(unique(fix.subject),:);
 fwhm = nan(27,1);
-for n = 1:27; 
+for n = 1:27;
     if ~isnan(params(n,2))
-    fwhm(n) = vM2FWHM(params(n,2));
+        fwhm(n) = vM2FWHM(params(n,2));
     else
         fprintf('isnan, skipping  %d \n',n)
     end
 end
 [rho,pval] = corr(gendiscr(~isnan(fwhm)),fwhm(~isnan(fwhm)))
+
+
+%% ttest fixation number in single pixels CS+ vs CS-
+v=[];
+c = 0;
+for cond = [90 -90]
+    for sub = unique(fix.subject)
+        c = c+1;
+        v{c} = {'deltacsp' cond 'subject' sub};
+    end
+end
+fix.getmaps(v{:})
+fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
+M = fix.vectorize_maps;
+
+fprintf('Completed Pixel \n')
+for n = 1:length(M)
+    [hyp(n) pval(n)] = ttest(M(n,1:26),M(n,27:end));
+    if mod(n,100)==0
+        fprintf('%g ...\n',n)
+    end
+end
+figure
+imagesc(mean(fix.maps(:,:,1:26)-fix.maps(:,:,27:end),3))
+hold on
+for n = find(pval<0.05);[y x] = ind2sub([size(fix.maps,1),size(fix.maps,2)],n);text(x,y,'x','FontSize',20);end
+%% SVM CS+ vs CS-  - the numbers
+r4 = load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph4_NEV18_fwhm5.mat','AVE','HP','result','R');
+r2 = load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph2_NEV18_fwhm5.mat','AVE','HP','result','R');
+bla = r4;
+m = mean(mean(bla.result,2),3)%first over bootstr, then subjects
+sd = std(mean(bla.result,2),0,3)%first over bootstr, then subjects
+
+rcsn = 1-bla.result(8,:,:);
+m = mean(mean(rcsn,2),3)%first over bootstr, then subjects
+sd = std(mean(rcsn,2),0,3)%first over bootstr, then subjects
+
+
+

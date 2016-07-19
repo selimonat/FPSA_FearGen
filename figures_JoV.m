@@ -21,7 +21,7 @@ fix.plot('linear',[2 1])
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-% behavioral results 
+% behavioral results
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% big figure for behavioral results
@@ -62,24 +62,24 @@ title('Conditioning','FontSize',14)
 subplot(sp(1),sp(2),4)
 title('Generalization','FontSize',14)
 
-%% scr 
+%% scr
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat','dataz','data')
 ylims = [-1 1.2];%600 [-.8 .8]  %1500: [-1 1.2]
 Yticks = [-1 0 1];%600 [-.8 0 .8], %1500: [-1 0 1]
 
 % plot
 for n = [7 9]
-subplot(sp(1),sp(2),n);
-b = bar(-135:45:180,mean(dataz(:,:,n-6),2));
-hold on;
-ylim(ylims)
-xlim([-180 225])
-e = errorbar(-135:45:180,mean(dataz(:,:,n-6),2),std(dataz(:,:,n-6),0,2)./sqrt(size(dataz,2)),'k.');
-set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks,'FontSize',12)
-SetFearGenBarColors(b)
-set(e,'LineWidth',2,'Color','k')
-axis square
-box off
+    subplot(sp(1),sp(2),n);
+    b = bar(-135:45:180,mean(dataz(:,:,n-6),2));
+    hold on;
+    ylim(ylims)
+    xlim([-180 225])
+    e = errorbar(-135:45:180,mean(dataz(:,:,n-6),2),std(dataz(:,:,n-6),0,2)./sqrt(size(dataz,2)),'k.');
+    set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',Yticks,'FontSize',12)
+    SetFearGenBarColors(b)
+    set(e,'LineWidth',2,'Color','k')
+    axis square
+    box off
 end
 %test phase CS+ CS-
 subplot(sp(1),sp(2),9);
@@ -114,14 +114,14 @@ subplot(sp(1),sp(2),7);
 hold on;
 plot(x,mean(mean(dataz(:,:,1))),'k-','LineWidth',2)
 
-% 
+%
 % try
 %     for n = 1:size(scr_bars,3)
 %         subplot(sp(1),sp(2),1+n)
 %         line([-180 225],repmat(mean(scr_bars(:,9,n)),[2 1]),'Color','k','LineWidth',1.3,'LineStyle',':')
 %     end
 % end
-% % 
+% %
 % % add von mises groupfit curve to SCR bars @testphase
 % subplot(sp(1),sp(2),7);
 % plot(x,mean(mean(scr_bars(:,1:8,1))),'k-','LineWidth',3.5)
@@ -141,34 +141,34 @@ xhd = linspace(0,135,1000);
 xc = 0;
 for x = 0:11.25:135;
     xc = xc+1;
-subplot(sp(1),sp(2),[1 6])
-errorbar(x,pdiffgroup(xc,2),sdgroup(xc,2),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,1)) %before, CS-
-hold on
-% plot(xhd,PAL_Weibull(out.params1(2,:),xhd),'LineWidth',2,'Color','c')
-errorbar(x,pdiffgroup(xc,1),sdgroup(xc,1),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,1)) %before, CS+
-% plot(xhd,PAL_Weibull(out.params1(1,:),xhd),'LineWidth',2,'Color','r')
-box off
-xlim([-10 145])
-set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
-ylabel('p(different)','FontSize',12)
-xlabel('delta X [deg]')
-title('Discrimination pre','FontSize',14)
-ylim([0 1]);
-plot(out.params1(1,1),PAL_Weibull(out.params1(1,:),out.params1(1,1)),'k.','MarkerSize',20)
-
-subplot(sp(1),sp(2),[5 10])
-errorbar(x,pdiffgroup(xc,4),sdgroup(xc,4),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,2)) %after, CS-
-hold on
-% plot(xhd,PAL_Weibull(out.params1(4,:),xhd),'LineWidth',2,'Color','c')
-errorbar(x,pdiffgroup(xc,3),sdgroup(xc,3),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,2)) %after, CS+
-% plot(xhd,PAL_Weibull(out.params1(3,:),xhd),'LineWidth',2,'Color','r')
-box off
-xlim([-10 145])
-set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
-ylabel('p(different)','FontSize',12)
-xlabel('delta X [deg]')
-title('Discrimination post','FontSize',14)
-ylim([0 1])
+    subplot(sp(1),sp(2),[1 6])
+    errorbar(x,pdiffgroup(xc,2),sdgroup(xc,2),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,1)) %before, CS-
+    hold on
+    % plot(xhd,PAL_Weibull(out.params1(2,:),xhd),'LineWidth',2,'Color','c')
+    errorbar(x,pdiffgroup(xc,1),sdgroup(xc,1),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,1)) %before, CS+
+    % plot(xhd,PAL_Weibull(out.params1(1,:),xhd),'LineWidth',2,'Color','r')
+    box off
+    xlim([-10 145])
+    set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
+    ylabel('p(different)','FontSize',12)
+    xlabel('delta X [deg]')
+    title('Discrimination pre','FontSize',14)
+    ylim([0 1]);
+    plot(out.params1(1,1),PAL_Weibull(out.params1(1,:),out.params1(1,1)),'k.','MarkerSize',20)
+    
+    subplot(sp(1),sp(2),[5 10])
+    errorbar(x,pdiffgroup(xc,4),sdgroup(xc,4),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,2)) %after, CS-
+    hold on
+    % plot(xhd,PAL_Weibull(out.params1(4,:),xhd),'LineWidth',2,'Color','c')
+    errorbar(x,pdiffgroup(xc,3),sdgroup(xc,3),'.','Color','r','LineWidth',2,'MarkerEdgeColor','r','MarkerSize',dotsize(xc,1,2)) %after, CS+
+    % plot(xhd,PAL_Weibull(out.params1(3,:),xhd),'LineWidth',2,'Color','r')
+    box off
+    xlim([-10 145])
+    set(gca,'XTick',[0 45 90 135],'YTick',0:.2:1,'FontSize',12)
+    ylabel('p(different)','FontSize',12)
+    xlabel('delta X [deg]')
+    title('Discrimination post','FontSize',14)
+    ylim([0 1])
 end
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -330,25 +330,34 @@ hold off
 %% bootstrap sigmoid
 clear all
 close all
-nboot = 1000;
+nboot = 10000;
 sp = [2 4];
 fontsize = 12;
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
-x  = mat6(:,17);
+x0  = mat6(:,17);
+x = x0 - min(x0);
 y0  = mat6(:,18);
 % subplot(sp(1),sp(2),[3 4 7 8])
 subplot(1,2,1);
-plot(x,y0,'o','MarkerFaceColor','b')
+plot(x0,y0,'o','MarkerFaceColor','b')
 hold on;
 y = y0./180;
 subplot(1,2,2);plot(x,y,'o','MarkerFaceColor','k')
 ndata = 1:length(x);
+% run fit
+clear params LL fit;
 for n = 1:nboot
     fprintf('Bootstrap n = %g. \n',n)
     ii(:,n)     = randsample(ndata,length(x),1);
-    params(:,n) = FitLogsCumNorm(x(ii(:,n)),y(ii(:,n)));
+    %[params(:,n) LL(n)] = FitLogsCumNorm(x(ii(:,n)),y(ii(:,n)),1);
+    [o] = FitLogistic_manually(x(ii(:,n)),y(ii(:,n)));
+    fit(:,n)    = o.fitup;
+    LL(:,n)     = o.Likelihood;
+    params(:,n) = o.Est(1:4);
 end
-X2 = linspace(min(x),max(x),100);
+PlotTransparentLine(o.xsup,fit,.1,'k')
+% prepare figure
+X2 = linspace(min(x0),max(x0),100);
 for n = 1:nboot
     Y(:,n) = PAL_CumulativeNormal(params(:,n),X2)';
     Y0(:,n) = (PAL_CumulativeNormal(params(:,n),X2)*180)';
@@ -357,12 +366,11 @@ Y = Y';
 Y0 = Y0';
 YY = prctile(Y0,[2.5 97.5])';
 subplot(1,2,1);hold on;
-keyboard;
 %shaded area
-x1 = X2';
-y1 = YY(:,1);
-x2 = X2';
-y2 = YY(:,2);
+x1 = X2;
+y1 = YY(:,1)';
+x2 = X2;
+y2 = YY(:,2)';
 fill([x1 fliplr(x2)],[y1 fliplr(y2)],'r','FaceAlpha',.5,'EdgeColor','none')
 
 %% graph alpha x discrimination (binning)
@@ -377,7 +385,7 @@ mat = mat6;
 col = [1 3];
 p = prctile(mean(mat(:,col),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];
-for n = 1:length(p)-1   
+for n = 1:length(p)-1
     if n ==1
         i = (mean(mat(:,col),2) >= p(n)) & (mean(mat(:,col),2) <= p(n+1));
     else
@@ -385,10 +393,10 @@ for n = 1:length(p)-1
     end
     sum(i)
     ii(:,n) = i;
-    mean(mean(mat(i,[1 3]),2))   
+    mean(mean(mat(i,[1 3]),2))
     binalpha(n) = mean(mean(mat(i,[1 3]),2));
     outcome_m(n) = mean(mean(mat(i,[18]),2));
-    outcome_s(n) = std(mean(mat(i,[18]),2))./sqrt(sum(i)); 
+    outcome_s(n) = std(mean(mat(i,[18]),2))./sqrt(sum(i));
 end
 bar(1:3,binalpha,'FaceColor',[.7 .7 .7],'EdgeColor','none')%bar(1:3,[2.59 .995 .147],'FaceColor',[.3 .3 .3])
 bar(1:3,outcome_m,'FaceColor','w');hold on;
@@ -547,7 +555,7 @@ clear g
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 [branch_id,order] = fix.dendrogram(3,mat(:,13));
-%% 
+%%
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\dendro_branch_id_subjects.mat')
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\mat_N27_for_dendro.mat')
 g1 = Group(sub1);
@@ -679,7 +687,7 @@ for subject = unique(fix.subject);
     fix.getmaps(v{:});
     maps = fix.maps;
     fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
-    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average    
+    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
 
@@ -698,7 +706,7 @@ tfix = length(fix);
 cormat_t = nan(8,8,tsub,tfix);
 cormat_b = nan(8,8,tsub,tfix);
 subc   = 0;
-        
+
 for subject = unique(fix.subject);
     for nf = nfix(:)';
         subc = subc + 1;
@@ -720,9 +728,8 @@ for subject = unique(fix.subject);
         cormat_t(:,:,subc,nf)   = fix.corr;
     end
 end
- %%
+%%
 for nf = 1:4;
-    subplot(2,4,nf)
     imagesc([nanmean(cormat_b(:,:,:,nf),3) ],[-.15 .15]);
     title(sprintf('Fixation No: %d',nf))
     if nf == 1
@@ -741,3 +748,35 @@ for nf = 1:4;
     end
 end
 
+%% SVM of CS+ vs CS-
+r4 = load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph4_NEV18_fwhm5.mat','AVE','HP','result','R');
+r2 = load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph2_NEV18_fwhm5.mat','AVE','HP','result','R');
+fix = Fixmat(6,3);
+fix.maps = cat(3,r2.AVE,r4.AVE);
+fix.plot
+cbh = colorbar;
+set(cbh,'YTick',-.04:.02:.04,'FontSize',12)
+%%
+close all
+figure
+c = 0;
+for bla = [r2 r4]
+    c = c+1;
+    m = mean(mean(bla.result,2),3)
+    sd = std(mean(bla.result,2),0,3)
+    sem = sd./sqrt(size(bla.result,3));
+    subplot(1,2,c)
+    b = bar(m);
+    SetFearGenBarColors(b);
+    hold on;
+    errorbar(m,sem,'k.','LineWidth',2);
+    axis square
+    box off
+    ylim([.3 .7])
+    set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',.3:.1:.7,'FontSize',12)
+    xlim([0 9])
+    hold on;
+    line([.5 8.5],[.5 .5],'Color','k')
+end
+subplot(1,2,1);
+ylabel('Classified as CS+','FontSize',12)

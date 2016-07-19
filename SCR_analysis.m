@@ -158,6 +158,8 @@ for sub = subjects(:)'
     sc=sc+1;
     s = Subject(sub);
     s.scr.cut(s.scr.findphase('test$'));
+   
+    s.scr.smooth('sgolay')
     s.scr.run_ledalab;
     scr_data(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
 end
