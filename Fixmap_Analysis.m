@@ -2346,3 +2346,47 @@ sd = std(mean(rcsn,2),0,3)%first over bootstr, then subjects
 
 
 
+%% multiple regression of alpha and fwhm in each pixel
+
+% disclaimer: This might lead to different results than we had, because
+% there we just took every person we had (Nalpha ~= Nfwhm), and now we take
+% the intersect
+p = Project;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+subs = intersect(find(p.getMask('ET_feargen')),subjects(subs6));
+fix = Fixmat(subs,[1 3]);
+fix.getsubmaps;
+f = fix.vectorize_maps;
+a = mat6(:,17); 
+b = mat6(:,19);
+% exclude sub 46 bc no usable eye data
+a(8) = [];
+b(8) = [];
+
+% X = [zscore([a b a.*b])  ones(size(a))];
+X = [OrthogonolizeTwoVectors(zscore([a b ]))  ones(size(a))];
+for n = 1:length(f)
+    [beta(:,n)] = X\squeeze(zscore(f(n,:)))';
+end
+fix.maps =[];
+figure
+for n = 1:size(X,2);fix.maps(:,:,n) = reshape(beta(n,:),[500 500]);end;fix.plot('linear',[1 size(X,2)])
+%% canonical correlation
+p = Project;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
+subs = intersect(find(p.getMask('ET_feargen')),subjects(subs6));
+fix1 = Fixmat(subs,1);fix1.getsubmaps;fix1.maps = imresize(fix1.maps,0.1,'method','bilinear');f1 = fix1.vectorize_maps;
+fix4 = Fixmat(subs,4);fix4.getsubmaps;fix4.maps = imresize(fix4.maps,0.1,'method','bilinear');f4 = fix4.vectorize_maps;
+
+a = mat6(:,17); a(8) = [];
+b = mat6(:,19); b(8) = [];
+X = [a b];
+
+for n = 1700%length(fix1)
+    Y = [f1(n,:)' f4(n,:)'];
+    if sum(sum(Y))==0
+        fprintf('All zero... skipping px %g...\n',n)
+    else
+        [A(:,n) B(:,n) r(:,n) U(:,n) V(:,n)] = canoncorr(X,Y);
+    end
+end
