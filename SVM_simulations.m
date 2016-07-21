@@ -10,7 +10,7 @@ function [R AVE result HP]=SVM_simulations(phase)
 %.25 in the test. This is taken into account by the HOLDOUT_RATIO. This
 %script will run train-test cycles for different smootheness levels and
 %with different numbers of eigenvectors (up to TEIG).
-random = 1;
+random = 0;
 
 subject_exlusion = [20 22 7];%these people do not have much trials so kick them out.
 tbootstrap       = 100;%number of bootstraps
