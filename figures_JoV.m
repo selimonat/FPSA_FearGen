@@ -330,14 +330,13 @@ hold off
 %% bootstrap sigmoid
 clear all
 close all
-nboot = 10000;
+nboot = 100000;
 sp = [2 4];
 fontsize = 12;
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
 x0  = mat6(:,17);
 x = x0 - min(x0);
 y0  = mat6(:,18);
-% subplot(sp(1),sp(2),[3 4 7 8])
 subplot(1,2,1);
 plot(x0,y0,'o','MarkerFaceColor','b')
 hold on;
@@ -355,24 +354,52 @@ for n = 1:nboot
     LL(:,n)     = o.Likelihood;
     params(:,n) = o.Est(1:4);
 end
-PlotTransparentLine(o.xsup,fit,.1,'k')
+params1 = params;
+params(1,:) = params(1,:) + min(x0);
+%% 
 % prepare figure
 X2 = linspace(min(x0),max(x0),100);
 for n = 1:nboot
     Y(:,n) = PAL_CumulativeNormal(params(:,n),X2)';
     Y0(:,n) = (PAL_CumulativeNormal(params(:,n),X2)*180)';
 end
-Y = Y';
 Y0 = Y0';
-YY = prctile(Y0,[2.5 97.5])';
-subplot(1,2,1);hold on;
+YY = prctile(Y0,[2.5 97.5]);
+plot(X2,prctile(Y0,50),'r','LineWidth',2);
+%% plot
+subplot(sp(1),sp(2),[3 4 7 8])
+plot(x0,y0,'o','MarkerFaceColor','b')
+hold on;
+plot(X2,prctile(Y0,50),'r','LineWidth',2);
 %shaded area
 x1 = X2;
-y1 = YY(:,1)';
+y1 = YY(1,:);
 x2 = X2;
-y2 = YY(:,2)';
+y2 = YY(2,:);
 fill([x1 fliplr(x2)],[y1 fliplr(y2)],'r','FaceAlpha',.5,'EdgeColor','none')
+xlim([min(x0)-10 max(x0)+10])
+ylim([min(y0)-10 max(y0)+10])
+axis square
+box off
+set(gca,'YTick',20:40:200,'XTick',20:20:100)
+text(13,185,'B','FontSize',20);
+%% illustration for new threshold .63 vs .5
+guess = .2;
+lapse = .1;
 
+clf;
+PlotTransparentLine(linspace(0,120,1000)',PAL_Weibull([45 3 .2 .1],linspace(0,120,1000))',.4,'r','LineWidth',3);
+hold on;
+% noise = randn(10,1)'*.03.*randsample([-1 1],10,true);
+e = errorbar(linspace(0,100,10),PAL_Weibull([45 3 .2 .1],linspace(0,120,10))+noise,noise+.02,'ko','MarkerFaceColor','k','LineWidth',2);
+ylim([0 1]);
+xlim([-5 105]);
+axis square
+set(gca,'YTick',.2:.2:1,'XTick',0:20:100,'FontSize',14)
+line([45 45],ylim)
+line(xlim,repmat(PAL_Weibull([45 3 guess lapse],45),[2 1]))
+line(repmat(PAL_Weibull([45 3 guess lapse],(1-guess-lapse)*.5+guess,'inverse'),[2 1]),ylim)
+line(xlim,repmat((1-guess-lapse)*.5+guess,[2 1]))
 %% graph alpha x discrimination (binning)
 load('C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
 sp = [2 4];
@@ -439,7 +466,7 @@ fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
 fix.plot
 v = [];
 c = 0;
-for sub = [6 7 10]
+for sub = [6 13 10]
     for ph = 1:5
         c = c+1;
         v{c} = {'subject' sub 'phase' ph 'deltacsp' fix.realcond};
@@ -473,7 +500,7 @@ end
 ss = [sqrt(length(r)) sqrt(length(r))];
 clf
 imagesc(reshape(r,ss),[-1 1])
-for n = find(pval<0.01);[y x] = ind2sub(ss,n);text(x,y,'x','FontSize',8);end
+for n = find(pval<0.001);[y x] = ind2sub(ss,n);text(x,y,'x','FontSize',8);end
 fix.maps = reshape(r,ss);
 fix.plot
 % correct it by mean fixmap
@@ -491,6 +518,18 @@ pval(i)
 % -> minimal pixel for rc doesn't get significant in the original
 % correlation..
 
+%% weight fixmaps, then correlate
+for n = 1:25;subjmaps(:,n) = fix.maps(:,n).*scaling;end
+fix.getsubmaps;
+fix.maps = fix.vectorize_maps;
+scaling = mean(fix.maps,2);
+for n = 1:25;subjmaps(:,n) = fix.maps(:,n).*scaling;end
+
+for n = 1:length(subjmaps)
+    [r(n),pval(n)] = corr(subjmaps(n,:)',mean(mat(:,[1 3]),2),'type','Spearman');
+end
+rb(pval>.01)=NaN;
+fix.maps = reshape(rb,[500 500]);
 %% fear specificity
 clear all
 p           = Project;
@@ -508,7 +547,7 @@ subjmaps = fix.vectorize_maps;
 for n = 1:25; param(n,1) = vM2FWHM(mat(n,13));end
 %normal correlation
 for n = 1:length(subjmaps)
-    [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Pearson');
+    [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Spearman');
 end
 clf
 ss = [sqrt(length(r)) sqrt(length(r))];
