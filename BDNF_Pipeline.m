@@ -227,7 +227,7 @@ triallnoad = datamatrix'*eigen(:,1:num)*diag(dv(1:num))^-.5;%dewhitened
 p = Project;
 phasenames = {'base$' 'cond$' 'test$'};
 phaseconds = [9 3 9];
-bdnf_problems = [2 13 18 31 32 39 50 82];
+bdnf_problems = [2 13 18 31 32 39 50 82 52 60 63];
 subjects = Project.subjects_bdnf(~ismember(Project.subjects_bdnf,bdnf_problems));
 for ph = 1:3
     sc = 0;
@@ -252,6 +252,50 @@ subs1 = Project.subjects_bdnf(Project.BDNF ==1);
 subs2 = Project.subjects_bdnf(Project.BDNF ==2);
 members(:,1) = ismember(subjects,subs1);
 members(:,2) = ismember(subjects,subs2);
+
+%% 
+scr_data0 = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('base$'));
+    s.scr.run_ledalab;
+    scr_data0(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
+    
+end
+scr_data2 = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('test$'));
+    s.scr.run_ledalab;
+    scr_data2(:,:,sc) = s.scr.ledalab.mean(1:800,1:9);
+end
+scr_data1 = NaN(800,9,length(subjects));
+sc=0;
+for sub = subjects(:)'
+    fprintf('Working on subject %d .. \n',sub)
+    sc=sc+1;
+    s = Subject(sub);
+    s.scr.cut(s.scr.findphase('cond$'));
+    s.scr.run_ledalab;
+    scr_data1(:,[4 8 9],sc) = s.scr.ledalab.mean(1:800,1:3);    
+end
+
+scr_data = cat(4,scr_data0,scr_data1,scr_data2);
+
+%check window
+subplot(1,3,1);SetFearGenColors;plot(mean(scr_data(:,1:8,:,1),3)-repmat(mean(scr_data(:,9,:,1),3),[1 8]));
+subplot(1,3,2);SetFearGenColors;plot(mean(scr_data(:,1:8,:,2),3)-repmat(mean(scr_data(:,9,:,2),3),[1 8]));
+subplot(1,3,3);SetFearGenColors;plot(mean(scr_data(:,1:8,:,3),3)-repmat(mean(scr_data(:,9,:,3),3),[1 8]));
+
+%200 to 550 is good
+scr_data_cut = scr_data(200:550,:,:,:);%take window of 200:500 for 600, and 250:550 for 1500;
+scr_resp = squeeze(mean(scr_data_cut(:,1:8,:,:)));
 %% OR
 load('C:\Users\user\Google Drive\EthnoMaster\BDNF\midlevel\males_scr_1_2.mat')
 scr_bars1m = scr_bars1;
