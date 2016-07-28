@@ -1,21 +1,19 @@
 %% 
-% this script provides results that could be used to complement the
-% super-complex hyperplan analysis by doing basically down to earth
-% comparisons of amount of fixation counts. The question it tries to answer
-% is whether and where there are more fixations on the face in CS+ vs. CS?
-% conditions. The simple comparison for 0 vs. 180 gives nice results which
-% are in line with the hyperplane analysis. However one needs to have a
-% control and here also the best control is to check whether 90 vs. -90
-% gives similar results. The idea would be that if these differences are
-% induces purely by differences of the images, it should also be present in
-% any combination of opposite faces.
-
+%this script provides results that could be used to complement the
+%super-complex hyperplan analysis by doing basically down to earth
+%comparisons of amount of fixation counts. The question it tries to answer
+%is whether and where there are more fixations on the face in CS+ vs. CS?
+%conditions. The simple comparison for 0 vs. 180 gives nice results which
+%are in line with the hyperplane analysis. However one needs to have a
+%control and here also the best control is to check whether 90 vs. -90
+%gives similar results. The idea would be that if these differences are
+%induces purely by differences of the images, it should also be present in
+%any combination of opposite faces.
 fix             = Fixmat(setdiff(Project.subjects_1500,7),[2 4]);
 p = Project;
 subjects        = intersect(find(p.getMask('ET_feargen')),p.subjects_1500)';%22 has to be kicked for svm
 %% similarity of fixation maps
 cmat  =[];
-pval  = [];
 sub_c = 0;
 v = [];
 correct  = 1;
@@ -35,13 +33,8 @@ for ns = setdiff(Project.subjects_1500,[20 22 7]);
         fix.maps(:,:,9:end) = fix.maps(:,:,9:end) - repmat(mean(fix.maps(:,:,9:end),3),[1 1 8]);
     end
     cmat(:,:,sub_c) = CancelDiagonals(  fix.corr,NaN);
-    [~,pval(:,:,sub_c)] = corr(fix.vectorize_maps);
 end
-medmat = reshape(ifisherz(median(reshape(fisherz( cmat),[16 16 26]),3)),[16 16]);
-imagesc(medmat)
-box off
-axis square
-set(gca,'XTick',[4 8 12 16],'XTickLabel',{'CS+' 'CS-' 'CS+' 'CS-'},'YTick',[4 8 12 16],'YTickLabel',{'CS+' 'CS-' 'CS+' 'CS-'},'FontSize',12)
+imagesc(fisherz_inverse(   mean(fisherz( cmat),3)))
 %this shows that similar faces generate similar fixation patterns i.e.
 %fixation patterns are also circularly organized. Furthermore there is also
 %circular similarity between baseline and test phases, which suggests that
@@ -52,36 +45,6 @@ set(gca,'XTick',[4 8 12 16],'XTickLabel',{'CS+' 'CS-' 'CS+' 'CS-'},'YTick',[4 8 
 %is predicted by pure dissimilarity based on circularity. So let's look at
 %what is different between CS+ and CS? faces.
 %
-%% same for single fixations
-cmat  =[];
-pval  = [];
-sub_c = 0;
-v = [];
-correct  = 1;
-tfix     = 5;
-
-for ns = setdiff(Project.subjects_1500,[20 22 7]);
-    ns
-    sub_c = sub_c + 1;cond_c = 0;
-    for phase = [2 4]
-        for nfix = 1:tfix
-            for ncond = -135:45:180
-                cond_c = cond_c + 1;
-                v{cond_c} = {'subject' ns 'phase' phase 'deltacsp' [ncond] 'fix' nfix};
-            end            
-        end
-    end
-    fix.getmaps(v{:})
-            if correct == 1
-                %correct phase specific cocktail blank
-                fix.maps(:,:,1:40) = fix.maps(:,:,1:40) - repmat(mean(fix.maps(:,:,1:40),3),[1 1 40]);
-                fix.maps(:,:,41:end) = fix.maps(:,:,41:end) - repmat(mean(fix.maps(:,:,41:end),3),[1 1 40]);
-            end
-     cmat(:,:,sub_c) = CancelDiagonals(  fix.corr,NaN);
-     [~,pval(:,:,sub_c)] = corr(fix.vectorize_maps);
-end
-medmat = fisherz_inverse(nanmedian(fisherz( cmat),3));
-imagesc(medmat)
 %% differences of fixation maps
 cmat     = [];
 v        = [];
@@ -155,6 +118,16 @@ end
 %comparison 45 vs. -135. However the effect gets weaker if
 %differences between 45 vs. 135 is compared to 45 vs. -135.
 
+%%
+p               = Project;
+subjects        = intersect(find(p.getMask('ET_feargen')),p.subjects_1500)';%22 has to be kicked for svm
+subjects        = setdiff(Project.subjects_1500,[20 22 7])
+fix = Fixmat(subjects,[2 4]);
+fix.kernel_fwhm = 45;
+[C Cr]        = fix.get_corrFixbyFix([2 4],[-135:45:180],1:4);
+% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
+
+
 %% collect covariance matrices for each fixation and each subject. in the next cell we will test 
 % different exploration strategies on these matrices.
 
@@ -186,6 +159,7 @@ for kernel_fwhm = 29
     end   
 end
 %% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
+>>>>>>> 3248e0ddc8fecf43aac1e5d573b04cddad3db817
 %_constant component: this models the correlation (or covariance) that is
 %common to all faces. Basically this is the one that is mostly affected
 %when doing the cocktail blank corrections. 
@@ -202,6 +176,7 @@ end
 %circularity). It could be highly interesting to see whether this is
 %related to discrimination or feargen performance (we have these weights on
 %a subject by subject basis).
+%%
 [X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
 xdata         = [X(:) Y(:)]-2.3562;
 block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
@@ -209,16 +184,16 @@ block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 % covariance matrices
 clear amp_*
 for db = 1:8%diagonal blocks
-    Y                  = block_extract(C,db,db,1:size(C,3));
+    Y                  = block_extract(Cr,db,db,1:size(C,3));
     [bla, param]       = fitcorrmat(Y,'gradient');
     amp_circ(db,:)     = param(1,:);
     amp_gau(db,:)      = param(2,:);
     amp_const(db,:)    = param(3,:);
     amp_diag(db,:)     = param(4,:);
 end
-%%
+%
 %results saved in Dropbox/CovarianceAnalysis.
-figure(2);
+figure;
 subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component')
 subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component')
 subplot(4,1,3);bar(nanmean(amp_gau,2));title('gaussian component');
