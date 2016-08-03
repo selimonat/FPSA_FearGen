@@ -119,47 +119,28 @@ end
 %differences between 45 vs. 135 is compared to 45 vs. -135.
 
 %%
+
+%% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
+clear all;
 p               = Project;
 subjects        = intersect(find(p.getMask('ET_feargen')),p.subjects_1500)';%22 has to be kicked for svm
 subjects        = setdiff(Project.subjects_1500,[20 22 7])
 fix = Fixmat(subjects,[2 4]);
-fix.kernel_fwhm = 45;
-[C Cr]        = fix.get_corrFixbyFix([2 4],[-135:45:180],1:4);
+[X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
+xdata         = [X(:) Y(:)]-2.3562;
+block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);;
+
+for kernel_fwhm = linspace(5,50,10);
+    fix.kernel_fwhm = kernel_fwhm;
+    [C Cr]          = fix.get_corrFixbyFix([2 4],[-135:45:180],1:4);
+    figure;imagesc(block_extract(nanmean(Cr,3),6,6,1));title(mat2str(kernel_fwhm));
+end
+%I decided on 35
+fix.kernel_fwhm = 35;;
+[C Cr]          = fix.get_corrFixbyFix([2 4],[-135:45:180],1:4);
+[C0 Cr0]        = fix.get_corrFixbyFix([2 4],[-135:45:180],1:4);%no cocktail corrections makes it looks a lot more noisy.
 % correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
 
-
-%% collect covariance matrices for each fixation and each subject. in the next cell we will test 
-% different exploration strategies on these matrices.
-
-for kernel_fwhm = 29
-    M = [];
-    C               = [];
-    Cr              = [];
-    fix.kernel_fwhm = kernel_fwhm;
-    c_sub           = 0;
-    for ns = subjects(:)'
-        c_sub   = c_sub +1
-        counter = 0;
-        v       = [];
-        for phase = [2 4]
-            for nfix = 1:4
-                for ncond = [-135:45:180];
-                    counter      = counter + 1;
-                    %                     trials = unique(fix.trialid((fix.deltacsp == ncond).*(fix.phase == phase).*(fix.subject == ns)==1));
-                    v{counter}   = {'phase' phase 'deltacsp' ncond 'subject' ns 'fix' nfix(:)'};%, 'trialid', trials(1:end)};
-                end
-            end
-        end
-        fix.getmaps(v{:});
-        fix.maps(:,:,1:32)      = fix.maps(:,:,1:32)   - repmat(mean(fix.maps(:,:,1:32),3),[ 1 1 32]);
-        fix.maps(:,:,33:end)    = fix.maps(:,:,33:end) - repmat(mean(fix.maps(:,:,33:end),3),[ 1 1 32]);        
-        M(:,:,:,c_sub)          = fix.maps;
-        C(:,:,c_sub)            = fix.cov;
-        Cr(:,:,c_sub)           = fix.corr;
-    end   
-end
-%% correlation matrix decomposition. We will now decompose the covariance matrices into 4 different components: 
->>>>>>> 3248e0ddc8fecf43aac1e5d573b04cddad3db817
 %_constant component: this models the correlation (or covariance) that is
 %common to all faces. Basically this is the one that is mostly affected
 %when doing the cocktail blank corrections. 
@@ -176,15 +157,16 @@ end
 %circularity). It could be highly interesting to see whether this is
 %related to discrimination or feargen performance (we have these weights on
 %a subject by subject basis).
-%%
+%% OBSOLET, now we do it with linear regression
 [X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
 xdata         = [X(:) Y(:)]-2.3562;
 block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 % the code above creates a function handle to extract blocks from the
 % covariance matrices
+tsub = size(C,3);
 clear amp_*
 for db = 1:8%diagonal blocks
-    Y                  = block_extract(Cr,db,db,1:size(C,3));
+    Y                  = block_extract(C,db,db,1:size(C,3));
     [bla, param]       = fitcorrmat(Y,'gradient');
     amp_circ(db,:)     = param(1,:);
     amp_gau(db,:)      = param(2,:);
@@ -194,22 +176,107 @@ end
 %
 %results saved in Dropbox/CovarianceAnalysis.
 figure;
-subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component')
-subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component')
+subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component');hold on;
+subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component');hold on;
+subplot(4,1,3);bar(nanmean(amp_gau,2));title('gaussian component');hold on
+subplot(4,1,4);bar(nanmean(amp_diag,2));title('diagonal component');hold on;
+subplot(4,1,1);errorbar(nanmean(amp_const,2),nanstd(amp_const,1,2)./sqrt(27));title('constant component')
+subplot(4,1,2);errorbar(nanmean(amp_circ,2),nanstd(amp_circ,1,2)./sqrt(27));title('circular component')
+subplot(4,1,3);errorbar(nanmean(amp_gau,2),nanstd(amp_gau,1,2)./sqrt(27));title('gaussian component');
+subplot(4,1,4);errorbar(nanmean(amp_diag,2),nanstd(amp_diag,1,2)./sqrt(27));title('diagonal component');
+
+%% Bootstrap version of the above single subject analysis. But also OBSOLET
+[X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
+xdata         = [X(:) Y(:)]-2.3562;
+block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
+% the code above creates a function handle to extract blocks from the
+% covariance matrices
+tsub = size(C,3);
+clear amp_*;n=0;
+while n < 10000
+    n = n +1
+    for db = 1:8%diagonal blocks
+        i                  = randsample(1:tsub,tsub,1);%WRONG
+        Y                  = block_extract(nanmean(Cr(:,:,i),3),db,db,1);
+        [bla, param(n,db,:)]       = fitcorrmat(Y,'gradient');
+        
+    end
+    subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component');
+subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component');
 subplot(4,1,3);bar(nanmean(amp_gau,2));title('gaussian component');
 subplot(4,1,4);bar(nanmean(amp_diag,2));title('diagonal component');
+drawnow
+end
+%%
+figure;
+subplot(4,1,1);bar(nanmean(amp_const,2));title('constant component');hold on;
+subplot(4,1,2);bar(nanmean(amp_circ,2));title('circular component');hold on;
+subplot(4,1,3);bar(nanmean(amp_gau,2));title('gaussian component');hold on
+subplot(4,1,4);bar(nanmean(amp_diag,2));title('diagonal component');hold on;
+subplot(4,1,1);errorbar(nanmean(amp_const,2),nanstd(amp_const,1,2)./sqrt(27));title('constant component')
+subplot(4,1,2);errorbar(nanmean(amp_circ,2),nanstd(amp_circ,1,2)./sqrt(27));title('circular component')
+subplot(4,1,3);errorbar(nanmean(amp_gau,2),nanstd(amp_gau,1,2)./sqrt(27));title('gaussian component');
+subplot(4,1,4);errorbar(nanmean(amp_diag,2),nanstd(amp_diag,1,2)./sqrt(27));title('diagonal component');
 
+%%
+np = 3;
+M = mean(param(:,:,np));
+S = std(param(:,:,np));
+bar(M);
+hold on;
+errorbar(M,S,'ro');
+hold off;
 
-
-
-
-
-
-
-
-
-
-
+%% linear regression
+clear all;
+p               = Project;
+subjects        = intersect(find(p.getMask('ET_feargen')),p.subjects_1500)';%22 has to be kicked for svm
+subjects        = setdiff(Project.subjects_1500,[20 22 7])
+fix = Fixmat(subjects,[2 4]);
+[X Y]         = meshgrid(linspace(0,2*pi-2*pi/8,8));
+xdata         = [X(:) Y(:)]-2.3562;
+block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);;
+%%
+for sigma = 2;%linspace(.5,4,20);%sigma of the Aversive Generalization similarity hypothesis.
+    x    = [pi/4:pi/4:2*pi];
+    tsub = size(Cr,3);
+    clear betas;
+    n=0;
+    C            = triu([cos(x') sin(x')]*[cos(x') sin(x')]',1);
+    G            = triu(make_gaussian1d(x-pi-deg2rad(22.5),1,sigma,0)'*make_gaussian1d(x-pi-deg2rad(22.5),1,sigma,0),1);
+    Co           = triu(ones(8),1);
+    invalid      = Co == 0;
+    X            = [C(:) G(:) Co(:)];
+    X(invalid,:) = [];
+    X(:,1:2)     = [zscore(X(:,1:2))];
+    while n < 1000
+        i       = randsample(1:tsub,tsub,1);
+        n       = n +1
+        for db = 1:8%diagonal blocks
+            Y               = block_extract(nanmean(Cr(:,:,i),3),db,db,1);
+            Y(invalid(:))   = [];
+            Y               = Y';
+            betas(n,db,:) = X\Y;
+        end
+    end
+    %% plot the above results
+    figure;
+    set(gcf,'position',[1279           1         520        1104]);
+    for n = 1:3
+        subplot(3,1,n);
+        M = mean(betas(:,:,n));
+        %     h = bar(M);
+        %     SetFearGenBarColors(h,repmat(repmat(linspace(0,.8,4),3,1),1,2))
+        violin(betas(:,:,n),[]);
+        xlim([0 9])
+        box off
+        xlabel('fixation')
+        set(gca,'xticklabel',1:4)
+    end
+    drawnow;
+    title(mat2str(sigma));
+    
+end
 
 
 

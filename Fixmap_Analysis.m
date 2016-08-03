@@ -619,9 +619,8 @@ fix = Fixmat(subjects, 1);
 fix.getsubmaps;
 fix.maps   = imresize(fix.maps,0.1,'method','bilinear');
 subjmaps = fix.vectorize_maps;
-
-
 param = mean(mat(:,[1 3]),2);
+%%
 %normal correlation
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Spearman');
@@ -2235,8 +2234,8 @@ for n = 1:5
     dummy = rmat_f(:,:,n);
     corrs(:,n) = dummy(ind);
 end
-ifisherz(mean(mean(corrs)))%should give .53
-figure; bar(ifisherz(mean(corrs)))
+fisherz_inverse(mean(mean(corrs)))%should give .53
+figure; bar(fisherz_inverse(mean(corrs)))
 
 %% phase similarity within subjects
 clear all
@@ -2245,21 +2244,27 @@ mask            = p.getMask('ET_discr');
 subjects        = intersect(find(mask),Project.subjects_1500);
 mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),subjects);
-fix = Fixmat(subjects,1:5);
-
-sc = 0;
-c=0;
-for sub = subjects(:)'
-    sc = sc+1;
-    pc=0;
-    v=[];
-    for ph = unique(fix.phase)
-        pc    = pc+1;
-        v{pc} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph};
+fix             = Fixmat(subjects,1:5);
+%%
+for kernel_fwhm = linspace(5,50,10);
+    fix.kernel_fwhm = kernel_fwhm;
+    rmat = [];
+    sc   = 0;
+    c    = 0;
+    for sub = subjects(:)'
+        sc = sc+1;
+        pc=0;
+        v=[];
+        for ph = unique(fix.phase)
+            pc    = pc+1;
+            v{pc} = {'deltacsp' [0 180 18000] 'subject' sub 'phase' ph};
+        end
+        fix.getmaps(v{:});
+        %mean correction
+%         fix.maps     = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+        rmat(:,:,sc) = fix.corr;
     end
-    fix.getmaps(v{:});
-    %  fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
-    rmat(:,:,sc) = fix.corr;
+    figure;imagesc(CancelDiagonals(mean(rmat,3),NaN));title(mat2str(fix.kernel_fwhm));colorbar
 end
 
 %% plot this mat
@@ -2352,16 +2357,40 @@ sd = std(mean(rcsn,2),0,3)%first over bootstr, then subjects
 % there we just took every person we had (Nalpha ~= Nfwhm), and now we take
 % the intersect
 p = Project;
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat')
-subs = intersect(find(p.getMask('ET_feargen')),subjects(subs6));
-fix = Fixmat(subs,[1 3]);
-fix.getsubmaps;
-f = fix.vectorize_maps;
-a = mat6(:,17); 
-b = mat6(:,19);
-% exclude sub 46 bc no usable eye data
-a(8) = [];
-b(8) = [];
+load('/Users/onat/Dropbox/feargen_lea/EthnoMaster/data/midlevel/rate_and_pmf_N48.mat')
+subs = intersect(find(p.getMask('ET_feargen')),subjects(subs15));
+fix  = Fixmat(subs,[1:5]);
+%%
+M = [];
+for ns = unique(fix.subject)    
+    query = {'subject' ns 'phase' [1:5] 'deltacsp' [0 180 18000]};    
+    fix.getmaps(query);
+    M     = cat(3,M,fix.maps);
+end
+%%
+for n = 1:20
+    a    = mat15(:,n); 
+    b    = mat15(:,18);
+    % exclude sub 46 bc no usable eye data
+    a(8) = [];
+    b(8) = [];
+    %%
+    fix.maps = M;
+    r_a      = reshape(corr(fix.vectorize_maps',a,'type','spearman'),500,500);
+    r_b = [];
+% r_b      = reshape(corr(fix.vectorize_maps',b,'type','spearman'),500,500);
+% r_a = reshape(corr(fix.vectorize_maps',a,'type','pearson'),500,500);
+% r_b = reshape(corr(fix.vectorize_maps',b,'type','pearson'),500,500);
+    fix.maps = cat(3,r_a,r_b);
+    figure;fix.plot;%title(mat2str(tags{n}),'interpreter','none');
+    drawnow
+    colorbar off
+    axis off
+    SaveFigure(sprintf('~/Desktop/bla/bla%03d.png',n),'-transparent');
+end
+%%
+
+
 
 % X = [zscore([a b a.*b])  ones(size(a))];
 X = [OrthogonolizeTwoVectors(zscore([a b ]))  ones(size(a))];
