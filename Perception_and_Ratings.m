@@ -930,7 +930,7 @@ end
 %sanity check: is this alpha (with crit = .63)
 [r,pval] = corr(alpha(:,1),g.pmf.csp_before_alpha);
 init_alpha = mean(alpha(:,1:2),2);
-%
+%% now bootstrap FWHM x alpha50
 nboot = 100000;
 x0  = init_alpha;
 x = x0 - min(x0);
