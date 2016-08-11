@@ -611,9 +611,9 @@ end
             addpath([homedir '/Documents/Code/Matlab/libsvm/matlab'])
          elseif ispc
             t = datestr(now,30);
-            path = 'C:\Users\user\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160531';
+            path = 'C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160531';
             mkdir(path)
-            addpath('C:\Users\user\Documents\GitHub\libsvm\matlab\')
+            addpath('C:\Users\Lea\Documents\GitHub\libsvm\matlab\')
         elseif isunix
             [~,version] = GetGit(fullfile(homedir,'Documents','Code','Matlab','fearcloud'));
             path = fullfile(homedir,'Documents','fearcloud','data','midlevel','svm_analysis',['version' version]);
