@@ -692,8 +692,8 @@ for n  = 1:25; param(n,1) = vM2FWHM(mat(n,13));end
 for n = 1:length(subjmaps)
     [r(n),pval(n)] = corr(subjmaps(n,:)',param,'type','Spearman');
 end
-imagesc(reshape(r,[50 50]),[-1 1])
-fix.maps = reshape(r,[50 50]);fix.plot
+imagesc(reshape(r,[500 500]),[-1 1])
+fix.maps = reshape(r,[500 500]);fix.plot
 for n = find(pval<0.05);[y x] = ind2sub([50 50],n);text(x,y,'x','FontSize',8);end
 fix.maps = reshape(r,[50 50]);
 fix.plot
@@ -1674,8 +1674,14 @@ subjects = intersect(find(mask),Project.subjects_1500);
 mask = p.getMask('ET_discr');
 subjects = intersect(find(mask),subjects);
 fix = Fixmat(subjects,[1 3 4 5]);
-fix.getsubmaps;
+% fix.getsubmaps;
 % fix.maps        = imresize(fix.maps,0.1,'method','bilinear');
+v = []; c = 0;
+for sub = subjects(:)'
+    c = c+1;
+    v{c} = {'subject' sub 'deltacsp' [0 180 18000]};
+end
+fix.getmaps(v{:})
 
 g = Group(subjects);[mat tags]=g.parameterMat;mises = g.loadmises;clear g;mat = [mat mises];
 
@@ -1687,6 +1693,7 @@ invalid_a = ~ismember(subjects,find(sum(mask,2)==4));
 mat(invalid_a,1:11) = NaN;
 mat(invalid_r,12:end)= NaN;
 
+% compute FWHM instead of kappa
 mat(:,17) = mean(mat(:,[1 3]),2);
 for n = 1:length(subjects)
     mat(n,18) = vM2FWHM(mat(n,12));
@@ -1696,10 +1703,28 @@ end
 mat(invalid_a,[1:11 17]) = NaN;
 mat(invalid_r,[12:16 18:20])= NaN;
 
+%get the new alpha 50%
+crit = .5;
+for sub = 1:length(g.ids)
+    for n = 1:4
+        guess = g.subject{sub}.pmf.params1(n,3);
+        lapse = g.subject{sub}.pmf.params1(n,4);
+        alpha(sub,n) = PAL_Weibull(g.subject{sub}.pmf.params1(n,:),(1-lapse-guess)*crit+guess,'inverse');
+    end
+end
+%BEWARE: initial alpha is 1 and 2 now (not 1 and 3 like in parameterMat)
+mat(:,21) = mean(alpha(:,1:2),2);
+mat(invalid_a,21) = NaN;
+%sanity check: 
+[r,p] = corrcoef(mat(~invalid_a,17),mat(~invalid_a,21));
+
+% full matrix is ready.
 crit = mat(:,19);
 [branch_id,ids] = fix.dendrogram(2,crit);
 
 [h p stats] = ttest2(crit(branch_id==1),crit(branch_id==2)) % gives p = 0.045
+
+[h p stats] = signrank(crit(branch_id==1),crit(branch_id==2)) % gives p = 0.045
 %% plot the relevant parameters for cluster 1 and 2
 fix.maps = cat(3,mean(fix.maps(:,:,branch_id==1),3),mean(fix.maps(:,:,branch_id==2),3));
 fix.plot
@@ -2216,20 +2241,20 @@ for ph = unique(fix.phase)
     c=0;
     for sub = subjects(:)'
         c    = c+1;
-        v{c} = {'deltacsp' fix.realcond 'subject' sub 'phase' ph}; % like this, we have 27x27x5
+        v{c} = {'deltacsp' [0 180 18000] 'subject' sub 'phase' ph}; % like this, we have 27x27x5
     end
     fix.getmaps(v{:});
     rmat(:,:,pc) = fix.corr;
     rmat_f(:,:,pc) = reshape(fisherz(fix.corr),[27 27]);
 end
 ind = logical(CancelDiagonals(triu(ones(27,27)),0));
-subplot(1,2,1)
-imagesc(rmat(:,:,1))
-axis square
-subplot(1,2,2)
-ind = logical(CancelDiagonals(triu(ones(27,27)),0));
-imagesc(ind)
-axis square
+% subplot(1,2,1)
+% imagesc(rmat(:,:,1))
+% axis square
+% subplot(1,2,2)
+% ind = logical(CancelDiagonals(triu(ones(27,27)),0));
+% imagesc(ind)
+% axis square
 for n = 1:5
     dummy = rmat_f(:,:,n);
     corrs(:,n) = dummy(ind);
@@ -2237,6 +2262,8 @@ end
 fisherz_inverse(mean(mean(corrs)))%should give .53
 figure; bar(fisherz_inverse(mean(corrs)))
 
+mean_r_iss = fisherz_inverse(mean(mean(corrs)));
+sem_r_iss  = fisherz_inverse(std(mean(corrs)))./sqrt(5);
 %% phase similarity within subjects
 clear all
 p               = Project;
@@ -2246,45 +2273,41 @@ mask            = p.getMask('ET_feargen');
 subjects        = intersect(find(mask),subjects);
 fix             = Fixmat(subjects,1:5);
 %%
-for kernel_fwhm = linspace(5,50,10);
-    fix.kernel_fwhm = kernel_fwhm;
-    rmat = [];
-    sc   = 0;
-    c    = 0;
-    for sub = subjects(:)'
-        sc = sc+1;
-        pc=0;
-        v=[];
-        for ph = unique(fix.phase)
-            pc    = pc+1;
-            v{pc} = {'deltacsp' [0 180 18000] 'subject' sub 'phase' ph};
-        end
-        fix.getmaps(v{:});
-        %mean correction
-%         fix.maps     = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
-        rmat(:,:,sc) = fix.corr;
+
+rmat = [];
+sc   = 0;
+c    = 0;
+for sub = subjects(:)'
+    sc = sc+1;
+    pc=0;
+    v=[];
+    for ph = unique(fix.phase)
+        pc    = pc+1;
+        v{pc} = {'deltacsp' [0 180 18000] 'subject' sub 'phase' ph};
     end
-    figure;imagesc(CancelDiagonals(mean(rmat,3),NaN));title(mat2str(fix.kernel_fwhm));colorbar
+    fix.getmaps(v{:});
+    %mean correction
+    %         fix.maps     = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
+    rmat(:,:,sc) = fix.corr;
 end
 
-%% plot this mat
-clf
-cd('C:\Users\Lea\Documents\GitHub\globalfunctions\')
-avemat = fisherz_inverse(mean(fisherz(rmat),3));
-imagesc(avemat)
-axis square
-box off
-% cmap = zeros(256,3);
-% cmap(:,1) = linspace(0,1,256);
-colormap(colormapper([1 0 -1]))
-maxave = max(max(CancelDiagonals(avemat,0)));
-caxis([min(avemat(:)) maxave ])
-labels = {'Discrimination pre','Free viewing','Conditioning','Generalization','Discrimination post'};
-set(gca,'XTick',1:5,'YTick',1:5,'YTickLabel',labels,'XTickLabel',{'D','F','C','G','D'},'FontSize',12)
-cbh = colorbar;
-set(cbh,'YTick',.7:.05:.9,'FontSize',12)
-%% compute means
-rmat_f  = nan(5,5,27);
+% %% plot this mat
+% clf
+% cd('C:\Users\Lea\Documents\GitHub\globalfunctions\')
+% avemat = fisherz_inverse(mean(fisherz(rmat),3));
+% imagesc(avemat)
+% axis square
+% box off
+% % cmap = zeros(256,3);
+% % cmap(:,1) = linspace(0,1,256);
+% colormap(colormapper([1 0 -1]))
+% maxave = max(max(CancelDiagonals(avemat,0)));
+% caxis([min(avemat(:)) maxave ])
+% labels = {'Discrimination pre','Free viewing','Conditioning','Generalization','Discrimination post'};
+% set(gca,'XTick',1:5,'YTick',1:5,'YTickLabel',labels,'XTickLabel',{'D','F','C','G','D'},'FontSize',12)
+% cbh = colorbar;
+% set(cbh,'YTick',.7:.05:.9,'FontSize',12)
+%% compute means (ITS)
 for n = 1:27;
     rmat_f(:,:,n) = reshape(fisherz(rmat(:,:,n)),[5 5 1]);
 end
@@ -2297,8 +2320,32 @@ for n = 1:27;
     corrs(:,n) = dummy(ind);%this is then size (sum(1:5)-5 x 27)
 end
 
-ifisherz(mean(mean(fisherz(corrs)))) % gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals
-figure;bar(ifisherz(mean(fisherz(corrs))))
+mean_r_its = ifisherz(mean(mean(fisherz(corrs)))) ;% gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals, r = .82 for CSP and CSN maps only, this is ITS (Inter Task Similarity).
+% figure;bar(ifisherz(mean(fisherz(corrs))))
+sem_r_its   = ifisherz(std(mean(fisherz(corrs))))./sqrt(27);
+
+figure;
+subplot(1,2,1)
+bar(1,mean_r_its);hold on;
+errorbar(1,mean_r_its,sem_r_its,'LineWidth',2,'Color','k')
+bar(2,mean_r_iss);hold on;
+errorbar(2,mean_r_iss,sem_r_iss,'LineWidth',2,'Color','k')
+ylim([0 1])
+ylabel('Similarity (r)','FontSize',12)
+set(gca,'XTick',[1 2],'XTickLabel',{'ITS' 'ISS'},'YTick',0:.2:1,'FontSize',12)
+box off
+
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\multiclass\multiclass_ovr_holdout.mat')
+subplot(1,2,2)
+bar(1,mean(diag(scaled)));hold on;errorbar(1,mean(diag(scaled)),std(diag(scaled))./sqrt(27),'LineWidth',2,'Color','k')
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\20160509\subjects_rand0\result.mat')
+a = result;
+scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,27]);%scale by rowsums
+bar(2,mean(diag(scaled)));hold on;errorbar(2,mean(diag(scaled)),std(diag(scaled))./sqrt(27),'LineWidth',2,'Color','k')
+ylim([0 1])
+ylabel('% correct classification','FontSize',12)
+set(gca,'XTick',[1 2],'XTickLabel',{'OVA' 'OVO'},'YTick',0:.2:1,'FontSize',12)
+box off
 %% can this be related to feargen sharpness or sth?
 gendiscr = squeeze(rmat(4,5,:));
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\misesmat.mat');
