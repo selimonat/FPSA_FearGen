@@ -14,15 +14,16 @@ random = 0;
 
 subject_exlusion = [20 22 7];%these people do not have much trials so kick them out.
 tbootstrap       = 100;%number of bootstraps
+nfix              = 2;
 % phase            = 2;%baseline or test
 holdout_ratio    = [NaN .5 NaN .25];%see above
-teig             = 18;%how many eigenvalues do you want to include for each run.
+teig             = 100;%how many eigenvalues do you want to include for each run.
 fwhm             = 0;%counter
 R                = [];%result storage
 AVE              = [];%result storate
 HP               = [];
 %%
-for kernel_fwhm = 50;%10:10:100;
+for kernel_fwhm = 10:10:100;
     fwhm            = fwhm  + 1;
     %
     fix             = Fixmat(setdiff(Project.subjects_1500,7),phase);%get the data
@@ -78,7 +79,7 @@ for kernel_fwhm = 50;%10:10:100;
     trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
     %% LIBSVM business    
     cev = 0;
-    for neig    = teig;%1:teig%test different numbers of eigenvectors
+    for neig    = 1:teig%test different numbers of eigenvectors
         cev = cev+1;
         sub_counter = 0;
         result      = [];
@@ -126,5 +127,8 @@ for kernel_fwhm = 50;%10:10:100;
     drawnow
 end
 try
-    save(sprintf('C:\Users\Lea\Desktop\SVM_simulations_phase%d_unitize_%d.mat',phase,fix.unitize),'R','AVE')
+    save(sprintf('C:/Users/Lea/Documents/Experiments/FearCloud_Eyelab/data/midlevel/svm_analysis/findingparams/SVM_simulations_phase%d_NEV%d_FWHM%d.mat',phase,neig,kernel_fwhm),'R','AVE','HP')
+catch
+    fprintf('couldnt save, do sth!')
+    keyboard
 end
