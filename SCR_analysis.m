@@ -330,6 +330,15 @@ crit = params(:,1);
 [r,pval]=corr(mat(:,11),crit(ismember(subs_scr,subs)))
 
 %% just putting this here
-                i                    = (self.ledalab.x(:,1) >= 2.5)&(self.ledalab.x(:,1) <= 5.5);
-                self.fear_tuning     = mean(self.ledalab.mean(i,:));%take out the average in that window
-                self.fear_tuning = self.fear_tuning(:,conds);
+i                    = (self.ledalab.x(:,1) >= 2.5)&(self.ledalab.x(:,1) <= 5.5);
+self.fear_tuning     = mean(self.ledalab.mean(i,:));%take out the average in that window
+self.fear_tuning = self.fear_tuning(:,conds);
+
+%% corrected z-score 
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat','dataz','data')
+data = permute(data,[1 3 2]);
+D = reshape(data,[8*3 29]);
+DD = nanzscore(D);
+subplot(1,3,1);bar(mean(DD(1:8,:),2))
+subplot(1,3,2);bar(mean(DD([1:8]+8,:),2))
+subplot(1,3,3);bar(mean(DD([1:8]+8*2,:),2))
