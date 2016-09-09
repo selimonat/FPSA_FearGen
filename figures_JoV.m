@@ -42,8 +42,8 @@ for n = 2:4
 end
 subplot(sp(1),sp(2),2);ylabel('Rating of p(shock)','FontSize',12)
 %add Groupfit line
-% params = [5.1801 0.7288 deg2rad(0.8714) 1.8312; 4.4396 1.1171 deg2rad(-0.0598) 1.9506]; %600ms cond;test
-params = [5.4773,1.3072,deg2rad(-8.0356),1.7061;4.6438,2.2964,deg2rad(-1.4551),1.9557]; %1500 cond;test
+params = [5.1801 0.7288 deg2rad(0.8714) 1.8312; 4.4396 1.1171 deg2rad(-0.0598) 1.9506]; %600ms cond;test
+% params = [5.4773,1.3072,deg2rad(-8.0356),1.7061;4.6438,2.2964,deg2rad(-1.4551),1.9557]; %1500 cond;test
 x = -150:0.1:195;
 subplot(sp(1),sp(2),2);
 plot(x,mean(mean(ratings(:,:,2))),'k-','LineWidth',2)
@@ -63,9 +63,9 @@ subplot(sp(1),sp(2),4)
 title('Generalization','FontSize',14)
 
 %% scr
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat')
-ylims = [-.85 .85];%600 [-1 1]  %1500: [-1 1.2]
-Yticks = -.5:.5:2;%600 [-.8 0 .8], %1500: [-1 0 1]
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600_zscores.mat')
+ylims = [-1 1];%600 [-1 1]  %1500: [-1 1.8]
+Yticks = [-1 0 1];%600 [-.8 0 .8], %1500: [-1 0 1]
 
 % plot
 for n = [7 8 9]
@@ -82,14 +82,14 @@ for n = [7 8 9]
     axis square
     box off
 end
-subplot(2,5,8);ylim([0 1.7]);set(gca,'YTick',0:.5:1.5)
+subplot(2,5,8);ylim([0 2.2]);set(gca,'YTick',0:1:2.0)
 %cond phase CS+ CS-
 subplot(sp(1),sp(2),8);
 line([0 180],repmat(1.8,[1 2]),'Color','k','LineWidth',2)
 text(90,1.8,'***','FontSize',20)
 subplot(sp(1),sp(2),9);
 line([0 180],repmat(.7,[1 2]),'Color','k','LineWidth',2)
-text(90,.7,'***','FontSize',20)
+text(90,.7,'*','FontSize',20)
 
 
 subplot(sp(1),sp(2),7);ylabel('SCR (z-Score)','FontSize',12)
@@ -126,7 +126,7 @@ for x = 0:11.25:135;
     xlabel('delta X [deg]')
     title('Discrimination pre','FontSize',14)
     ylim([0 1]);
-    plot(params1(1,1),PAL_Weibull(params1(1,:),params1(1,1)),'k.','MarkerSize',20)
+%     plot(params1(1,1),PAL_Weibull(params1(1,:),params1(1,1)),'k.','MarkerSize',20)
     
     subplot(sp(1),sp(2),[5 10])
     errorbar(x,pdiffgroup(xc,4),sdgroup(xc,4),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,2)) %after, CS-
@@ -377,56 +377,44 @@ line(xlim,repmat((1-guess-lapse)*.5+guess,[2 1]))
 %%% don't mention the peakshift
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fontsize =  12;
+fontsize =  14;
 binsize = 8;
-sp = [1 3];
+sp = [1 4];
 figure;
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% % FWHM histogram
-% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate2pmf_N54.mat')
-% subplot(sp(1),sp(2),1)%FWHM
-% ind = subs6;
-% hold off
-% b = linspace(0,180,binsize);
-% histf(mat(ind,18),b,'FaceColor','b','EdgeColor','none','FaceAlpha',.6);
-% hold on;
-% histf(mat(ind,19),b,'FaceColor','k','EdgeColor','none','FaceAlpha',.6);
-% axis square;box off
-% hold off
-% legend('Conditioning','Generalization','orientation','vertical','location','best')
-% ylabel('counts of FWHM','FontSize',fontsize)
-% text(-80,11,'A','FontSize',fontsize+8);
-% xlim([0 200])
-% xlabel('deg','FontSize',fontsize)
-% set(gca,'YTick',[0 5 10],'FontSize',fontsize)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% new alpha 50% threshold bars
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\pmf_params_N51.mat')
-subplot(sp(1),sp(2),1)%alpha results
-ylabel('threshold alpha (deg)','FontSize',fontsize)
-b = bar([1 2 4 5],mean(alpha(subs6,:)));
-SetFearGenBarColors(b,[1 0 0;.6 0 0;0 1 1;0 .6 .6]')
-line([1 2],[mean(alpha(subs6,1))+10 mean(alpha(subs6,1))+10],'Color','k','LineWidth',2)
-text(1,mean(alpha(subs6,1))+13,'***','FontSize',fontsize+4)
-hold on;
-e = errorbar([1 2 4 5],mean(alpha(subs6,:)),std(alpha(subs6,:))./sqrt(length(alpha(subs6,:))),'k.');
-set(e,'LineWidth',2)
-set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'},'FontSize',fontsize,'YTick',[0 20 40 60])
-ylabel('alpha')
-set(e,'LineWidth',2)
-axis square;box off;
-xlim([0 6])
-text(-1,82,'A','FontSize',fontsize+8);
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % graph alpha x discrimination (binning of M and SD)
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
-% bin perception, plot kappa
+clear all;p = Project;
+subjects = intersect(p.subjects_600,find(sum(p.getMask('PMF'),2)==4));
+subjects = intersect(subjects,find(p.getMask('RATE')));
+g = Group(subjects);
+mat =  g.parameterMat;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% scatterplot
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clf
+subplot(sp(1),sp(2),1)
+plot(mat(:,17),mat(:,18),'bo','MarkerFaceColor','b')
+l = lsline;
+set(l,'LineWidth',2,'Color','b')
+xlim([min(mat(:,17))-10 max(mat(:,17))+10])
+ylim([min(mat(:,18))-10 max(mat(:,18))+10])
+set(gca,'XTick',0:50:100,'YTick',0:50:150,'fontsize',fontsize)
+axis square
+box off
+xlabel('initial threshold \alpha','fontsize',fontsize)
+ylabel('FWHM Conditioning','fontsize',fontsize)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% bin perception, plot FWHM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 600ms
-mat = mat6;
-bincol = [21 23];%which col for bins;
+
+bincol = [17];%which col for bins;
 outc = 18; %which col for outcome (cond = 18, test=19)
 p = prctile(mean(mat(:,bincol),2),linspace(0,100,4));
 outcome_m = [];outcome_s=[];binalpha = [];binsd = [];
@@ -445,10 +433,12 @@ for n = 1:length(p)-1
 end
 subplot(sp(1),sp(2),2)
 text(-.5,200,'B','FontSize',20);
-bar(1:3,outcome_m,.7,'b');hold on;
+bar(1:3,outcome_m,.6,'FaceColor',[.3 .3 .3],'EdgeColor','none');hold on;
+plot(1:3,binalpha,'r*','Markersize',10)
 % bar(1:3,binalpha,'FaceColor',[.7 .7 .7],'EdgeColor','none')%bar(1:3,[2.59 .995 .147],'FaceColor',[.3 .3 .3])
 % errorbar(1:3,outcome_m,outcome_s,'k.','LineWidth',3)
-set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize,'YTick',[0 90 180])
+set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize-2)
+set(gca,'YTick',0:45:90,'fontsize',fontsize)
 xlabel('discrimination performance','fontsize',fontsize)
 ylabel('M FWHM Conditioning','fontsize',fontsize)
 axis square
@@ -456,15 +446,39 @@ box off
 xlim([0 4])
 hold off
 subplot(sp(1),sp(2),3)
-bar(1:3,outcome_s,.7,'b');hold on;
-set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize,'YTick',[0 10 20])
+bar(1:3,outcome_s,.6,'FaceColor',[.5 .5 .5],'EdgeColor','none');hold on;
+set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize-2)
+set(gca,'YTick',[0 5 10],'fontsize',fontsize)
 xlabel('discrimination performance','fontsize',fontsize)
-ylabel('SD FWHM Conditioning','fontsize',fontsize)
+ylabel('SEM FWHM Conditioning','fontsize',fontsize)
+ylim([0 11])
 axis square
 box off
 xlim([0 4])
 hold off
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% threshold bars, before after
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear all; 
+sp = [1 4];
+p = Project;
+g = Group(intersect(p.subjects_600,find(sum(p.getMask('PMF'),2)==4)));
+mat = g.parameterMat;
+subplot(sp(1),sp(2),4)%alpha results
+ylabel('threshold alpha (deg)','FontSize',fontsize)
+b = bar([1 2 4 5],mean(mat(:,[1 2 3 4])));
+SetFearGenBarColors(b,[1 0 0;.6 0 0;0 1 1;0 .6 .6]')
+line([1 2],[mean(mat(:,1))+10 mean(mat(:,1))+10],'Color','k','LineWidth',2)
+text(1,mean(mat(:,1))+13,'***','FontSize',fontsize+4)
+hold on;
+e = errorbar([1 2 4 5],mean(mat(:,[1 2 3 4])),std(mat(:,[1 2 3 4]))./sqrt(length(g.ids)),'k.');
+set(e,'LineWidth',2)
+set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'},'FontSize',fontsize,'YTick',[0 20 40 60 80])
+ylabel('perceptual threshold \alpha [deg]','Fontsize',fontsize)
+set(e,'LineWidth',2)
+axis square;box off;
+xlim([0 6])
+text(-2,82,'A','FontSize',fontsize+8);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -474,33 +488,28 @@ clear all
 p           = Project;
 mask = p.getMask('ET_discr');
 subjects = intersect([Project.subjects_1500],find(mask));
-mask = p.getMask('PMF');
-subjects = intersect(subjects,find(sum(mask,2)==4));
+mask = p.getMask('ET_feargen');
+subjects = intersect(subjects,find(mask));
 fix = Fixmat(subjects,1:5);
-v = [];
-c = 0;
-for ph = 1:5
-    c = c+1;
-    v{c} = {'phase' ph};
-end
-fix.getmaps(v{:});
-fix.plot('linear',[1 5])
-% fix.maps = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
-% fix.plot
 v = [];
 c = 0;
 for sub = [6 13 10]
     for ph = 1:5
         c = c+1;
-        v{c} = {'subject' sub 'phase' ph 'deltacsp' fix.realcond};
+        v{c} = {'subject' sub 'phase' ph 'deltacsp' [0 180 18000]};
     end
+    c=c+1;
+    v{c} = {'subject' sub 'deltacsp' [ 0 180 18000]};
 end
+
 for ph = 1:5
     c = c+1;
-    v{c} = {'phase' ph};
+    v{c} = {'phase' ph 'deltacsp' [0 180 18000]};
 end
+c = c+1;
+v{c} = {'deltacsp' [0 180 18000]};
 fix.getmaps(v{:});
-fix.plot('linear',[4 5])
+fix.plot('linear',[4 6])
 
 
 %%
