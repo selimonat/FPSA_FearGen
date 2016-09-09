@@ -119,13 +119,14 @@ axis square;colorbar;
 set(gca,'fontsize',15)
 axis off
 %% big corrmat (single fixations)
+clear all
 p = Project;
 subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
 fix = Fixmat(subs,[2 4]);
 
 correct = 1;
-tfix = 5;
-corrmat = nan(80,80,length(subs));
+tfix = 4;
+corrmat = nan(8*tfix*length(unique(fix.phase)),8*tfix*length(unique(fix.phase)),length(subs));
 
 sc = 0;
 for sub = unique(fix.subject)
@@ -143,17 +144,89 @@ for sub = unique(fix.subject)
     fix.getmaps(v{:})
     if correct == 1
         %correct phase specific cocktail blank
-        fix.maps(:,:,1:40) = fix.maps(:,:,1:40) - repmat(nanmean(fix.maps(:,:,1:40),3),[1 1 40]);
-        fix.maps(:,:,41:end) = fix.maps(:,:,41:end) - repmat(nanmean(fix.maps(:,:,41:end),3),[1 1 40]);
+        fix.maps(:,:,1:(8*tfix)) = fix.maps(:,:,1:8*tfix) - repmat(nanmean(fix.maps(:,:,1:(8*tfix)),3),[1 1 8*tfix]);
+        fix.maps(:,:,((8*tfix)+1):2*8*tfix) = fix.maps(:,:,((8*tfix)+1):2*8*tfix) - repmat(nanmean(fix.maps(:,:,((8*tfix)+1):2*8*tfix),3),[1 1 8*tfix]);
     end
     corrmat(:,:,sc) = fix.corr;
 end
-
+figure
+subplot(3,6,[1 2 3 7 8 9 13 14 15])
 imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.35 .6])
 axis square
 box off
-set(gca,'XTick',[4:8:80],'XTickLabel',{'1' '2' '3' '4' '5' '1' '2' '3' '4' '5'})
-set(gca,'YTick',[4:8:80],'YTickLabel',{'1' '2' '3' '4' '5' '1' '2' '3' '4' '5'})
+set(gca,'XTick',[4:8:size(corrmat,1)],'XTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
+set(gca,'YTick',[4:8:size(corrmat,1)],'YTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
+%% Linear Model on that with constant, physical similarity, aversive generalization components
+medmat = fisherz_inverse(nanmedian(fisherz(corrmat),3));
+const = ~eye(8);
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\v1_corr_uncorr.mat','v1_corr');
+phys  = v1_corr;
+gen   = make_gaussian2D(8,8,4,4,4,4);
+X = [const(:) phys(:) gen(:)];
+% % for whole group (median) first
+% for ph = 0:1
+%     for f = 1:5
+%         ff = f-1;
+%         dummy = medmat(ph*40+ff*8+[1:8],ph*40+ff*8+[1:8]);
+%         y     = dummy(:);
+%         mdl = LinearModel.fit(X,y);
+%         betas(:,f,ph+1) = mdl.Coefficients.Estimate(2:end);
+%     end
+% end
+% figure;
+% for ph = 0:1
+%     for n =1:3
+%         subplot(2,3,ph*3+n);
+%         bar(1:5,betas(n,:,ph+1))
+%         box off
+%     end
+% end
+% for single subjects
+nfix = 4;
+for ph = 0:1
+    for f = 1:nfix
+        for sub = 1:length(unique(fix.subject))
+            fprintf('Phase %g, Fix No %g, Sub No %g. \n',ph+1,f,sub)
+            ff = f-1;
+            dummy = corrmat(ph*tfix*8+ff*8+[1:8],ph*tfix*8+ff*8+[1:8],sub);
+            y     = dummy(:);
+            mdl = LinearModel.fit(X,y);
+            betas(:,f,ph+1,sub) = mdl.Coefficients.Estimate(2:end);
+        end
+    end
+end
+%plot models
+subplot(3,6,4);title('constant similarity');
+imagesc(const)
+axis square
+colormap gray
+subplot(3,6,5);title('physical similarity');
+imagesc(phys)
+axis square
+colormap gray
+subplot(3,6,6);title('aversive generalization');
+imagesc(gen)
+axis square
+colormap gray
+%baseline, middle row
+for b =1:3
+    subplot(3,6,b+9);
+    bar(1:nfix,mean(betas(b,:,1,:),4))
+    hold on
+    errorbar(1:nfix,mean(betas(b,:,1,:),4),std(betas(b,:,1,:),0,4)./sqrt(size(corrmat,3)),'k.');
+    box off
+    axis square
+end
+% test phase, lower row
+for b =1:3
+    subplot(3,6,b+15);
+    bar(1:nfix,mean(betas(b,:,2,:),4))
+    hold on
+    errorbar(1:nfix,mean(betas(b,:,2,:),4),std(betas(b,:,2,:),0,4)./sqrt(size(corrmat,3)),'k.');
+    box off
+    axis square
+end
+
 %% try the same as MDS
 tsub = length(unique(fix.subject));
 dismat_t = zeros(8,8,tsub);
@@ -1715,7 +1788,7 @@ end
 %BEWARE: initial alpha is 1 and 2 now (not 1 and 3 like in parameterMat)
 mat(:,21) = mean(alpha(:,1:2),2);
 mat(invalid_a,21) = NaN;
-%sanity check: 
+%sanity check:
 [r,p] = corrcoef(mat(~invalid_a,17),mat(~invalid_a,21));
 
 % full matrix is ready.
@@ -2331,9 +2404,10 @@ errorbar(1,mean_r_its,sem_r_its,'LineWidth',2,'Color','k')
 bar(2,mean_r_iss);hold on;
 errorbar(2,mean_r_iss,sem_r_iss,'LineWidth',2,'Color','k')
 ylim([0 1])
-ylabel('Similarity (r)','FontSize',12)
-set(gca,'XTick',[1 2],'XTickLabel',{'ITS' 'ISS'},'YTick',0:.2:1,'FontSize',12)
+ylabel('Similarity (r)','FontSize',14)
+set(gca,'XTick',[1 2],'XTickLabel',{'ITS' 'ISS'},'YTick',0:.2:1,'FontSize',14)
 box off
+xlim([0 3])
 
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\multiclass\multiclass_ovr_holdout.mat')
 subplot(1,2,2)
@@ -2343,9 +2417,10 @@ a = result;
 scaled = (a./sum(a(:)))./repmat(sum((a./sum(a(:))),2),[1,27]);%scale by rowsums
 bar(2,mean(diag(scaled)));hold on;errorbar(2,mean(diag(scaled)),std(diag(scaled))./sqrt(27),'LineWidth',2,'Color','k')
 ylim([0 1])
-ylabel('% correct classification','FontSize',12)
-set(gca,'XTick',[1 2],'XTickLabel',{'OVA' 'OVO'},'YTick',0:.2:1,'FontSize',12)
+ylabel('% correct classification','FontSize',14)
+set(gca,'XTick',[1 2],'XTickLabel',{'OVA' 'OVO'},'YTick',0:.2:1,'FontSize',14)
 box off
+xlim([0 3])
 %% can this be related to feargen sharpness or sth?
 gendiscr = squeeze(rmat(4,5,:));
 load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\misesmat.mat');
@@ -2404,19 +2479,19 @@ sd = std(mean(rcsn,2),0,3)%first over bootstr, then subjects
 % there we just took every person we had (Nalpha ~= Nfwhm), and now we take
 % the intersect
 p = Project;
-load('/Users/onat/Dropbox/feargen_lea/EthnoMaster/data/midlevel/rate_and_pmf_N48.mat')
+load('C:/Users/Lea/Dropbox/feargen_hiwi/EthnoMaster/data/midlevel/rate_and_pmf_N48.mat')
 subs = intersect(find(p.getMask('ET_feargen')),subjects(subs15));
 fix  = Fixmat(subs,[1:5]);
 %%
 M = [];
-for ns = unique(fix.subject)    
-    query = {'subject' ns 'phase' [1:5] 'deltacsp' [0 180 18000]};    
+for ns = unique(fix.subject)
+    query = {'subject' ns 'phase' [1:5] 'deltacsp' [0 180 18000]};
     fix.getmaps(query);
     M     = cat(3,M,fix.maps);
 end
 %%
 for n = 1:20
-    a    = mat15(:,n); 
+    a    = mat15(:,n);
     b    = mat15(:,18);
     % exclude sub 46 bc no usable eye data
     a(8) = [];
@@ -2425,15 +2500,15 @@ for n = 1:20
     fix.maps = M;
     r_a      = reshape(corr(fix.vectorize_maps',a,'type','spearman'),500,500);
     r_b = [];
-% r_b      = reshape(corr(fix.vectorize_maps',b,'type','spearman'),500,500);
-% r_a = reshape(corr(fix.vectorize_maps',a,'type','pearson'),500,500);
-% r_b = reshape(corr(fix.vectorize_maps',b,'type','pearson'),500,500);
+    % r_b      = reshape(corr(fix.vectorize_maps',b,'type','spearman'),500,500);
+    % r_a = reshape(corr(fix.vectorize_maps',a,'type','pearson'),500,500);
+    % r_b = reshape(corr(fix.vectorize_maps',b,'type','pearson'),500,500);
     fix.maps = cat(3,r_a,r_b);
     figure;fix.plot;%title(mat2str(tags{n}),'interpreter','none');
     drawnow
     colorbar off
     axis off
-    SaveFigure(sprintf('~/Desktop/bla/bla%03d.png',n),'-transparent');
+    SaveFigure(sprintf('C:/Users/Lea/Desktop/bla/bla%03d.png',n),'-transparent');
 end
 %%
 
