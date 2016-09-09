@@ -335,10 +335,74 @@ self.fear_tuning     = mean(self.ledalab.mean(i,:));%take out the average in tha
 self.fear_tuning = self.fear_tuning(:,conds);
 
 %% corrected z-score 
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat','dataz','data')
-data = permute(data,[1 3 2]);
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_600.mat','data')
+data = permute(data,[1 3 2]); %permutes dimensions, so that subs = dim3
 D = reshape(data,[8*3 29]);
 DD = nanzscore(D);
-subplot(1,3,1);bar(mean(DD(1:8,:),2))
-subplot(1,3,2);bar(mean(DD([1:8]+8,:),2))
-subplot(1,3,3);bar(mean(DD([1:8]+8*2,:),2))
+subplot(1,3,1);b = bar(mean(DD(1:8,:),2));SetFearGenBarColors(b);
+subplot(1,3,2);b = bar(mean(DD([1:8]+8,:),2));SetFearGenBarColors(b);
+subplot(1,3,3);b = bar(mean(DD([1:8]+8*2,:),2));SetFearGenBarColors(b);
+
+%% decomposition using all phases together, then zscore within subject (across all phases).
+p = Project;
+subjects = intersect(p.subjects_600,find(sum(p.getMask('SCR'),2)==3));
+data = NaN(8,3,length(subjects));
+sc = 0;
+for sub = subjects(:)'
+    sc = sc+1;
+    s = Subject(sub);
+    s.scr.run_ledalab;
+    unique(s.scr.ledalab.condnames);
+    conds = [1:8 14:15 19:26];
+    s.scr.plot_tuning_ledalab(conds);
+    dummy = s.scr.fear_tuning;
+    data(:,1,sc) = dummy(1:8);
+    data([4 8],2,sc) = dummy(9:10);
+    data(:,3,sc) = dummy(11:18);
+end
+D = reshape(data,[8*3 29]); %27 for 1500, 29 for 600
+DD = nanzscore(D);
+subplot(1,3,1);b = bar(mean(DD(1:8,:),2));SetFearGenBarColors(b);box off
+subplot(1,3,2);b = bar(mean(DD([1:8]+8,:),2));SetFearGenBarColors(b);box off
+subplot(1,3,3);b = bar(mean(DD([1:8]+8*2,:),2));SetFearGenBarColors(b);box off
+EqualizeSubPlotYlim(gcf);
+% save('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_1500_zscores.mat','subjects','data','D','DD')
+%compute percentage CS+ > CS-
+% mean(DD(12,:))-mean(DD(16,:))./mean(DD(16,:))
+%% sanity check
+figure;
+for n = 1:length(subjects)
+subplot(1,3,1);b = bar(mean(DD(1:8,n),2));SetFearGenBarColors(b);box off
+subplot(1,3,2);b = bar(mean(DD([1:8]+8,n),2));SetFearGenBarColors(b);box off
+subplot(1,3,3);b = bar(mean(DD([1:8]+8*2,n),2));SetFearGenBarColors(b);box off
+EqualizeSubPlotYlim(gcf);
+pause
+end
+for n = 1:length(subjects);subplot(3,10,n);b=bar(1:8,DD(9:16,n)');SetFearGenBarColors(b);title(sprintf('Sub %g',subjects(n)));set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'});end
+%% get graphs directly
+p = Project;
+subjects = intersect(p.subjects_600,find(sum(p.getMask('SCR'),2)==3));
+data = NaN(800,9,3,length(subjects));
+sc = 0;
+for sub = subjects(:)'
+    sc = sc+1;
+    s = Subject(sub);
+    s.scr.run_ledalab;
+    unique(s.scr.ledalab.condnames);
+    conds = [1:8 14:15 19:26];
+    data(:,1:9,1,sc) = s.scr.ledalab.mean(1:800,1:9);
+    data(:,[4 8 9],2,sc) = s.scr.ledalab.mean(1:800,14:16);
+    data(:,1:9,3,sc) = s.scr.ledalab.mean(1:800,19:27);
+end
+datam = nanmean(data,4);
+
+close all
+for n=1:3;
+    subplot(2,3,n);
+    plot(datam(:,1:8,n),'LineWidth',2);
+    SetFearGenColors;box off;xlim([0 800]);
+    hold on;
+    plot(datam(:,9,n),'k','LineWidth',2);
+    subplot(2,3,n+3);
+    plot(datam(:,1:8,n)-repmat(datam(:,9,n),[1 8]),'LineWidth',2);
+end
