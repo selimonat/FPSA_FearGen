@@ -930,7 +930,7 @@ end
 %sanity check: is this alpha (with crit = .63)
 [r,pval] = corr(alpha(:,1),g.pmf.csp_before_alpha);
 init_alpha = mean(alpha(:,1:2),2);
-%
+%% now bootstrap FWHM x alpha50
 nboot = 100000;
 x0  = init_alpha;
 x = x0 - min(x0);
@@ -953,3 +953,20 @@ for n = 1:nboot
 end
 params1 = params;
 params(1,:) = params(1,:) + min(x0);
+
+%% alpha(50%) x fwhm including amplitude information
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\rate_and_pmf_N48.mat');
+load('C:\Users\Lea\Dropbox\feargen_hiwi\EthnoMaster\data\midlevel\new_alpha_50.mat','init_alpha','subjects','subs6')
+g = Group(subjects(subs6));
+g.getSI(8);
+
+minn = 5;
+maxn = 80;
+dotsize  = Scale(g.tunings.rate{3}.fit_results.params(:,1))*(maxn-minn)+minn;
+mu = Scale(abs(g.tunings.rate{3}.fit_results.params(:,3)));
+figure
+for n = 1:24
+plot(init_alpha(n),mat6(n,18),'.','MarkerSize',dotsize(n),'color',[mu(n) mu(n) mu(n)])
+hold on
+end
+hold off
