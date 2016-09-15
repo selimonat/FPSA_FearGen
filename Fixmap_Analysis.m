@@ -149,18 +149,42 @@ for sub = unique(fix.subject)
     end
     corrmat(:,:,sc) = fix.corr;
 end
+% set up figure
 figure
 subplot(3,6,[1 2 3 7 8 9 13 14 15])
-imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.35 .6])
+imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.3 .6])
+freezeColors;
 axis square
 box off
 set(gca,'XTick',[4:8:size(corrmat,1)],'XTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
 set(gca,'YTick',[4:8:size(corrmat,1)],'YTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
+h = colorbar;
+freezeColors;
+set(h,'YTick',[-.3 0 .3 .6],'fontsize',12);
+freezeColors;
 %% Linear Model on that with constant, physical similarity, aversive generalization components
 medmat = fisherz_inverse(nanmedian(fisherz(corrmat),3));
-const = ~eye(8);
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\v1_corr_uncorr.mat','v1_corr');
-phys  = v1_corr;
+const = eye(8);
+const(~eye(8))=.8;
+% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\v1_corr_uncorr.mat','v1_corr');
+% phys  = v1_corr;
+% or perfect circle of 8 faces
+r = 1;
+Xcoord = cos([0:45:355]*pi/180)*r;
+Ycoord = -sin([0:45:355]*pi/180)*r;
+coord = [Xcoord' Ycoord'];
+for n1=1:8
+    a=coord(n1,:);
+    for n2 = 1:8
+        b=coord(n2,:);
+        if n2<n1;
+            ed(n1,n2) = norm(a(:)-b(:));
+            ed(n2,n1) = ed(n1,n2);
+        end
+    end
+end
+phys = 1-Scale(ed);
+
 gen   = make_gaussian2D(8,8,4,4,4,4);
 X = [const(:) phys(:) gen(:)];
 % % for whole group (median) first
@@ -182,6 +206,7 @@ X = [const(:) phys(:) gen(:)];
 %     end
 % end
 % for single subjects
+clear betas
 nfix = 4;
 for ph = 0:1
     for f = 1:nfix
@@ -191,40 +216,61 @@ for ph = 0:1
             dummy = corrmat(ph*tfix*8+ff*8+[1:8],ph*tfix*8+ff*8+[1:8],sub);
             y     = dummy(:);
             mdl = LinearModel.fit(X,y);
+            R(sub) = mdl.Rsquared.Adjusted;
             betas(:,f,ph+1,sub) = mdl.Coefficients.Estimate(2:end);
         end
     end
 end
 %plot models
 subplot(3,6,4);title('constant similarity');
-imagesc(const)
+imagesc(const,[0 1])
 axis square
 colormap gray
+freezeColors
 subplot(3,6,5);title('physical similarity');
-imagesc(phys)
+imagesc(phys,[0 1])
 axis square
 colormap gray
+freezeColors
 subplot(3,6,6);title('aversive generalization');
-imagesc(gen)
+imagesc(gen,[0 1])
 axis square
 colormap gray
+h = colorbar;
+set(h,'FontSize',12)
+freezeColors
+for n = [4 5 6]
+    subplot(3,6,n)
+    set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
+    box off
+end
 %baseline, middle row
 for b =1:3
     subplot(3,6,b+9);
-    bar(1:nfix,mean(betas(b,:,1,:),4))
+    bar(1:nfix,mean(betas(b,:,1,:),4),'FaceColor',[.03 .1 .4],'EdgeColor','none')
     hold on
-    errorbar(1:nfix,mean(betas(b,:,1,:),4),std(betas(b,:,1,:),0,4)./sqrt(size(corrmat,3)),'k.');
-    box off
-    axis square
+    errorbar(1:nfix,mean(betas(b,:,1,:),4),std(betas(b,:,1,:),0,4)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
 end
 % test phase, lower row
 for b =1:3
     subplot(3,6,b+15);
-    bar(1:nfix,mean(betas(b,:,2,:),4))
+    bar(1:nfix,mean(betas(b,:,2,:),4),'FaceColor',[.03 .1 .4],'EdgeColor','none')
     hold on
-    errorbar(1:nfix,mean(betas(b,:,2,:),4),std(betas(b,:,2,:),0,4)./sqrt(size(corrmat,3)),'k.');
+    errorbar(1:nfix,mean(betas(b,:,2,:),4),std(betas(b,:,2,:),0,4)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
+    xlabel('Fix','FontSize',12)
+end
+% some cosmetics
+for n = [10:12 16:18]
+    subplot(3,6,n)
     box off
     axis square
+    set(gca,'FontSize',12)
+end
+l = .32;
+for n = [11 12 17 18]
+subplot(3,6,n)
+ylim([-.1 l]);
+set(gca,'YTick',[0 .3])
 end
 
 %% try the same as MDS
@@ -539,7 +585,7 @@ fix.maps        = cat(3,mean(fix.maps(:,:,i),3),mean(fix.maps(:,:,~i),3));
 
 fix.plot('log');
 %
-fix.maps = -diff(fix.maps,1,3);%bad - good.
+fix.maps = -diff(fix.maps,1,3);%bad - good
 fix.plot('linear');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -700,7 +746,7 @@ for n = 1:length(subjmaps)
 end
 clf
 imagesc(reshape(r,[size(fix.maps,1),size(fix.maps,2)]),[-1 1])
-for n = find(pval<0.05);[y x] = ind2sub([size(fix.maps,1),size(fix.maps,2)],n);text(x,y,'x','FontSize',10);end
+for n = find(pval<0.01);[y x] = ind2sub([size(fix.maps,1),size(fix.maps,2)],n);text(x,y,'x','FontSize',10);end
 fix.maps = reshape(r,[size(fix.maps,1),size(fix.maps,2)]);
 fix.plot
 
@@ -1756,7 +1802,7 @@ for sub = subjects(:)'
 end
 fix.getmaps(v{:})
 
-g = Group(subjects);[mat tags]=g.parameterMat;mises = g.loadmises;clear g;mat = [mat mises];
+g = Group(subjects);[mat tags]=g.parameterMat;
 
 %now we need to prepare the correct data for these guys
 mask = p.getMask('RATE');
@@ -2317,8 +2363,8 @@ for ph = unique(fix.phase)
         v{c} = {'deltacsp' [0 180 18000] 'subject' sub 'phase' ph}; % like this, we have 27x27x5
     end
     fix.getmaps(v{:});
-    rmat(:,:,pc) = fix.corr;
-    rmat_f(:,:,pc) = reshape(fisherz(fix.corr),[27 27]);
+    rmat_iss(:,:,pc) = fix.corr;
+    rmat_f_iss(:,:,pc) = reshape(fisherz(fix.corr),[27 27]);
 end
 ind = logical(CancelDiagonals(triu(ones(27,27)),0));
 % subplot(1,2,1)
@@ -2330,13 +2376,12 @@ ind = logical(CancelDiagonals(triu(ones(27,27)),0));
 % axis square
 for n = 1:5
     dummy = rmat_f(:,:,n);
-    corrs(:,n) = dummy(ind);
+    corrs_iss(:,n) = dummy(ind);
 end
-fisherz_inverse(mean(mean(corrs)))%should give .53
-figure; bar(fisherz_inverse(mean(corrs)))
+fisherz_inverse(mean(mean(corrs_iss)))%should give .53
 
-mean_r_iss = fisherz_inverse(mean(mean(corrs)));
-sem_r_iss  = fisherz_inverse(std(mean(corrs)))./sqrt(5);
+mean_r_iss = fisherz_inverse(mean(mean(corrs_iss)));
+sem_r_iss  = fisherz_inverse(std(mean(corrs_iss)))./sqrt(5);
 %% phase similarity within subjects
 clear all
 p               = Project;
@@ -2361,9 +2406,9 @@ for sub = subjects(:)'
     fix.getmaps(v{:});
     %mean correction
     %         fix.maps     = fix.maps - repmat(mean(fix.maps,3),[1 1 5]);
-    rmat(:,:,sc) = fix.corr;
+    rmat_iss(:,:,sc) = fix.corr;
+    rmat_f_its(:,:,n) = reshape(fisherz(rmat_iss(:,:,n)),[5 5 1]);
 end
-
 % %% plot this mat
 % clf
 % cd('C:\Users\Lea\Documents\GitHub\globalfunctions\')
@@ -2381,21 +2426,14 @@ end
 % cbh = colorbar;
 % set(cbh,'YTick',.7:.05:.9,'FontSize',12)
 %% compute means (ITS)
-for n = 1:27;
-    rmat_f(:,:,n) = reshape(fisherz(rmat(:,:,n)),[5 5 1]);
-end
-% rmat_mean = CancelDiagonals(reshape(ifisherz(mean(rmat_f,3)),[5 5]),1); % average across the subjects, take the mean, inv fisher it...
-% imagesc(rmat_mean)
-
 ind = logical(CancelDiagonals(triu(ones(5,5)),0));
 for n = 1:27;
-    dummy = rmat(:,:,n);
-    corrs(:,n) = dummy(ind);%this is then size (sum(1:5)-5 x 27)
+    dummy = rmat_f_its(:,:,n);
+    corrs_its(:,n) = dummy(ind);%this is then size (sum(1:5)-5 x 27)
 end
 
-mean_r_its = ifisherz(mean(mean(fisherz(corrs)))) ;% gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals, r = .82 for CSP and CSN maps only, this is ITS (Inter Task Similarity).
-% figure;bar(ifisherz(mean(fisherz(corrs))))
-sem_r_its   = ifisherz(std(mean(fisherz(corrs))))./sqrt(27);
+mean_r_its = ifisherz(mean(mean(corrs_its))) ;% gives r = .84 for un-cocktail-blank-corrected fixmaps, without diagonals, r = .82 for CSP and CSN maps only, this is ITS (Inter Task Similarity).
+sem_r_its   = ifisherz(std(mean(corrs_its)))./sqrt(27);
 
 figure;
 subplot(1,2,1)
