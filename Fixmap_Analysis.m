@@ -152,7 +152,9 @@ for sub = unique(fix.subject)
 end
 % set up figure
 sp = [6,3];
+
 figure
+clf
 subplot(sp(1),sp(2),1:9)
 imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.3 .6])
 colormap('jet')
@@ -161,9 +163,11 @@ axis square
 box off
 set(gca,'XTick',[4:8:size(corrmat,1)],'XTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
 set(gca,'YTick',[4:8:size(corrmat,1)],'YTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
+colormap('jet');
 h = colorbar;
+cbfreeze(h)
 set(h,'YTick',[-.3 0 .3 .6],'fontsize',12);
-cbfreeze(h);
+
 
 
 %% Linear Model on that with constant, physical similarity, aversive generalization components
@@ -182,7 +186,7 @@ X = [const(:) phys(:) gen(:)];
 
 % for single subjects
 clear betas
-block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);;
+block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 nfix = 4;
 for db = 1:nfix*2;
     for ind = 1:length(unique(fix.subject))
@@ -228,8 +232,6 @@ subplot(sp(1),sp(2),12);
 imagesc(gen,lims)
 axis square
 title('aversive generalization');
-h = colorbar;
-set(h,'FontSize',12)
 freezeColors
 for n = 10:12
     subplot(sp(1),sp(2),n)
@@ -237,10 +239,11 @@ for n = 10:12
     box off
 end
 % plot block betas
-subplot(sp(1),sp(2),13);imagesc(bconst);axis image;axis off;h=colorbar;set(h,'YTick',[-.2 .4]);
-subplot(sp(1),sp(2),14);imagesc(bphys);axis image;axis off;h=colorbar;set(h,'YTick',[0 .4]);
-subplot(sp(1),sp(2),15);imagesc(bgen,[-.08 .06]);axis image;axis off;h=colorbar;set(h,'YTick',[-.08 .06]);
 colormap(colormapper([1 0 -1]));
+subplot(sp(1),sp(2),13);imagesc(bconst,[-.2 .4]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[-.2 .4]);cbfreeze(h);
+subplot(sp(1),sp(2),14);imagesc(bphys,[0 .4]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[0 .4]);cbfreeze(h);
+subplot(sp(1),sp(2),15);imagesc(bgen,[-.08 .06]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[-.08 .06]);cbfreeze(h);
+
 
 
 % test - base as barplots
@@ -255,8 +258,11 @@ for b = 1:3;
     ylim([-.2 .2])
     box off
     axis square
-end
+    set(gca,'YTick',[-.2 0 .2])
 
+end
+subplot(sp(1),sp(2),16);
+ylabel('beta [a.u.]');
 %% try the same as MDS
 tsub = length(unique(fix.subject));
 dismat_t = zeros(8,8,tsub);
