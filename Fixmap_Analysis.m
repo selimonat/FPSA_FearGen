@@ -122,6 +122,7 @@ axis off
 clear all
 p = Project;
 subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
+subs = setdiff(subs,[20 22 7]);
 fix = Fixmat(subs,[2 4]);
 
 correct = 1;
@@ -150,127 +151,110 @@ for sub = unique(fix.subject)
     corrmat(:,:,sc) = fix.corr;
 end
 % set up figure
+sp = [6,3];
 figure
-subplot(3,6,[1 2 3 7 8 9 13 14 15])
+subplot(sp(1),sp(2),1:9)
 imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.3 .6])
+colormap('jet')
 freezeColors;
 axis square
 box off
 set(gca,'XTick',[4:8:size(corrmat,1)],'XTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
 set(gca,'YTick',[4:8:size(corrmat,1)],'YTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
 h = colorbar;
-freezeColors;
 set(h,'YTick',[-.3 0 .3 .6],'fontsize',12);
-freezeColors;
+cbfreeze(h);
+
+
 %% Linear Model on that with constant, physical similarity, aversive generalization components
+
 medmat = fisherz_inverse(nanmedian(fisherz(corrmat),3));
+
 const = eye(8);
-const(~eye(8))=.8;
-% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\v1_corr_uncorr.mat','v1_corr');
-% phys  = v1_corr;
-% or perfect circle of 8 faces
-r = 1;
-Xcoord = cos([0:45:355]*pi/180)*r;
-Ycoord = -sin([0:45:355]*pi/180)*r;
-coord = [Xcoord' Ycoord'];
-for n1=1:8
-    a=coord(n1,:);
-    for n2 = 1:8
-        b=coord(n2,:);
-        if n2<n1;
-            ed(n1,n2) = norm(a(:)-b(:));
-            ed(n2,n1) = ed(n1,n2);
-        end
-    end
-end
-phys = 1-Scale(ed);
+const(~eye(8))=.9;
+% const = ones(8);
+
+x    = [pi/4:pi/4:2*pi];
+phys            = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
 
 gen   = make_gaussian2D(8,8,4,4,4,4);
 X = [const(:) phys(:) gen(:)];
-% % for whole group (median) first
-% for ph = 0:1
-%     for f = 1:5
-%         ff = f-1;
-%         dummy = medmat(ph*40+ff*8+[1:8],ph*40+ff*8+[1:8]);
-%         y     = dummy(:);
-%         mdl = LinearModel.fit(X,y);
-%         betas(:,f,ph+1) = mdl.Coefficients.Estimate(2:end);
-%     end
-% end
-% figure;
-% for ph = 0:1
-%     for n =1:3
-%         subplot(2,3,ph*3+n);
-%         bar(1:5,betas(n,:,ph+1))
-%         box off
-%     end
-% end
+
 % for single subjects
 clear betas
+block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);;
 nfix = 4;
-for ph = 0:1
-    for f = 1:nfix
-        for sub = 1:length(unique(fix.subject))
-            fprintf('Phase %g, Fix No %g, Sub No %g. \n',ph+1,f,sub)
-            ff = f-1;
-            dummy = corrmat(ph*tfix*8+ff*8+[1:8],ph*tfix*8+ff*8+[1:8],sub);
-            y     = dummy(:);
-            mdl = LinearModel.fit(X,y);
-            R(sub) = mdl.Rsquared.Adjusted;
-            betas(:,f,ph+1,sub) = mdl.Coefficients.Estimate(2:end);
+for db = 1:nfix*2;
+    for ind = 1:length(unique(fix.subject))
+        fprintf('Sub No %g, Block %g. \n',sub,db)
+        Y               = block_extract(corrmat(:,:,ind),db,db,1)';
+        mdl = LinearModel.fit(X,Y(:));
+        mdl1 = removeTerms(mdl,'1');
+        R(ind,db)       = mdl1.Rsquared.Adjusted;
+        betas(:,db,ind) = mdl1.Coefficients.Estimate;
+    end
+end
+%betas per block.
+for ind = 1:26
+    for db1 = 1:8;
+        for db2 = 1:8%diagonal blocks
+            Y               = block_extract(corrmat(:,:,ind),db1,db2,1)';
+            mdl = LinearModel.fit(X,Y(:));
+            mdl1 = removeTerms(mdl,'1');
+            RR(ind,db1,db2)        = mdl1.Rsquared.Adjusted;            
+            bbetas(:,db1,db2,ind) = mdl1.Coefficients.Estimate;
         end
     end
 end
+bconst = squeeze(nanmean(bbetas(1,:,:,:),4));
+bphys = squeeze(nanmean(bbetas(2,:,:,:),4));
+bgen = squeeze(nanmean(bbetas(3,:,:,:),4));
+
+% plot everything to second half of figure begun before
+lims = [0 1];
 %plot models
-subplot(3,6,4);title('constant similarity');
-imagesc(const,[0 1])
+subplot(sp(1),sp(2),10);
+imagesc(const,lims)
 axis square
-colormap gray
+title('constant similarity');
+colormap(colormapper([1 0 -1]));
 freezeColors
-subplot(3,6,5);title('physical similarity');
-imagesc(phys,[0 1])
+subplot(sp(1),sp(2),11);
+imagesc(phys,lims)
 axis square
-colormap gray
+title('physical similarity');
 freezeColors
-subplot(3,6,6);title('aversive generalization');
-imagesc(gen,[0 1])
+subplot(sp(1),sp(2),12);
+imagesc(gen,lims)
 axis square
-colormap gray
+title('aversive generalization');
 h = colorbar;
 set(h,'FontSize',12)
 freezeColors
-for n = [4 5 6]
-    subplot(3,6,n)
+for n = 10:12
+    subplot(sp(1),sp(2),n)
     set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
     box off
 end
-%baseline, middle row
-for b =1:3
-    subplot(3,6,b+9);
-    bar(1:nfix,mean(betas(b,:,1,:),4),'FaceColor',[.03 .1 .4],'EdgeColor','none')
+% plot block betas
+subplot(sp(1),sp(2),13);imagesc(bconst);axis image;axis off;h=colorbar;set(h,'YTick',[-.2 .4]);
+subplot(sp(1),sp(2),14);imagesc(bphys);axis image;axis off;h=colorbar;set(h,'YTick',[0 .4]);
+subplot(sp(1),sp(2),15);imagesc(bgen,[-.08 .06]);axis image;axis off;h=colorbar;set(h,'YTick',[-.08 .06]);
+colormap(colormapper([1 0 -1]));
+
+
+% test - base as barplots
+betadiff = betas(:,5:8,:)-betas(:,1:4,:);
+
+for b = 1:3;
+    subplot(sp(1),sp(2),b+15);
+    bar(1:nfix,mean(betadiff(b,:,:),3),'FaceColor',[.03 .1 .4],'EdgeColor','none')
     hold on
-    errorbar(1:nfix,mean(betas(b,:,1,:),4),std(betas(b,:,1,:),0,4)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
-end
-% test phase, lower row
-for b =1:3
-    subplot(3,6,b+15);
-    bar(1:nfix,mean(betas(b,:,2,:),4),'FaceColor',[.03 .1 .4],'EdgeColor','none')
-    hold on
-    errorbar(1:nfix,mean(betas(b,:,2,:),4),std(betas(b,:,2,:),0,4)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
+    errorbar(1:nfix,mean(betadiff(b,:,:),3),std(betadiff(b,:,:),0,3)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
     xlabel('Fix','FontSize',12)
-end
-% some cosmetics
-for n = [10:12 16:18]
-    subplot(3,6,n)
+    ylim([-.2 .2])
     box off
     axis square
-    set(gca,'FontSize',12)
-end
-l = .32;
-for n = [11 12 17 18]
-subplot(3,6,n)
-ylim([-.1 l]);
-set(gca,'YTick',[0 .3])
 end
 
 %% try the same as MDS
