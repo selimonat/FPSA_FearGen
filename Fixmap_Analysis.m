@@ -74,7 +74,7 @@ end
 % All the above is done by considering all subjects as one single megasubject i.e. the analysis
 % is not done individually.
 % compute single subject correlation matrices
-%% plot and save single subject fixations maps RSA
+%% plot and save single subject fixations maps 
 tsub = length(unique(fix.subject));
 cormat = nan(16,16,tsub);
 pval = nan(16,16,tsub);
@@ -97,7 +97,7 @@ for subject = unique(fix.subject);
     fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
-%% RSA plot
+%%
 figure
 subplot(1,2,1);
 imagesc(median(cormat,3),[-.1 .1]);
@@ -110,7 +110,7 @@ axis square;colorbar
 set(gca,'fontsize',15)
 axis off
 
-%% RSA plot but fisherz transformed
+%% plot but fisherz transformed
 cormatz = fisherz_inverse(median(fisherz(cormat),3));
 cormatz = CancelDiagonals(cormatz,0);
 figure
@@ -118,7 +118,7 @@ imagesc(cormatz)
 axis square;colorbar;
 set(gca,'fontsize',15)
 axis off
-%% big corrmat (single fixations)
+%% big corrmat (single fixations) RSA
 clear all
 p = Project;
 subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
@@ -152,10 +152,10 @@ for sub = unique(fix.subject)
 end
 % set up figure
 sp = [6,3];
-
+%%
 figure
 clf
-subplot(sp(1),sp(2),1:9)
+subplot(sp(1),sp(2),4:12)
 imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.3 .6])
 colormap('jet')
 freezeColors;
@@ -165,9 +165,8 @@ set(gca,'XTick',[4:8:size(corrmat,1)],'XTickLabel',{'1' '2' '3' '4' '1' '2' '3' 
 set(gca,'YTick',[4:8:size(corrmat,1)],'YTickLabel',{'1' '2' '3' '4' '1' '2' '3' '4'})
 colormap('jet');
 h = colorbar;
-cbfreeze(h)
 set(h,'YTick',[-.3 0 .3 .6],'fontsize',12);
-
+cbfreeze(h)
 
 
 %% Linear Model on that with constant, physical similarity, aversive generalization components
@@ -184,7 +183,7 @@ phys            = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
 gen   = make_gaussian2D(8,8,4,4,4,4);
 X = [const(:) phys(:) gen(:)];
 
-% for single subjects
+% for single subjects, just the main diagonals.
 clear betas
 block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 nfix = 4;
@@ -198,7 +197,7 @@ for db = 1:nfix*2;
         betas(:,db,ind) = mdl1.Coefficients.Estimate;
     end
 end
-%betas per block.
+%single subjects, betas per every block.
 for ind = 1:26
     for db1 = 1:8;
         for db2 = 1:8%diagonal blocks
@@ -214,39 +213,40 @@ bconst = squeeze(nanmean(bbetas(1,:,:,:),4));
 bphys = squeeze(nanmean(bbetas(2,:,:,:),4));
 bgen = squeeze(nanmean(bbetas(3,:,:,:),4));
 
-% plot everything to second half of figure begun before
+%% plot everything to second half of figure begun before
 lims = [0 1];
 %plot models
-subplot(sp(1),sp(2),10);
+subplot(sp(1),sp(2),1);
 imagesc(const,lims)
 axis square
-title('constant similarity');
+title('constant similarity','fontsize',12);
 colormap(colormapper([1 0 -1]));
 freezeColors
-subplot(sp(1),sp(2),11);
+subplot(sp(1),sp(2),2);
 imagesc(phys,lims)
 axis square
-title('physical similarity');
+title('physical similarity','fontsize',12);
 freezeColors
-subplot(sp(1),sp(2),12);
+subplot(sp(1),sp(2),3);
 imagesc(gen,lims)
 axis square
-title('aversive generalization');
+title('aversive generalization','fontsize',12);
 freezeColors
-for n = 10:12
+for n = 1:3
     subplot(sp(1),sp(2),n)
     set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
     box off
 end
-% plot block betas
+%% plot block betas
 colormap(colormapper([1 0 -1]));
-subplot(sp(1),sp(2),13);imagesc(bconst,[-.2 .4]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[-.2 .4]);cbfreeze(h);
-subplot(sp(1),sp(2),14);imagesc(bphys,[0 .4]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[0 .4]);cbfreeze(h);
-subplot(sp(1),sp(2),15);imagesc(bgen,[-.08 .06]);axis image;axis off;freezeColors;h=colorbar;set(h,'YTick',[-.08 .06]);cbfreeze(h);
+subplot(sp(1),sp(2),13);imagesc(bconst,[-.4 .4]);axis image;axis off;freezeColors%;h=colorbar;set(h,'YTick',[-.4 .4]);cbfreeze(h);
+subplot(sp(1),sp(2),14);imagesc(bphys,[-.6 .6]);axis image;axis off;freezeColors;%h=colorbar;set(h,'YTick',[-.6 .6]);cbfreeze(h);
+colormap(colormapper([1 0 -1]));
+subplot(sp(1),sp(2),15);imagesc(bgen,[-.06 .06]);axis image;axis off;freezeColors;%h=colorbar;set(h,'YTick',[-.06 .06]);cbfreeze(h);
 
 
 
-% test - base as barplots
+%% test - base as barplots
 betadiff = betas(:,5:8,:)-betas(:,1:4,:);
 
 for b = 1:3;
@@ -2569,3 +2569,76 @@ for n = 1700%length(fix1)
         [A(:,n) B(:,n) r(:,n) U(:,n) V(:,n)] = canoncorr(X,Y);
     end
 end
+
+%% circulating pixels? Fit Gauss to pixels.
+clear all
+p = Project;
+subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
+subs = setdiff(subs,[20 22 7]);
+fix = Fixmat(subs,4);
+c=0;
+v=[];
+for cond = -135:45:180
+    c=c+1;
+    v{c} = {'deltacsp' cond};
+end
+fix.getmaps(v{:})
+fix.maps        = imresize(fix.maps,.1,'method','bilinear');
+D = fix.vectorize_maps;
+
+for px = 1:length(D)
+    fprintf('Px No %g/%g.\n',px,length(D));
+    data.y = D(px,:);
+    data.x = -135:45:180;
+    data.ids = px;
+    t = Tuning(data);
+    t.SingleSubjectFit(3);
+    params(px,:) = t.fit_results.params;
+    pvals(px) = t.fit_results.pval;
+    yhat(px,:) = t.fit_results.y_fitted;
+end
+
+%% Fit sin/cos
+fix.kernel_fwhm = 23;
+D = [];
+for sub =  subs(:)'
+    v=[];
+    c=0;
+    for cond = -135:45:180
+        c=c+1;
+        v{c} = {'deltacsp' cond 'subject' sub};
+    end
+    fix.getmaps(v{:})
+    D = cat(3,D,fix.vectorize_maps);
+end
+%
+% on mean for all subs
+ZD=zscore(mean(D,3)');
+x = linspace(-135,180,8);
+betas = [ones(1,8);cosd(x); sind(x)]'\ZD;
+amp1 = sqrt(betas(2,:).^2+betas(3,:).^2);
+fix.maps = reshape(amp1,[500 500]);
+figure(1)
+fix.plot
+
+betasgauss=  [ones(1,8);cosd(0.5*x)]'\ZD;
+amp2 = betasgauss(2,:);
+fix.maps = reshape(abs(amp2),[500 500]);
+figure(2)
+fix.plot
+%% %%%%%%%%
+% single subjects
+x = linspace(-135,180,8);
+
+for ss = 1:length(subs)
+    DD = squeeze(D(:,:,ss));
+    ZD = zscore(DD');
+    betas(:,:,ss) = [ones(1,8);cosd(x); sind(x)]'\ZD;
+    amp1(:,:,ss) = sqrt(betas(2,:,ss).^2+betas(3,:,ss).^2);
+    
+    betasgauss(:,:,ss)=  [ones(1,8);cosd(0.5*x)]'\ZD;
+    amp2(:,:,ss) = betasgauss(2,:,ss);
+end
+
+fix.maps = cat(3,reshape(squeeze(mean(amp1,3)),[500 500]),reshape(squeeze(mean(amp2,3)),[500 500]));
+fix.plot
