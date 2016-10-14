@@ -126,7 +126,7 @@ for x = 0:11.25:135;
     xlabel('delta X [deg]')
     title('Discrimination pre','FontSize',14)
     ylim([0 1]);
-%     plot(params1(1,1),PAL_Weibull(params1(1,:),params1(1,1)),'k.','MarkerSize',20)
+    %     plot(params1(1,1),PAL_Weibull(params1(1,:),params1(1,1)),'k.','MarkerSize',20)
     
     subplot(sp(1),sp(2),[5 10])
     errorbar(x,pdiffgroup(xc,4),sdgroup(xc,4),'.','Color','c','LineWidth',2,'MarkerEdgeColor','c','MarkerSize',dotsize(xc,2,2)) %after, CS-
@@ -328,7 +328,7 @@ for n = 1:nboot
 end
 params1 = params;
 params(1,:) = params(1,:) + min(x0);
-%% 
+%%
 % prepare figure
 X2 = linspace(min(x0),max(x0),100);
 for n = 1:nboot
@@ -377,13 +377,8 @@ line(xlim,repmat((1-guess-lapse)*.5+guess,[2 1]))
 %%% don't mention the peakshift
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-fontsize =  14;
-binsize = 8;
-sp = [1 4];
-figure;
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % graph alpha x discrimination (binning of M and SD)
 clear all;p = Project;
@@ -391,6 +386,10 @@ subjects = intersect(p.subjects_600,find(sum(p.getMask('PMF'),2)==4));
 subjects = intersect(subjects,find(p.getMask('RATE')));
 g = Group(subjects);
 mat =  g.parameterMat;
+fontsize =  14;
+binsize = 8;
+sp = [1 4];
+figure;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % scatterplot
@@ -428,17 +427,17 @@ for n = 1:length(p)-1
     ii(:,n) = i;
     binalpha(n) = mean(mean(mat(i,[1 3]),2));
     binsd(n) = std(mean(mat(i,[1 3]),2));
-    outcome_m(n) = mean(mean(mat(i,outc),2))./2;
-    outcome_s(n) = std(mean(mat(i,outc),2)./2)./sqrt(sum(i));
+    outcome_m(n) = mean(mean(mat(i,outc),2));
+    outcome_s(n) = std(mean(mat(i,outc),2))./sqrt(sum(i));
 end
 subplot(sp(1),sp(2),2)
 text(-.5,200,'B','FontSize',20);
 bar(1:3,outcome_m,.6,'FaceColor',[.3 .3 .3],'EdgeColor','none');hold on;
 plot(1:3,binalpha,'r*','Markersize',10)
 % bar(1:3,binalpha,'FaceColor',[.7 .7 .7],'EdgeColor','none')%bar(1:3,[2.59 .995 .147],'FaceColor',[.3 .3 .3])
-% errorbar(1:3,outcome_m,outcome_s,'k.','LineWidth',3)
+errorbar(1:3,outcome_m,outcome_s,'k.','LineWidth',2)
 set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize-2)
-set(gca,'YTick',0:45:90,'fontsize',fontsize)
+set(gca,'YTick',0:100:200,'fontsize',fontsize)
 xlabel('discrimination performance','fontsize',fontsize)
 ylabel('M FWHM Conditioning','fontsize',fontsize)
 axis square
@@ -448,10 +447,10 @@ hold off
 subplot(sp(1),sp(2),3)
 bar(1:3,outcome_s,.6,'FaceColor',[.5 .5 .5],'EdgeColor','none');hold on;
 set(gca,'XTickLabel',{'good','moderate','weak'},'fontsize',fontsize-2)
-set(gca,'YTick',[0 5 10],'fontsize',fontsize)
+set(gca,'YTick',[0:10:20],'fontsize',fontsize)
 xlabel('discrimination performance','fontsize',fontsize)
 ylabel('SEM FWHM Conditioning','fontsize',fontsize)
-ylim([0 11])
+ylim([0 21])
 axis square
 box off
 xlim([0 4])
@@ -459,7 +458,7 @@ hold off
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % threshold bars, before after
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clear all; 
+clear all;
 sp = [1 4];
 p = Project;
 g = Group(intersect(p.subjects_600,find(sum(p.getMask('PMF'),2)==4)));
@@ -473,12 +472,12 @@ text(1,mean(mat(:,1))+13,'***','FontSize',fontsize+4)
 hold on;
 e = errorbar([1 2 4 5],mean(mat(:,[1 2 3 4])),std(mat(:,[1 2 3 4]))./sqrt(length(g.ids)),'k.');
 set(e,'LineWidth',2)
-set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'},'FontSize',fontsize,'YTick',[0 20 40 60 80])
+ylim([35 80])
+set(gca,'xtick',[1.5 4.5],'xticklabel',{'CS+' 'CS-'},'FontSize',fontsize,'YTick',[20 40 60 80])
 ylabel('perceptual threshold \alpha [deg]','Fontsize',fontsize)
 set(e,'LineWidth',2)
 axis square;box off;
 xlim([0 6])
-text(-2,82,'A','FontSize',fontsize+8);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -856,3 +855,34 @@ for bla = [r2 r4]
 end
 subplot(1,2,1);
 ylabel('Classified as CS+','FontSize',12)
+
+%%
+clf
+subplot(1,3,1);
+b = bar(mean(mean(result_ph2,2),3));
+hold on;
+SetFearGenBarColors(b);
+errorbar(mean(mean(result_ph2,2),3),std(mean(result_ph2,2),0,3)./sqrt(size(result_ph2,3)),'k.','LineWidth',2);
+title('Free Viewing','fontsize',14)
+ylabel('Classified as CS+','FontSize',12);
+subplot(1,3,2);
+b = bar(mean(mean(result_ph4,2),3));
+hold on;
+SetFearGenBarColors(b);
+errorbar(mean(mean(result_ph4,2),3),std(mean(result_ph4,2)./sqrt(size(result_ph4,3)),0,3),'k.','LineWidth',2);
+title('Generalization','fontsize',14)
+subplot(1,3,3);
+b = bar(mean(mean(result_90,2),3),'FaceColor',[.5 .5 .5]);
+hold on;
+errorbar(mean(mean(result_90,2),3),std(mean(result_90,2),0,3)./sqrt(size(result_90,3)),'k.','LineWidth',2);
+title('Similarity Tuning','fontsize',14)
+ylabel('Classified as CS+ - 90°','FontSize',12);
+EqualizeSubPlotYlim(gcf);
+for n = 1:3;
+    subplot(1,3,n);
+    set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',.3:.1:.7,'FontSize',12)
+    ylim([.3 .7])
+    box off
+    axis square
+    line([.5 8.5],[.5 .5],'LineStyle',':','LineWidth',2,'Color','k')
+end
