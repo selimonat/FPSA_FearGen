@@ -75,6 +75,11 @@ end
 % is not done individually.
 % compute single subject correlation matrices
 %% plot and save single subject fixations maps 
+p = Project;
+subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
+subs = setdiff(subs,[20 22 7]);
+fix = Fixmat(subs, [2 4]);
+
 tsub = length(unique(fix.subject));
 cormat = nan(16,16,tsub);
 pval = nan(16,16,tsub);
@@ -97,34 +102,101 @@ for subject = unique(fix.subject);
     fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
-%%
+%% plot fisher transformed
+cormatz = fisherz_inverse(median(fisherz(cormat),3));
+cormatz = CancelDiagonals(cormatz,NaN);
+
 figure
 subplot(1,2,1);
-imagesc(median(cormat,3),[-.1 .1]);
+imagesc(cormatz(1:8,1:8),[-.4 .15]);
 axis square;colorbar;
 set(gca,'fontsize',15)
 axis off
 subplot(1,2,2);
-imagesc(median(cormat,3),[-.1 .1])
+imagesc(cormatz(9:end,9:end),[-.4 .15])
 axis square;colorbar
 set(gca,'fontsize',15)
 axis off
+%% Linear Model on that with constant, physical similarity, aversive generalization components
+x    = [pi/4:pi/4:2*pi];
 
-%% plot but fisherz transformed
-cormatz = fisherz_inverse(median(fisherz(cormat),3));
-cormatz = CancelDiagonals(cormatz,0);
+const = ones(8);
+const = CancelDiagonals(const,NaN);
+% phys = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
+phys = [cos(x') sin(x')]*[cos(x') sin(x')]';
+phys = CancelDiagonals(phys,NaN);
+gen  = make_gaussian2D(8,8,2,2,4,4); %90 degrees bc this is approx. the mean fwhm in testphase
+gen = CancelDiagonals(gen,NaN);
+
+pick = triu(ones(8),1);
+incl  = pick ~=0;
+X = [const(incl) phys(incl) gen(incl)];
+X(:,2:3)     = [zscore(X(:,2:3))];
+
+%% put them to figure
 figure
-imagesc(cormatz)
-axis square;colorbar;
-set(gca,'fontsize',15)
-axis off
-%% big corrmat (single fixations) RSA
-clear all
-p = Project;
-subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
-subs = setdiff(subs,[20 22 7]);
-fix = Fixmat(subs,[2 4]);
+sp = [2 6];
+lims = [-1 1];
+%plot models
+subplot(sp(1),sp(2),1);
+imagesc(const,lims)
+axis square
+title('constant similarity','fontsize',12);
+colormap(colormapper([1 0 -1]));
+freezeColors
+subplot(sp(1),sp(2),2);
+imagesc(phys,lims)
+axis square
+title('physical similarity','fontsize',12);
+freezeColors
+subplot(sp(1),sp(2),3);
+imagesc(gen,lims)
+axis square
+title('aversive generalization','fontsize',12);
+freezeColors
+for n = 1:3
+    subplot(sp(1),sp(2),n)
+    set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
+    box off
+end
+%% compute loadings on these 
+tsub = 26;
+n = 0;
+while n < 1000
+    i       = randsample(1:tsub,tsub,1);
+    n       = n +1
+    Y = fisherz_inverse(nanmedian(fisherz(cormat(1:8,1:8,i)),3));
+    invalid = ~triu(ones(8),1);
+    Y(invalid(:))   = [];
+    Y               = Y';
+    betas(n,1,:)    = X\Y;
+    Y = fisherz_inverse(nanmedian(fisherz(cormat(9:end,9:end,i)),3));
+    invalid = ~triu(ones(8),1);
+    Y(invalid(:))   = [];
+    Y               = Y';
+    betas(n,2,:)    = X\Y;
+end
+%% plot these betas
+subplot(sp(1),sp(2),7);
+bar(mean(betas(:,:,1)));hold on
+errorbar(mean(betas(:,:,1)),std(betas(:,:,1))./sqrt(length(betas)),'k.');
+axis square
+subplot(sp(1),sp(2),8);
+bar(mean(betas(:,:,2)));hold on
+errorbar(mean(betas(:,:,2)),std(betas(:,:,2))./sqrt(length(betas)),'k.');
+axis square
+subplot(sp(1),sp(2),9);
+bar(mean(betas(:,:,3)));hold on
+errorbar(mean(betas(:,:,3)),std(betas(:,:,3))./sqrt(length(betas)),'k.');
+axis square
+for n = 7:9
+    subplot(sp(1),sp(2),n)
+    set(gca,'XTick',[1 2],'XTickLabel',{'FV','Gen'},'FontSize',12)
+    xlim([0 3])
+    box off
+end
 
+%% big corrmat (single fixations) RSA
 correct = 1;
 tfix = 4;
 corrmat = nan(8*tfix*length(unique(fix.phase)),8*tfix*length(unique(fix.phase)),length(subs));
@@ -150,13 +222,11 @@ for sub = unique(fix.subject)
     end
     corrmat(:,:,sc) = fix.corr;
 end
-% set up figure
-sp = [6,3];
-%%
+
+%% biiig medianmat of single fixations
+medmat = fisherz_inverse(nanmedian(fisherz(corrmat),3));
 figure
-clf
-subplot(sp(1),sp(2),4:12)
-imagesc(fisherz_inverse(nanmedian(fisherz(corrmat),3)),[-.3 .6])
+imagesc(medmat,[-.3 .6])
 colormap('jet')
 freezeColors;
 axis square
@@ -167,102 +237,62 @@ colormap('jet');
 h = colorbar;
 set(h,'YTick',[-.3 0 .3 .6],'fontsize',12);
 cbfreeze(h)
-
-
-%% Linear Model on that with constant, physical similarity, aversive generalization components
-
-medmat = fisherz_inverse(nanmedian(fisherz(corrmat),3));
-
-const = eye(8);
-const(~eye(8))=.9;
-% const = ones(8);
-
-x    = [pi/4:pi/4:2*pi];
-phys            = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
-
-gen   = make_gaussian2D(8,8,4,4,4,4);
-X = [const(:) phys(:) gen(:)];
-
-% for single subjects, just the main diagonals.
-clear betas
+%% loadings of 3 components on this single blocks of this median mat
 block_extract = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-nfix = 4;
-for db = 1:nfix*2;
-    for ind = 1:length(unique(fix.subject))
-        fprintf('Sub No %g, Block %g. \n',sub,db)
-        Y               = block_extract(corrmat(:,:,ind),db,db,1)';
-        mdl = LinearModel.fit(X,Y(:));
-        mdl1 = removeTerms(mdl,'1');
-        R(ind,db)       = mdl1.Rsquared.Adjusted;
-        betas(:,db,ind) = mdl1.Coefficients.Estimate;
-    end
-end
-%single subjects, betas per every block.
-for ind = 1:26
-    for db1 = 1:8;
-        for db2 = 1:8%diagonal blocks
-            Y               = block_extract(corrmat(:,:,ind),db1,db2,1)';
-            mdl = LinearModel.fit(X,Y(:));
-            mdl1 = removeTerms(mdl,'1');
-            RR(ind,db1,db2)        = mdl1.Rsquared.Adjusted;            
-            bbetas(:,db1,db2,ind) = mdl1.Coefficients.Estimate;
-        end
-    end
-end
-bconst = squeeze(nanmean(bbetas(1,:,:,:),4));
-bphys = squeeze(nanmean(bbetas(2,:,:,:),4));
-bgen = squeeze(nanmean(bbetas(3,:,:,:),4));
 
-%% plot everything to second half of figure begun before
-lims = [0 1];
-%plot models
-subplot(sp(1),sp(2),1);
-imagesc(const,lims)
-axis square
-title('constant similarity','fontsize',12);
-colormap(colormapper([1 0 -1]));
-freezeColors
-subplot(sp(1),sp(2),2);
-imagesc(phys,lims)
-axis square
-title('physical similarity','fontsize',12);
-freezeColors
-subplot(sp(1),sp(2),3);
-imagesc(gen,lims)
-axis square
-title('aversive generalization','fontsize',12);
-freezeColors
+for db1 = 1:8
+    for db2 = 1:8
+        fprintf('computing cell %g/%g.\n',db1,db2)
+        Y               = block_extract(medmat,db1,db2,1);
+        invalid = ~triu(ones(8),1);
+        Y(invalid(:))   = [];
+        Y               = Y';
+        betasmed(db1,db2,:) = X\Y;
+    end
+end
+% plot block betas for each component
 for n = 1:3
-    subplot(sp(1),sp(2),n)
-    set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
-    box off
+subplot(sp(1),sp(2),3+n)
+imagesc(betasmed(:,:,n))
+colormap(colormapper([1 0 -1]));
+freezeColors;
+axis image
+set(gca,'XTick',[4 8],'YTick',[4 8],'XTickLabel',{'CS+','CS-'},'YTickLabel',{'CS+','CS-'},'FontSize',12)
 end
-%% plot block betas
-colormap(colormapper([1 0 -1]));
-subplot(sp(1),sp(2),13);imagesc(bconst,[-.4 .4]);axis image;axis off;freezeColors%;h=colorbar;set(h,'YTick',[-.4 .4]);cbfreeze(h);
-subplot(sp(1),sp(2),14);imagesc(bphys,[-.6 .6]);axis image;axis off;freezeColors;%h=colorbar;set(h,'YTick',[-.6 .6]);cbfreeze(h);
-colormap(colormapper([1 0 -1]));
-subplot(sp(1),sp(2),15);imagesc(bgen,[-.06 .06]);axis image;axis off;freezeColors;%h=colorbar;set(h,'YTick',[-.06 .06]);cbfreeze(h);
-
-
-
+%% loadings for single diagonal elements
+n = 0;
+while n < 1000
+    i       = randsample(1:tsub,tsub,1);
+    n       = n +1
+    for db = 1:8%diagonal blocks
+        Y               = block_extract(fisherz_inverse(nanmedian(fisherz(corrmat(:,:,i)),3)),db,db,1);
+        Y(invalid(:))   = [];
+        Y               = Y';
+        betasfix(n,db,:) = X\Y;
+    end
+end
+betadiff = betasfix(:,5:8,:)-betasfix(:,1:4,:);
 %% test - base as barplots
-betadiff = betas(:,5:8,:)-betas(:,1:4,:);
-
+nfix = 4;
 for b = 1:3;
-    subplot(sp(1),sp(2),b+15);
-    bar(1:nfix,mean(betadiff(b,:,:),3),'FaceColor',[.03 .1 .4],'EdgeColor','none')
+    subplot(sp(1),sp(2),9+b);
+    bar(1:nfix,nanmean(betadiff(:,:,b)),'FaceColor',[.03 .1 .4],'EdgeColor','none')
     hold on
-    errorbar(1:nfix,mean(betadiff(b,:,:),3),std(betadiff(b,:,:),0,3)./sqrt(size(corrmat,3)),'k.','LineWidth',2);
+    errorbar(1:nfix,nanmean(betadiff(:,:,b)),nanstd(betadiff(:,:,b))./sqrt(1000),'k.','LineWidth',2);
     xlabel('Fix','FontSize',12)
-    ylim([-.2 .2])
+    xlim([0 5])
+%     ylim([-.2 .2])
     box off
     axis square
-    set(gca,'YTick',[-.2 0 .2])
+    set(gca,'FontSize',12)
 
 end
-subplot(sp(1),sp(2),16);
+subplot(sp(1),sp(2),10);
 ylabel('beta [a.u.]');
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%old stuff
+%%%%%%%%%%%%%%%%%%%%%%%%%
 %% try the same as MDS
 tsub = length(unique(fix.subject));
 dismat_t = zeros(8,8,tsub);
