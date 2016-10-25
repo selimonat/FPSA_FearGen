@@ -743,3 +743,46 @@ end
 % for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
 for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]).*meanmap;end
 for n = 1:27;fix.maps(:,:,n) = reshape(hp(:,n),[50 50]);end
+
+
+%% analyses
+% load all the results, from ph4 as well as ph2, 
+% both random = 0 and random = 1
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph4_NEV18_fwhm5.mat')
+result4_r0 = result;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph4_NEV18_fwhm5_random.mat')
+result4_r1 = result;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph2_NEV18_fwhm5.mat')
+result2_r0 = result;
+load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\svm_analysis\findingparams\SVM_simulations_ph2_NEV18_fwhm5_random.mat')
+result2_r1 = result;
+
+%statistics
+% csp phase 4 better than chance?
+a = squeeze(mean(result4_r0(4,:,:),2));
+b = squeeze(mean(result4_r1(4,:,:),2));
+[h,p] = ttest(a,b)
+
+%csp phase 2 better than chance?
+a = squeeze(mean(result2_r0(4,:,:),2));
+b = squeeze(mean(result2_r1(4,:,:),2));
+[h,p] = ttest(a,b)
+
+%fit tuning to ph4
+data.x = -135:45:180;
+data.y = squeeze(mean(mean(result4_r0,2),3));
+data.ids = NaN;
+t = Tuning(data);
+t.SingleSubjectFit(8)
+10.^-t.fit_results.pval
+%fit tuning to ph2
+data.x = -135:45:180;
+data.y = squeeze(mean(mean(result4_r0,2),3));
+data.ids = NaN;
+t = Tuning(data);
+t.SingleSubjectFit(8)
+10.^-t.fit_results.pval
+%because this is also fittable, we check CS+ vs CS- here
+a = squeeze(mean(result2_r0(4,:,:),2));
+b = squeeze(mean(result2_r0(8,:,:),2));
+[h,p] = ttest(a,b)
