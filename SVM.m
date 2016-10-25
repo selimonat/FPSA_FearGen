@@ -769,20 +769,43 @@ b = squeeze(mean(result2_r1(4,:,:),2));
 [h,p] = ttest(a,b)
 
 %fit tuning to ph4
+%average
 data.x = -135:45:180;
-data.y = squeeze(mean(mean(result4_r0,2),3));
+data.y = squeeze(mean(mean(result4_r0,2),3))';
 data.ids = NaN;
-t = Tuning(data);
-t.SingleSubjectFit(8)
-10.^-t.fit_results.pval
+t4 = Tuning(data);
+t4.SingleSubjectFit(8)
+10.^-t4.fit_results.pval
+%don't average
+data.y = squeeze(mean(result4_r0,2))'
+data.x = repmat(-135:45:180,[26 1]);
+data.ids = 1:26;
+t4 = Tuning(data);
+t4.GroupFit(8)
+10.^t4.groupfit.pval
 %fit tuning to ph2
 data.x = -135:45:180;
-data.y = squeeze(mean(mean(result4_r0,2),3));
+data.y = squeeze(mean(mean(result2_r0,2),3))';
 data.ids = NaN;
-t = Tuning(data);
-t.SingleSubjectFit(8)
-10.^-t.fit_results.pval
+t2 = Tuning(data);
+t2.SingleSubjectFit(8)
+10.^-t2.fit_results.pval
+%don't average
+data.y = squeeze(mean(result2_r0,2))'
+data.x = repmat(-135:45:180,[26 1]);
+data.ids = 1:26;
+t2 = Tuning(data);
+t2.GroupFit(8)
+10.^-t2.groupfit.pval
+
 %because this is also fittable, we check CS+ vs CS- here
 a = squeeze(mean(result2_r0(4,:,:),2));
 b = squeeze(mean(result2_r0(8,:,:),2));
 [h,p] = ttest(a,b)
+
+
+%% plot that thing @figures_JoV
+r2 = result2_r0;
+r4 = result4_r0;
+r20 = result2_r1;
+r40 = result4_r1;
