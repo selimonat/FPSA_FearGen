@@ -831,58 +831,42 @@ fix.maps = cat(3,r2.AVE,r4.AVE);
 fix.plot
 cbh = colorbar;
 set(cbh,'YTick',-.04:.02:.04,'FontSize',12)
-%%
+%% SVM classified as CSP
 close all
+x = -135:45:180;
+xhd = linspace(-165,210,100);
 figure
-c = 0;
-for bla = [r2 r4]
-    c = c+1;
-    m = mean(mean(bla.result,2),3)
-    sd = std(mean(bla.result,2),0,3)
-    sem = sd./sqrt(size(bla.result,3));
-    subplot(1,2,c)
-    b = bar(m);
-    SetFearGenBarColors(b);
-    hold on;
-    errorbar(m,sem,'k.','LineWidth',2);
-    axis square
-    box off
-    ylim([.3 .7])
-    set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',.3:.1:.7,'FontSize',12)
-    xlim([0 9])
-    hold on;
-    line([.5 8.5],[.5 .5],'Color','k')
-end
-subplot(1,2,1);
+subplot(1,2,1)
+m = mean(mean(r2,2),3);
+sd = std(mean(r2,2),0,3);
+sem = sd./sqrt(size(r2,3));
+b = bar(x,m);
+SetFearGenBarColors(b);
+hold on;
+errorbar(x,m,sem,'k.','LineWidth',2);
+plot(xhd,t2.fit_results.fitfun(xhd,t2.fit_results.params(1:4)),'k','LineWidth',2)
 ylabel('Classified as CS+','FontSize',12)
-
-%%
-clf
-subplot(1,3,1);
-b = bar(mean(mean(result_ph2,2),3));
-hold on;
-SetFearGenBarColors(b);
-errorbar(mean(mean(result_ph2,2),3),std(mean(result_ph2,2),0,3)./sqrt(size(result_ph2,3)),'k.','LineWidth',2);
 title('Free Viewing','fontsize',14)
-ylabel('Classified as CS+','FontSize',12);
-subplot(1,3,2);
-b = bar(mean(mean(result_ph4,2),3));
-hold on;
+
+subplot(1,2,2);
+m = mean(mean(r4,2),3);
+sd = std(mean(r4,2),0,3);
+sem = sd./sqrt(size(r4,3));
+b = bar(x,m);
 SetFearGenBarColors(b);
-errorbar(mean(mean(result_ph4,2),3),std(mean(result_ph4,2)./sqrt(size(result_ph4,3)),0,3),'k.','LineWidth',2);
-title('Generalization','fontsize',14)
-subplot(1,3,3);
-b = bar(mean(mean(result_90,2),3),'FaceColor',[.5 .5 .5]);
 hold on;
-errorbar(mean(mean(result_90,2),3),std(mean(result_90,2),0,3)./sqrt(size(result_90,3)),'k.','LineWidth',2);
-title('Similarity Tuning','fontsize',14)
-ylabel('Classified as CS+ - 90°','FontSize',12);
+errorbar(x,m,sem,'k.','LineWidth',2);
+plot(xhd,t4.fit_results.fitfun(xhd,t4.fit_results.params(1:4)),'k','LineWidth',2)
+title('Generalization','fontsize',14)
+
 EqualizeSubPlotYlim(gcf);
-for n = 1:3;
-    subplot(1,3,n);
+for n = 1:2;
+    subplot(1,2,n);
     set(gca,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'},'YTick',.3:.1:.7,'FontSize',12)
     ylim([.3 .7])
     box off
     axis square
-    line([.5 8.5],[.5 .5],'LineStyle',':','LineWidth',2,'Color','k')
+    xlim([-180 225])
+    line([-180 225],[.5 .5],'LineStyle',':','LineWidth',2,'Color','k')%.5 8.5 for 1:8 xscale
 end
+SaveFigure('classified_as_csp.eps')
