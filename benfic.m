@@ -3,7 +3,7 @@ p = Project;
 subjects = intersect(p.subjects_1500,find(sum(p.getMask('PMF'),2)==4));
 subjects = intersect(subjects,find(p.getMask('RATE')));
 subjects = intersect(find(p.getMask('ET_feargen').*p.getMask('ET_discr')),subjects);
-subjects = intersect(subjects,find(sum(p.getMask('SCR'),2)==3));
+%subjects = intersect(subjects,find(sum(p.getMask('SCR'),2)==3));
 
 fix  = Fixmat(subjects,[1 3 4 5]);
 
@@ -20,13 +20,13 @@ for ns = unique(fix.subject)
 end
 %
 
-load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_beneficial_locations.mat')
+% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_beneficial_locations.mat')
 a    = mat(:,17);
 b    = mat(:,19);
-c    = [DD(12,:)-DD(16,:)]';
+% c    = [DD(12,:)-DD(16,:)]';
 d    = mat(:,11);
 e    = mat(:,20);
-f    = [DD(20,:)-DD(24,:)]';
+% f    = [DD(20,:)-DD(24,:)]';
 % % exclude sub 46 bc no usable eye data
 % a(8) = [];
 % b(8) = [];
@@ -37,11 +37,11 @@ fix.maps = M;
 type = 'Spearman';
 [r_a, p_a]     = corr(fix.vectorize_maps',a,'Type',type);
 [r_b, p_b]     = corr(fix.vectorize_maps',b,'Type',type);
-[r_c, p_c]     = corr(fix.vectorize_maps',c,'Type',type);
+% [r_c, p_c]     = corr(fix.vectorize_maps',c,'Type',type);
 [r_d, p_d]     = corr(fix.vectorize_maps',d,'Type',type);
 
 [r_e, p_e]     = corr(fix.vectorize_maps',e,'Type',type);
-[r_f, p_f]     = corr(fix.vectorize_maps',f,'Type',type);
+% [r_f, p_f]     = corr(fix.vectorize_maps',f,'Type',type);
 % crit  = .10;
 % r_a(p_a>crit) = nan;
 % r_b(p_b>crit) = nan;
@@ -51,7 +51,7 @@ type = 'Spearman';
 % r_f(p_f>crit) = nan;
 
 
-fix.maps = reshape([r_a,r_b,r_c,r_d,r_e,r_f],[size(M,1) size(M,2) 6]);
+fix.maps = reshape([r_a,r_b,r_d,r_e],[size(M,1) size(M,2) 4]);
 figure;fix.plot;%title(mat2str(tags{n}),'interpreter','none');
 for n=1:6
     subplot(2,3,n)
@@ -119,5 +119,41 @@ disc(isnan(disc)) = 0;
 disc = -disc;
 subjload = disc'*subjmaps;
 [rho,pval] = corr(mat(:,17),subjload')
+
+
+%% bootstrap with rank correlation
+
+clear all;
+p        = Project;
+subjects = intersect(p.subjects_1500,find(sum(p.getMask('PMF'),2)==4));
+subjects = intersect(subjects,find(p.getMask('RATE')));
+subjects = intersect(find(p.getMask('ET_feargen').*p.getMask('ET_discr')),subjects);
+
+fix  = Fixmat(subjects,[1 3 4 5]);
+g    = Group(subjects);
+mat  = g.parameterMat;
+
+% fix.kernel_fwhm = 72;
+M = [];
+for ns = unique(fix.subject)
+    query = {'subject' ns 'deltacsp' [0 180 18000]};
+    fix.getmaps(query);
+    M     = cat(3,M,fix.maps);
+end
+%
+
+% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_beneficial_locations.mat')
+behav    = mat(:,[17 19 11 20]);
+fix.maps = M;
+superfun = @(x,y) corr(x,y,'type','pearson');
+
+R = [];
+for nparam = 1:size(behav,2)    
+    fprintf('Param: %03d\n',nparam);
+    tic
+    R(:,:,nparam) = bootstrp(1000,superfun,fix.vectorize_maps',behav(:,nparam));
+    toc
+end
+
 
 
