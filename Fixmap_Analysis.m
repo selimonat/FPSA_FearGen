@@ -98,9 +98,11 @@ for subject = unique(fix.subject);
     % plot and save fixation maps
     fix.getmaps(v{:});
     maps = fix.maps;
+    
+    
     fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
     fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
-    % RSA ROI searchlight here
+    
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
 %% plot fisher transformed
@@ -2690,3 +2692,87 @@ end
 
 fix.maps = cat(3,reshape(squeeze(mean(amp1,3)),[500 500]),reshape(squeeze(mean(amp2,3)),[500 500]));
 fix.plot
+%% search light analysis
+x    = [pi/4:pi/4:2*pi];
+
+const = ones(8);
+const = CancelDiagonals(const,NaN);
+% phys = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
+phys = [cos(x') sin(x')]*[cos(x') sin(x')]';
+phys = CancelDiagonals(phys,NaN);
+gen  = make_gaussian2D(8,8,2,2,4,4); %90 degrees bc this is approx. the mean fwhm in testphase
+gen = CancelDiagonals(gen,NaN);
+
+pick = triu(ones(8),1);
+incl  = pick ~=0;
+X = [const(incl) phys(incl) gen(incl)];
+X(:,2:3)     = [zscore(X(:,2:3))];
+X(:,3) = [];
+diameter = 10;%pixels
+
+
+
+
+p = Project;
+subs = intersect(Project.subjects_1500,find(p.getMask('ET_feargen')));
+subs = setdiff(subs,[20 22 7]);
+fix = Fixmat(subs, [2 4]);
+
+[XX YY]    = meshgrid(1:fix.rect(3),1:fix.rect(4));
+betas = nan(500*500,2);
+
+tsub = length(unique(fix.subject));
+cormat = nan(16,16,tsub);
+pval = nan(16,16,tsub);
+subc            = 0;
+for subject = unique(fix.subject);
+    subc = subc + 1
+    %creaete the query cell
+    v = [];
+    c = 0;
+    for ph = [2 4]
+        for cond = -135:45:180
+            c    = c+1;
+            v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject};
+        end
+    end
+    % plot and save fixation maps
+    fix.getmaps(v{:});
+    maps = fix.maps;
+    
+    for xx = 1:diameter:size(maps,2);
+        [yy xx]
+        for yy = 1:diameter:size(maps,1);            
+            roi = sqrt((XX - xx).^2+(YY - yy).^2)<=diameter/2;
+            DATA = [];
+            for ncond = 1:size(maps,3)
+                M             = maps(:,:,ncond);
+                DATA(:,ncond) = M(roi(:));
+            end
+            if all(sum(DATA));
+                %mean correction
+                DATA(:,1:8) = demean(DATA(:,1:8)')';
+                DATA(:,9:end) = demean(DATA(:,9:end)')';
+                cormat = corr(DATA);
+                %model
+                Y = cormat(9:end,9:end);
+                invalid = ~triu(ones(8),1);
+                Y(invalid(:))   = [];
+                Y               = Y';
+                betas(roi == 1,:,subc) = repmat([X\Y]',sum(roi(:)),1);
+            else                
+                cmat = 0;
+                betas(roi == 1,:,subc) = repmat([NaN NaN],sum(roi(:)),1); 
+            end            
+        end        
+        subplot(1,2,1);imagesc(fix.stimulus);hold on;h=imagesc(reshape(nanmean(betas(:,1,:),3),[500 500]));set(h,'alphaData',Scale(reshape(nanmean(betas(:,1,:),3),[500 500]))*.9+.1 );hold off;
+        subplot(1,2,2);imagesc(fix.stimulus);hold on;h=imagesc(reshape(nanmean(betas(:,2,:),3),[500 500]));set(h,'alphaData',Scale(reshape(nanmean(betas(:,2,:),3),[500 500]))*.9+.1 );hold off
+%         subplot(1,3,3);imagesc(reshape(nanmean(betas(:,3,:),3),[500 500]));
+        drawnow;
+    end
+    
+    fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
+    fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
+    
+    [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
+end
