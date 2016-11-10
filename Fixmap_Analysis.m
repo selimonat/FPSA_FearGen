@@ -100,6 +100,7 @@ for subject = unique(fix.subject);
     maps = fix.maps;
     fix.maps(:,:,1:8)     = maps(:,:,1:8) - repmat(mean(maps(:,:,1:8),3),[1 1 8]);%take out the average
     fix.maps(:,:,9:end)   = maps(:,:,9:end) - repmat(mean(maps(:,:,9:end),3),[1 1 8]);%take out the average
+    % RSA ROI searchlight here
     [cormat(:,:,subc) pval(:,:,subc)] = fix.corr;
 end
 %% plot fisher transformed
@@ -176,18 +177,23 @@ while n < 1000
     Y               = Y';
     betas(n,2,:)    = X\Y;
 end
+% get errorbars for that
+ci = prctile(betas,[2.5 97.5]);
 %% plot these betas
 subplot(sp(1),sp(2),7);
 bar(mean(betas(:,:,1)));hold on
-errorbar(mean(betas(:,:,1)),std(betas(:,:,1))./sqrt(length(betas)),'k.');
+errorbar(1,mean(betas(:,1,1)),mean(betas(:,1,1))-ci(1,1,1),ci(2,1,1)-mean(betas(:,1,1)),'k.');
+errorbar(2,mean(betas(:,2,1)),mean(betas(:,2,1))-ci(1,2,1),ci(2,2,1)-mean(betas(:,2,1)),'k.');
 axis square
 subplot(sp(1),sp(2),8);
 bar(mean(betas(:,:,2)));hold on
-errorbar(mean(betas(:,:,2)),std(betas(:,:,2))./sqrt(length(betas)),'k.');
+errorbar(1,mean(betas(:,1,2)),mean(betas(:,1,2))-ci(1,1,2),ci(2,1,2)-mean(betas(:,1,2)),'k.');
+errorbar(2,mean(betas(:,2,2)),mean(betas(:,2,2))-ci(1,2,2),ci(2,2,2)-mean(betas(:,2,2)),'k.');
 axis square
 subplot(sp(1),sp(2),9);
 bar(mean(betas(:,:,3)));hold on
-errorbar(mean(betas(:,:,3)),std(betas(:,:,3))./sqrt(length(betas)),'k.');
+errorbar(1,mean(betas(:,1,3)),mean(betas(:,1,3))-ci(1,1,3),ci(2,1,3)-mean(betas(:,1,3)),'k.');
+errorbar(2,mean(betas(:,2,3)),mean(betas(:,2,3))-ci(1,2,3),ci(2,2,3)-mean(betas(:,2,3)),'k.');
 axis square
 for n = 7:9
     subplot(sp(1),sp(2),n)
@@ -272,13 +278,19 @@ while n < 1000
     end
 end
 betadiff = betasfix(:,5:8,:)-betasfix(:,1:4,:);
+% get the ci
+ci2 = prctile(betadiff,[2.5 97.5]);
+
 %% test - base as barplots
 nfix = 4;
 for b = 1:3;
     subplot(sp(1),sp(2),9+b);
     bar(1:nfix,nanmean(betadiff(:,:,b)),'FaceColor',[.03 .1 .4],'EdgeColor','none')
     hold on
-    errorbar(1:nfix,nanmean(betadiff(:,:,b)),nanstd(betadiff(:,:,b))./sqrt(1000),'k.','LineWidth',2);
+    errorbar(1,nanmean(betadiff(:,1,b)),nanmean(betadiff(:,1,b))-ci2(1,1,b),ci2(2,1,b)-nanmean(betadiff(:,1,b)),'k.','LineWidth',2);
+    errorbar(2,nanmean(betadiff(:,2,b)),nanmean(betadiff(:,2,b))-ci2(1,2,b),ci2(2,2,b)-nanmean(betadiff(:,2,b)),'k.','LineWidth',2);
+    errorbar(3,nanmean(betadiff(:,3,b)),nanmean(betadiff(:,3,b))-ci2(1,3,b),ci2(2,3,b)-nanmean(betadiff(:,3,b)),'k.','LineWidth',2);
+    errorbar(4,nanmean(betadiff(:,4,b)),nanmean(betadiff(:,4,b))-ci2(1,4,b),ci2(2,4,b)-nanmean(betadiff(:,4,b)),'k.','LineWidth',2);
     xlabel('Fix','FontSize',12)
     xlim([0 5])
 %     ylim([-.2 .2])
@@ -289,6 +301,12 @@ for b = 1:3;
 end
 subplot(sp(1),sp(2),10);
 ylabel('beta [a.u.]');
+ylim([-.05 .2]);set(gca,'YTick',[0 .2])
+subplot(sp(1),sp(2),11);
+ylim([-.05 .15]);set(gca,'YTick',[0 .15])
+subplot(sp(1),sp(2),12);
+ylim([-.05 .15]);set(gca,'YTick',[0 .15])
+
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%old stuff
