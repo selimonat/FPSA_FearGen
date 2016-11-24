@@ -132,13 +132,39 @@ elseif strcmp(varargin{1},'get_betas')
     % get errorbars for that
     ci           = prctile(betas,[2.5 97.5]);
     varargout{1} = squeeze(mean(betas));
-    varargout{2} = ci;
+    varargout{2} = ci;    
+    %
+elseif strcmp(varargin{1},'get_betas_singlesubject')    
+    %% compute loadings on these
+    sim    = varargin{2};
+    tsub   = size(sim.correlation,1);
+    tblock = length(squareform(sim.correlation(1,:)))/8;
+    fprintf('Found %02d blocks\n',tblock);
+    betas  = [];
+    X      = FearCloud_RSA('get_design_matrix');
+    for nblock = 1:tblock        
+        data   = FearCloud_RSA('get_block',sim,nblock,nblock);
+        for n = 1:tsub            
+            Y                  = ( 1-squareform(mean(data(:,:,n),3)) );
+            betas(n,:,nblock)  = X\Y';
+        end
+    end
+    % get errorbars for that
+    ci           = std(betas)./sqrt(tsub);
+    varargout{1} = squeeze(mean(betas));
+    varargout{2} = [mean(betas)-ci/2 ;mean(betas)+ci/2];
+    varargout{3} = betas;
     %
 elseif strcmp(varargin{1},'plot_betas')    
-
+    %%
+    if nargin == 1
     sim        = FearCloud_RSA('get_rsa',1:100);
     [betas ci] = FearCloud_RSA('get_betas',sim);
-    %%
+    else
+        betas = varargin{2};
+        ci    = varargin{3};
+    end
+    %
     color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
     c= -1;
     for n = 1:size(betas,1);%betas
@@ -147,11 +173,15 @@ elseif strcmp(varargin{1},'plot_betas')
             c = c+1;            
             h=bar(c,betas(n,m),1,'facecolor',color{m,n},'edgecolor',color{m,n});
             hold on;
-            errorbar(c,betas(n,m),betas(n,m)-ci(1,n,m),betas(n,m)-ci(2,n,m))
+            errorbar(c,betas(n,m),betas(n,m)-ci(1,n,m),betas(n,m)-ci(2,n,m),'k')
         end
     end
     hold off;    
-  
+    box off
+    set(gca,'xtick',1:c,'xticklabel','','color','none')
+    ylabel('\beta weights')
+    xlabel('regressors')
+    
 elseif strcmp(varargin{1},'searchlight')
     
     fixmat   = varargin{2};
