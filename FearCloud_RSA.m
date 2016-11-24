@@ -55,6 +55,7 @@ elseif  strcmp(varargin{1},'get_fixmap')
     varargout{1} = maps;
 elseif strcmp(varargin{1},'get_rsa')
     %% COMPUTE THE SIMILARITY MATRIX
+    %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d.mat',path_project,fixations(1),fixations(end));    
     %
@@ -69,60 +70,16 @@ elseif strcmp(varargin{1},'get_rsa')
         end        
         save(filename,'sim');
     else
-        load(filename)
+        load(filename);
     end
-    varargout{1} = sim;
-elseif strcmp(varargin{1},'get_rsa_single')
-    %% COMPUTE THE SIMILARITY MATRIX
-    if nargin > 1
-        correct =varargin{2};
-    end
-    filename = sprintf('%s/midlevel/rsa_all_single_correction_%d.mat',path_project,correct);
-    tfix = 5;
-    %
-    if exist(filename) ==0 ;
-        fix      = FearCloud_RSA('get_fixmat');
-        tsub     = length(unique(fix.subject));
-        subc     = 0;
-        for subject = unique(fix.subject);
-            subc = subc + 1;
-            %creaete the query cell
-            v    = [];
-            c    = 0;
-            for ph = [2 4]
-                for nfix = 1:tfix
-                    for cond = -135:45:180
-                        c    = c+1;
-                        v{c} = {'phase', ph, 'deltacsp' cond 'subject' subject 'fix' nfix};
-                    end
-                end
-            end
-            % plot and save fixation maps
-            fix.getmaps(v{:});
-            maps          = fix.vectorize_maps;
-            if correct
-                i         = 1:(8*tfix);
-                maps(:,i) = demean(maps(:,i)')';
-                i         = (8*tfix)+1:size(maps,2);
-                maps(:,i) = demean(maps(:,i)')';
-            end
-            for method = {'euclidean' 'cosine' 'correlation'}
-                fprintf('Subject: %03d, Method: %s\n',subject,method{1});
-                sim.(method{1})(subc,:)       = pdist(maps',method{1});%both phases simultaneously           
-            end
-        end
-        save(filename,'sim');
-    else
-        load(filename)
-    end
-    varargout{1} = sim;        
+    varargout{1} = sim;       
 elseif strcmp(varargin{1},'plot_rsa');
     %% plot correlation matrices without fisher
-    figure(1000);
+    figure;
     sim     = varargin{2};
     cormatz = 1-squareform(nanmean(sim.correlation));
     cormatz = CancelDiagonals(cormatz,NaN);        
-    [d u] = GetColorMapLimits(cormatz,2.5);
+    [d u]   = GetColorMapLimits(cormatz,2.5);
     imagesc(cormatz,[d u]);    
     axis square;colorbar
     set(gca,'fontsize',15)
@@ -166,10 +123,10 @@ elseif strcmp(varargin{1},'get_betas')
         n      = 0;
         data   = FearCloud_RSA('get_block',sim,nblock,nblock);
         while n < tbootstrap
-            n               = n +1;
-            i               = randsample(1:tsub,tsub,1);
-            Y               = 1-squareform(nanmean(data(:,:,i),3));
-            betas(n,nblock,:)  = X\Y';
+            n                  = n +1;
+            i                  = randsample(1:tsub,tsub,1);
+            Y                  = ( 1-squareform(mean(data(:,:,i),3)) );
+            betas(n,:,nblock)  = X\Y';
         end
     end
     % get errorbars for that
@@ -178,44 +135,77 @@ elseif strcmp(varargin{1},'get_betas')
     varargout{2} = ci;
     %
 elseif strcmp(varargin{1},'plot_betas')    
-%     betas  = varargin{2};
-%     ci     = varargin{3};
-%     tbetas = size(betas,2);
-    %% plot these betas
-%     keyboard
-% %     subplot(1,size(betas,2),1);
-% %     bar(betas');hold on
-% %     errorbar(1:tbetas,betas',betas-ci(1,1,1),ci(2,1,1)-mean(betas(:,1,1)),'k.');
-% %     errorbar(2,mean(betas(:,2,1)),mean(betas(:,2,1))-ci(1,2,1),ci(2,2,1)-mean(betas(:,2,1)),'k.');
-% %     axis square    
+
+    sim        = FearCloud_RSA('get_rsa',1:100);
+    [betas ci] = FearCloud_RSA('get_betas',sim);
+    %%
+    color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
+    c= -1;
+    for n = 1:size(betas,1);%betas
+        c=c+1;
+        for m = 1:size(betas,2)%phases     
+            c = c+1;            
+            h=bar(c,betas(n,m),1,'facecolor',color{m,n},'edgecolor',color{m,n});
+            hold on;
+            errorbar(c,betas(n,m),betas(n,m)-ci(1,n,m),betas(n,m)-ci(2,n,m))
+        end
+    end
+    hold off;    
+  
 elseif strcmp(varargin{1},'searchlight')
     
-    fixmat   = varargin{2}
+    fixmat   = varargin{2};
     b1       = varargin{3};
     b2       = varargin{4};
+    filename = DataHash({unique(fixmat.subject),fixmat.kernel_fwhm,b1,b2});
     %
     tsub     = length(unique(fixmat.subject));    
     fun      = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
-    subc     = 0;
-    for subject = unique(fixmat.subject);
-        fprintf('Processing subject %03d\n',subject);
-        subc = subc + 1;
-        % craete the query cell
-        maps      = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
-        maps      = reshape(maps,[500 500 16]);        
-        B1(:,:,:,subc,1) = blockproc(maps(:,:,1:8),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true);
-        B1(:,:,:,subc,2) = blockproc(maps(:,:,9:16),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true);
-        c = 0;
-        for m = 1:2
-            for n = 1:3
-                c = c +1;
-                subplot(2,3,c)
-                imagesc(nanmean(B1(:,:,n,:,m),4));colorbar;
-                drawnow;
+    phc = 0;
+    for phase = [2 4];
+        subc  = 0;
+        phc   = phc + 1;
+        conds = condition_borders{phc};
+        for subject = unique(fixmat.subject);
+            subc             = subc + 1;                
+            fprintf('Processing subject %03d\n',subject);
+            path_write = sprintf('%ssub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);
+            if exist(path_write) == 0                                
+                % create the query cell
+                maps             = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
+                maps             = reshape(maps(:,conds),[500 500 length(conds)]);
+                out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
+                save(path_write,'out');
+            else                
+                fprintf('already cached...\n');
+                load(path_write);
             end
+            B1(:,:,:,subc,phc)   = out;
+            %
+            %                 c = 0;
+            %                 for m = 1:2
+            %                     for n = 1:3
+            %                         c = c +1;
+            %                         subplot(2,3,c)
+            %                         imagesc(nanmean(B1(:,:,n,:,m),4));colorbar;
+            %                         drawnow;
+            %                     end
+            %                 end
         end
     end
     varargout{1} = B1;
+elseif strcmp(varargin{1},'plot_searchlight')'
+    %
+    fixmat = varargin{2};
+    b1     = varargin{3};
+    b2     = varargin{4};
+    out    = FearCloud_RSA('searchlight',fixmat,b1,b2);    
+    out    = squeeze(nanmean(out,4));
+    out    = reshape(out,[500 500 6]);
+    fixmat.maps        = out;    
+    fixmat.cmap_limits = .5;
+    fixmat.plot;
+    
 elseif strcmp(varargin{1},'searchlight_bs')
     
     fixmat   = varargin{2}
@@ -232,8 +222,8 @@ elseif strcmp(varargin{1},'searchlight_bs')
         subject          = randsample(1:tsub,tsub,1);
         maps             = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
         maps             = reshape(maps,[500 500 16]);
-        B1(:,:,:,bs,1) = blockproc(maps(:,:,1:8),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true);
-        B1(:,:,:,bs,2) = blockproc(maps(:,:,9:16),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true);
+        B1(:,:,:,bs,1)   = blockproc(maps(:,:,1:8),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
+        B1(:,:,:,bs,2) = blockproc(maps(:,:,9:16),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
         c = 0;
         for m = 1:2
             for n = 1:3
@@ -250,7 +240,7 @@ elseif strcmp(varargin{1},'fun_handle')
    maps = reshape(maps,[size(maps,1)*size(maps,2) size(maps,3)]);
    if all(sum(abs(maps)))
       Y            = 1-pdist(maps','correlation');
-      X            =  FearCloud_RSA('get_design_matrix');      
+      X            = FearCloud_RSA('get_design_matrix');      
       betas(1,1,:) = X\Y';      
    else
        betas(1,1,:)= [NaN NaN NaN];
@@ -260,7 +250,7 @@ elseif strcmp(varargin{1},'fix_counts')
     
     fixmat         = varargin{2};
     fixmat.unitize = 0;
-    subjects = unique(fixmat.subject);
+    subjects       = unique(fixmat.subject);
     c = 0;
     for ns = subjects(:)'
         fprintf('Counting fixations in subject: %03d.\n',ns)
@@ -274,6 +264,42 @@ elseif strcmp(varargin{1},'fix_counts')
         end           
     end
     varargout{1} = count;
+    
+elseif strcmp(varargin{1},'plot_counts')    
+    c = varargin{2};
+    t      = {'Before' 'After'};
+    figure;
+    for np = 1:2;
+        subplot(1,2,np);
+        violin(c(:,1:2,np),[]);
+        set(gca,'xtick',1:2,'xticklabel',{'left' 'right'})
+        title(t{np});
+        ylabel('Fixation Counts');
+    end
+
+elseif strcmp(varargin{1},'beta_counts')    
+    
+    fixmat      = varargin{2};
+    b1          = varargin{3};
+    b2          = varargin{4};
+    out         = FearCloud_RSA('searchlight',fixmat,b1,b2);    
+    for np = 1:2
+        for ns = 1:size(out,4);
+            for beta = 2%1:size(out,3)
+               map            = out(:,:,beta,ns,np); 
+               count(ns,:,np) = fixmat.EyeNoseMouth(map);
+            end            
+        end
+    end    
+    varargout{1} = count;    
+    
+    
+elseif strcmp(varargin{1},'anova')    
+    
+    y = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
+side = [ones(65,1);ones(65,1)*2;ones(65,1);ones(65,1)*2];
+phase =[ones(65,1);ones(65,1);ones(65,1)*2;ones(65,1)*2];
+    
 end
 % %     %% loadings for single diagonal elements
 % %     n = 0;
