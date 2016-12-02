@@ -7,27 +7,42 @@ condition_borders = {1:8 9:16};
 tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
+current_subject_pool =1;
 
-if strcmp(varargin{1},'get_fixmat');
+if strcmp(varargin{1},'get_subject_pool');
+        
+    filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);    
+    if exist(filename) == 0
+        if current_subject_pool == 1%find tuned people;
+            
+            fprintf('finding tuned subjects first...\n');
+            p=[];sub=[];pval=[];;
+            for n = 1:82;
+                s = Subject(n);
+                p = [p ; s.feargen_rating(4).params];
+                pval = [pval ; s.feargen_rating(4).pval];
+                sub = [sub;n];
+            end
+            valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);
+            fprintf('Found %03d valid subjects...\n',sum(valid));
+            subjects = setdiff(sub(valid),[13 38]);
+            %subject 13's phase02 has no valid eye data, exluding that too.
+            %subject 30's correlation matrix is full of nans, will not investigate
+            %it further but just exclude.
+            save(filename,'subjects');
+    %    elseif%other pools
+        end
+    else
+        load(filename);
+    end
+    varargout{1} = subjects;
+elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
-    filename = sprintf('%s/midlevel/fixmat.mat',path_project);
+    filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d.mat',path_project,current_subject_pool);
     fix = [];
     if exist(filename) == 0
         
-        fprintf('finding tuned subjects first...\n');
-        p=[];sub=[];pval=[];;
-        for n = 1:82;
-            s = Subject(n);
-            p = [p ; s.feargen(4).params];
-            pval = [pval ; s.feargen(4).pval];
-            sub = [sub;n];
-        end
-        valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);
-        fprintf('Found %03d valid subjects...\n',sum(valid));
-        subjects = setdiff(sub(valid),[13 38]);
-        %subject 13's phase02 has no valid eye data, exluding that too.
-        %subject 30's correlation matrix is full of nans, will not investigate
-        %it further but just exclude.
+        subjects = FearCloud_RSA('get_subject_pool',current_pool)
         fix      = Fixmat(subjects,[2 4]);
         save(filename,'fix');
     else
@@ -41,7 +56,7 @@ elseif strcmp(varargin{1},'get_behavior')
         fprintf('subject:%03d...\n',ns);
         s = Subject(ns);
         dummy = s.feargen(4).params;
-        p = [p ; dummy(1) vM2FWHM(dummy(2)) abs(dummy(3)))];
+        p = [p ; dummy(1) vM2FWHM(dummy(2)) abs(dummy(3))];
     end
     varargout{1} = p;
     
@@ -68,7 +83,7 @@ elseif strcmp(varargin{1},'get_rsa')
     %% COMPUTE THE SIMILARITY MATRIX
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
-    filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d.mat',path_project,fixations(1),fixations(end));    
+    filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);    
     %
     if exist(filename) ==0 ;
         fixmat   = FearCloud_RSA('get_fixmat',1);
@@ -170,8 +185,8 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
 elseif strcmp(varargin{1},'plot_betas')    
     %%
     if nargin == 1
-    sim        = FearCloud_RSA('get_rsa',1:100);
-    [betas ci] = FearCloud_RSA('get_betas',sim);
+        sim        = FearCloud_RSA('get_rsa',1:100);
+        [betas ci] = FearCloud_RSA('get_betas',sim);
     else
         betas = varargin{2};
         ci    = varargin{3};
@@ -349,11 +364,11 @@ elseif strcmp(varargin{1},'figure03')
     d = -.3;u = .15;
     fs = 12;
 %     figure;
-%     set(gcf,'position',[0 0 1000 500]);
+    set(gcf,'position',[2132          23         600        1048]);
     subplot(6,6,[1 2 3 7 8 9 13 14 15]);
     h = imagesc(cormatz(1:8,1:8),[d u]);    
 %     contourf(CancelDiagonals(cormatz(1:8,1:8),mean(diag(cormatz(1:8,1:8),-1))),4);
-    axis square;h2=colorbar;
+    axis square;
     set(gca,'fontsize',fs,'xtick',1:8,'ytick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',labels)
 %     set(h,'alphaData',~diag(ones(1,8)));    
     title('Before');
@@ -361,7 +376,7 @@ elseif strcmp(varargin{1},'figure03')
     subplot(6,6,[4 5 6 10 11 12 16 17 18]);
     h=imagesc(cormatz(9:16,9:16),[d u]);    
 %     contourf(CancelDiagonals(cormatz(9:16,9:16),mean(diag(cormatz(9:16,9:16),-1))),4);
-    axis square;h2 = colorbar
+    axis square;h2 = colorbar;set(h2,'location','east');h2.Position = [.91 .65 0.02 .1];h2.AxisLocation='out'
     set(gca,'fontsize',fs,'xtick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',{''})
     title('After')
     set(h2,'box','off','ticklength',0,'ticks',[d 0 u],'fontsize',fs)
@@ -380,9 +395,37 @@ elseif strcmp(varargin{1},'figure03')
     X = FearCloud_RSA('get_design_matrix');
     imagesc(squareform(X(:,3)),[-1 1]);axis square;axis off
     title(sprintf('CS+\nSimilarity'))
-    %%
-    subplot(6,6,25:36);   
-    FearCloud_RSA('plot_betas');    
+    %%   
+    [betas ci] = FearCloud_RSA('get_betas',sim);
+    
+    location = {[25 26 ] [27 28 ] [29 30 ]};
+    color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
+    c= -1;
+    xticks =[];
+    for n = 1:size(betas,1);%betas        
+        subplot(6,6,location{n});           
+        for m = 1:size(betas,2)%phases                 
+            h=bar(m,betas(n,m),1,'facecolor',color{m,n},'edgecolor',color{m,n});
+            hold on;
+            errorbar(m,betas(n,m),betas(n,m)-ci(1,n,m),betas(n,m)-ci(2,n,m),'k')            
+            box off;
+            if n ==2
+                plot([1 2],[.14 .14],'k-');       
+                plot([1.5],[.15],'k*');
+            elseif n == 3
+                plot([1 2],[.035 .035],'k-');       
+                plot([1.5],[.04],'k*');
+            end
+        end
+        xlim([0 3])
+        hold off;
+        set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' },'XTickLabelRotation',45);
+        SetTickNumber(gca,3,'y');
+        axis square
+        if n == 1
+            ylabel('\beta');
+        end
+    end
     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure03.png','-transparent');
 elseif strcmp(varargin{1},'figure04');
     fixmat  = FearCloud_RSA('get_fixmat');    
@@ -391,6 +434,8 @@ elseif strcmp(varargin{1},'figure04');
     M      = reshape(M,[500 500 6]);
     fs     = 15;
     %%    1st column
+    figure;
+    set(gcf,'position',[ 2132         528        1579         543]);
     d       = -.1;
     u       = .6;
     G      = make_gaussian2D(51,51,32,32,26,26);
@@ -548,6 +593,7 @@ elseif strcmp(varargin{1},'figure04');
     set(h,'alphaData',.8);        
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
     set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)    
+    title(sprintf('Fixation\n probability'))
     %================================================================
     h       = subplot(2,4,8);
     v = [];
@@ -567,10 +613,10 @@ elseif strcmp(varargin{1},'figure04');
     set(h,'alphaData',.8);        
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
     set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)    
-    hold off        
+    hold off            
     %%    
     colormap jet
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure04.png','-transparent');
+    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure04.png','-transparent');
     elseif strcmp(varargin{1},'figure05');
         %%
         figure;
