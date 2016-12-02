@@ -7,13 +7,16 @@ condition_borders = {1:8 9:16};
 tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-current_subject_pool =1;
+current_subject_pool =0;
 
-if strcmp(varargin{1},'get_subject_pool');
+
+if strcmp(varargin{1},'get_subjects');
         
     filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);    
     if exist(filename) == 0
-        if current_subject_pool == 1%find tuned people;
+        if current_subject_pool == 0;
+            subjects = Project.subjects_bdnf;
+        elseif current_subject_pool == 1%find tuned people;
             
             fprintf('finding tuned subjects first...\n');
             p=[];sub=[];pval=[];;
@@ -25,24 +28,31 @@ if strcmp(varargin{1},'get_subject_pool');
             end
             valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);
             fprintf('Found %03d valid subjects...\n',sum(valid));
-            subjects = setdiff(sub(valid),[13 38]);
-            %subject 13's phase02 has no valid eye data, exluding that too.
-            %subject 30's correlation matrix is full of nans, will not investigate
-            %it further but just exclude.
+            subjects = sub(valid);            
             save(filename,'subjects');
-    %    elseif%other pools
+        elseif current_subject_pool == 2;%males
+            subjects = Project.subjects_bdnf(Project.gender == 1);
+        elseif current_subject_pool == 3;%females
+            subjects = Project.subjects_bdnf(Project.gender == 2);
+        elseif current_subject_pool == 4
+            subjects = Project.subjects_bdnf(Project.BDNF == 1);
+        elseif current_subject_pool == 5
+            subjects = Project.subjects_bdnf(Project.BDNF == 2);
         end
     else
         load(filename);
     end
+    subjects = setdiff(subjects,[13 38]);
+    %subject 13's phase02 has no valid eye data, exluding that too.
+    %subject 30's correlation matrix is full of nans, will not investigate
+    %it further but just exclude.
     varargout{1} = subjects;
 elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
     filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d.mat',path_project,current_subject_pool);
     fix = [];
-    if exist(filename) == 0
-        
-        subjects = FearCloud_RSA('get_subject_pool',current_pool)
+    if exist(filename) == 0  
+        subjects = FearCloud_RSA('get_subjects',current_subject_pool)
         fix      = Fixmat(subjects,[2 4]);
         save(filename,'fix');
     else
@@ -161,6 +171,15 @@ elseif strcmp(varargin{1},'get_betas')
     varargout{1} = squeeze(mean(betas));
     varargout{2} = ci;    
     %
+elseif strcmp(varargin{1},'test_betas')        
+    
+    sim     = FearCloud_RSA('get_rsa',1:100);
+    [a b c] = FearCloud_RSA('get_betas_singlesubject',sim);
+    [h p]   = ttest(c(:,2,1)-c(:,2,2));
+    fprintf('t-test for physical similarity H: %d, p-value:%3.5g\n',h,p);
+    [h p]   = ttest(c(:,3,1)-c(:,3,2));
+    fprintf('t-test for cs+ similarity H     : %d, p-value:%3.5g\n',h,p);
+    
 elseif strcmp(varargin{1},'get_betas_singlesubject')    
     %% compute loadings on these
     sim    = varargin{2};
@@ -217,9 +236,9 @@ elseif strcmp(varargin{1},'searchlight')
     fixmat   = varargin{2};
     b1       = varargin{3};
     b2       = varargin{4};
-    filename = DataHash({unique(fixmat.subject),fixmat.kernel_fwhm,b1,b2});
+    filename = DataHash({fixmat.kernel_fwhm,b1,b2});
     %
-    tsub     = length(unique(fixmat.subject));    
+    tsub     = length(unique(fixmat.subject));
     fun      = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
     phc = 0;
     for phase = [2 4];
@@ -227,16 +246,17 @@ elseif strcmp(varargin{1},'searchlight')
         phc   = phc + 1;
         conds = condition_borders{phc};
         for subject = unique(fixmat.subject);
-            subc             = subc + 1;                
-            fprintf('Processing subject %03d\n',subject);
-            path_write = sprintf('%ssub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);
-            if exist(path_write) == 0                                
+            subc             = subc + 1;
+            fprintf('Processing subject %03d\ncache name: %s\n',subject,filename);
+            path_write = sprintf('%ssub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);            
+            if exist(fileparts(path_write)) == 0;mkdir(fileparts(path_write));end;%create midlevel folder if not there.
+            if exist(path_write) == 0
                 % create the query cell
                 maps             = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
                 maps             = reshape(maps(:,conds),[500 500 length(conds)]);
                 out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
                 save(path_write,'out');
-            else                
+            else
                 fprintf('already cached...\n');
                 load(path_write);
             end
@@ -387,13 +407,17 @@ elseif strcmp(varargin{1},'figure03')
     labels = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
     d = -.3;u = .15;
     fs = 12;
-%     figure;
+    figure;
     set(gcf,'position',[2132          23         600        1048]);
     subplot(6,6,[1 2 3 7 8 9 13 14 15]);
     h = imagesc(cormatz(1:8,1:8),[d u]);    
 %     contourf(CancelDiagonals(cormatz(1:8,1:8),mean(diag(cormatz(1:8,1:8),-1))),4);
     axis square;
-    set(gca,'fontsize',fs,'xtick',1:8,'ytick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',labels)
+    if ~ismac
+        set(gca,'fontsize',fs,'xtick',1:8,'ytick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',labels)
+    else
+        set(gca,'fontsize',fs,'xtick',1:8,'ytick',1:8,'xticklabels',labels,'fontsize',fs,'yticklabels',labels)
+    end
 %     set(h,'alphaData',~diag(ones(1,8)));    
     title('Before');
     
@@ -401,9 +425,15 @@ elseif strcmp(varargin{1},'figure03')
     h=imagesc(cormatz(9:16,9:16),[d u]);    
 %     contourf(CancelDiagonals(cormatz(9:16,9:16),mean(diag(cormatz(9:16,9:16),-1))),4);
     axis square;h2 = colorbar;set(h2,'location','east');h2.Position = [.91 .65 0.02 .1];h2.AxisLocation='out'
-    set(gca,'fontsize',fs,'xtick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',{''})
+    if ~ismac
+        set(gca,'fontsize',fs,'xtick',1:8,'XTickLabelRotation',45,'xticklabels',labels,'fontsize',fs,'YTickLabelRotation',45,'yticklabels',{''})
+    else
+        set(gca,'fontsize',fs,'xtick',1:8,'xticklabels',labels,'fontsize',fs,'yticklabels',{''})
+    end
     title('After')
-    set(h2,'box','off','ticklength',0,'ticks',[d 0 u],'fontsize',fs)
+    if ~ismac
+        set(h2,'box','off','ticklength',0,'ticks',[d 0 u],'fontsize',fs)
+    end
     %axis off       
 %     set(h,'alphaData',~diag(ones(1,8)));
 %%
@@ -443,7 +473,11 @@ elseif strcmp(varargin{1},'figure03')
         end
         xlim([0 3])
         hold off;
-        set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' },'XTickLabelRotation',45);
+        if ~ismac
+            set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' },'XTickLabelRotation',45);
+        else
+            set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' });
+        end
         SetTickNumber(gca,3,'y');
         axis square
         if n == 1
