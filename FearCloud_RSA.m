@@ -323,7 +323,31 @@ elseif strcmp(varargin{1},'beta_counts')
     end    
     varargout{1} = count;    
     
-    
+elseif strcmp(varargin{1},'get_mdscale')    
+    %%    
+    sim    = varargin{2};
+%     simmat = squareform(mean(sim));
+
+Criterion='metricstress' ;
+ndimen = 2;
+if ndimen == 2
+    init   = [cosd(-135:45:180)' sind(-135:45:180)'];
+    y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*.1);
+    plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+    hold on;
+    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+    hold off;
+    for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+elseif ndimen == 3
+    init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
+    y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01);
+    plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
+    hold on;
+    plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
+    hold off;
+    for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+end
+
 elseif strcmp(varargin{1},'anova')    
     
     y = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
