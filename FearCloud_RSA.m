@@ -246,9 +246,9 @@ elseif strcmp(varargin{1},'searchlight')
         phc   = phc + 1;
         conds = condition_borders{phc};
         for subject = unique(fixmat.subject);
-            subc             = subc + 1;
-            fprintf('Processing subject %03d\ncache name: %s\n',subject,filename);
+            subc             = subc + 1;            
             path_write = sprintf('%ssub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);            
+            cprintf([1 0 0],'Processing subject %03d\ncache name: %s\n',subject,path_write);
             if exist(fileparts(path_write)) == 0;mkdir(fileparts(path_write));end;%create midlevel folder if not there.
             if exist(path_write) == 0
                 % create the query cell
@@ -257,7 +257,7 @@ elseif strcmp(varargin{1},'searchlight')
                 out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
                 save(path_write,'out');
             else
-                fprintf('already cached...\n');
+                cprintf([0 1 0],'Already cached...\n');
                 load(path_write);
             end
             B1(:,:,:,subc,phc)   = out;
