@@ -737,9 +737,10 @@ elseif strcmp(varargin{1},'behavior_correlation');
     b      = FearCloud_RSA('get_behavior');%amplitude of the scr response
     fixmat = FearCloud_RSA('get_fixmat');
     cr     = FearCloud_RSA('beta_counts',fixmat,1,15);
-    %%
+    %
     a2 = FearCloud_RSA('fix_counts',fixmat,1,15);
-    a  = FearCloud_RSA('beta_counts',fixmat,1,15);
+    a  = FearCloud_RSA('beta_counts',fixmat,1,15);    
+    %%
     b  = FearCloud_RSA('get_behavior');
     b.rating_center_03 = abs(b.rating_center_03);
     b.rating_center_04 = abs(b.rating_center_04);
@@ -763,21 +764,27 @@ elseif strcmp(varargin{1},'behavior_correlation');
     end    
     data = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(b)];
     
-    imagesc(corrcov(nancov(data)).^2,[0 .4])
+    imagesc(corrcov(nancov(data)).^2,[0 .5])
     hold on;    
+    plot([6 6]-.5+0,ylim,'r')
     plot([6 6]-.5+5,ylim,'r')
     plot([6 6]-.5+10,ylim,'r')
     plot([6 6]-.5+15,ylim,'r')
-    plot([6 6]-.5+20,ylim,'r')
+    plot([6 6]-.5+19,ylim,'r')
+    plot([6 6]-.5+16,ylim,'r')
+    plot([6 6]-.5+22,ylim,'r')
     plot([6 6]-.5+25,ylim,'r')
-    plot([6 6]-.5+30,ylim,'r')
-    plot(xlim,[6 6]-.5+30,'r')
     plot(xlim,[6 6]-.5+25,'r')
-    plot(xlim,[6 6]-.5+20,'r')
+    plot(xlim,[6 6]-.5+22,'r')
+    plot(xlim,[6 6]-.5+19,'r')
+    plot(xlim,[6 6]-.5+16,'r')
     plot(xlim,[6 6]-.5+15,'r')
     plot(xlim,[6 6]-.5+10,'r')
     plot(xlim,[6 6]-.5+5,'r')    
+    plot(xlim,[6 6]-.5+0,'r')    
     hold off
+    colorbar;axis square;
+    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames([10 1 2 3 4 5 6 7 8 9 11])]);axis square;
 end
 
 
