@@ -155,5 +155,97 @@ for nparam = 1:size(behav,2)
     toc
 end
 
+%% 
+clear all;
+p = Project;
+subjects15 = intersect(p.subjects_1500,find(sum(p.getMask('PMF'),2)==4));
+subjects15 = intersect(subjects15,find(p.getMask('RATE')));
+subjects15 = intersect(find(p.getMask('ET_feargen').*p.getMask('ET_discr')),subjects15);
+subjects6 = intersect(p.subjects_600,find(sum(p.getMask('PMF'),2)==4));
+subjects6 = intersect(subjects6,find(p.getMask('RATE')));
+subjects6 = intersect(find(p.getMask('ET_feargen').*p.getMask('ET_discr')),subjects6);
 
+fix  = Fixmat([subjects15' subjects6'],[1 3 4 5]);
+
+g15 = Group(subjects15);
+mat15 = g15.parameterMat;
+g6 = Group(subjects6);
+mat6 = g6.parameterMat;
+
+% fix.kernel_fwhm = 72;
+M1 = [];
+for ns = subjects15(:)'
+    query = {'subject' ns 'deltacsp' [0 180 18000]};
+    fix.getmaps(query);
+    M1     = cat(3,M1,fix.maps);
+end
+M2 = [];
+for ns = subjects15(:)'
+    query = {'subject' ns 'deltacsp' [0 180 18000]};
+    fix.getmaps(query);
+    M2     = cat(3,M2,fix.maps);
+end
+M3 = [];
+for ns = subjects6(:)'
+    query = {'subject' ns 'deltacsp' [0 180 18000]};
+    fix.getmaps(query);
+    M3     = cat(3,M3,fix.maps);
+end
+M4 = [];
+for ns = subjects6(:)'
+    query = {'subject' ns 'deltacsp' [0 180 18000]};
+    fix.getmaps(query);
+    M4     = cat(3,M4,fix.maps);
+end
+%
+%
+
+% load('C:\Users\Lea\Documents\Experiments\FearCloud_Eyelab\data\midlevel\scr_beneficial_locations.mat')
+a    = mat15(:,17);
+b    = mat15(:,18);
+% c    = [DD(12,:)-DD(16,:)]';
+d    = mat6(:,17);
+e    = mat6(:,18);
+% f    = [DD(20,:)-DD(24,:)]';
+% % exclude sub 46 bc no usable eye data
+% a(8) = [];
+% b(8) = [];
+%
+
+M1 = reshape(M1,[500*500,22]);
+M2 = reshape(M2,[500*500,22]);
+M3 = reshape(M3,[500*500,24]);
+M4 = reshape(M4,[500*500,24]);
+
+type = 'Pearson';
+[r_a, p_a]     = corr(M1',a,'Type',type);
+[r_b, p_b]     = corr(M2',b,'Type',type);
+% [r_c, p_c]     = corr(fix.vectorize_maps',c,'Type',type);
+[r_d, p_d]     = corr(M3',d,'Type',type);
+
+[r_e, p_e]     = corr(M4',e,'Type',type);
+% [r_f, p_f]     = corr(fix.vectorize_maps',f,'Type',type);
+% crit  = .10;
+% r_a(p_a>crit) = nan;
+% r_b(p_b>crit) = nan;
+% r_c(p_c>crit) = nan;
+% r_d(p_d>crit) = nan;
+% r_e(p_e>crit) = nan;
+% r_f(p_f>crit) = nan;
+
+fix.maps = reshape([r_a,r_b,r_d,r_e],[500 500 4]);
+figure;fix.plot;%title(mat2str(tags{n}),'interpreter','none');
+for n=1:6
+    subplot(2,3,n)
+    t=title(titletags{n});
+    set(t,'FontSize',14)
+end
+% drawnow
+%
+% subplot(2,3,1);title('initial alpha');
+% subplot(2,3,2);title('FWHM test');
+% subplot(2,3,3);title('SCR Cond');
+% subplot(2,3,4);title('alpha corr.improvement');
+% subplot(2,3,5);title('FWHM SI');
+% subplot(2,3,6);title('SCR Test');
 

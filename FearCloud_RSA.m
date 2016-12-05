@@ -61,10 +61,12 @@ elseif strcmp(varargin{1},'get_fixmat');
     end
     varargout{1} = fix;
 elseif strcmp(varargin{1},'get_behavior')
+    filename = sprintf('%s/midlevel/get_behavior.mat',path_project);
+    if exist(filename) == 0
     fixmat = FearCloud_RSA('get_fixmat');
     % get the SCR from phase 4 and 3. THe phase 3 is just the difference
     % between CS+ and CS?
-    p = [];p2 = [];
+    p = [];p2 = [];scr_amp_03=[];
     subjects = unique(fixmat.subject)';
     for ns = subjects(:)'
         fprintf('subject:%03d...\n',ns);
@@ -75,12 +77,20 @@ elseif strcmp(varargin{1},'get_behavior')
             p     = [p ; num2cell(nan(1,size(p,2)))];
         end
         %
-        dummy      = Subject(10).get_scr(3).y_mean;
-        scr_amp_03 = dummy(4)-dummy(8);
+        dummy      = Subject(ns).get_scr(3);
+	if ~isempty(dummy.y)
+        	scr_amp_03 = [scr_amp_03;dummy.y_mean(4)-dummy.y_mean(8)];
+	else
+		scr_amp_03 = [scr_amp_03;NaN];
+	end
         %
-        p2 = [p2;s.get_fit('rating',3).param_table s.get_fit('rating',4).param_table];
+        p2 = [p2;Subject(ns).get_fit('rating',3).param_table Subject(ns).get_fit('rating',4).param_table];
     end
     p            = [p p2 table(subjects(:),'VariableName',{'subject'}) table(scr_amp_03,'VariableName',{'scr_amp_03'})];
+    save(filename,'p');
+    else
+	    load(filename)
+    end
     varargout{1} = p;        
     
 elseif  strcmp(varargin{1},'get_fixmap')
