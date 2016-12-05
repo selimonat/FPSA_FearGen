@@ -738,19 +738,46 @@ elseif strcmp(varargin{1},'behavior_correlation');
     fixmat = FearCloud_RSA('get_fixmat');
     cr     = FearCloud_RSA('beta_counts',fixmat,1,15);
     %%
-    Y      = [log(b.scr_kappa_04) log10(b.scr_amp_04) ];   
-    [n, xed,yed,binx,biny] = histcounts2(Y(:,1),Y(:,2),3);
-    subplot(1,5,1);
-    imagesc(xed,yed,n');colorbar;;axis square
-    subplot(1,5,2)
-    imagesc(xed,yed,accumarray([biny binx]+1,cr(:,1,2),[],@mean));colorbar;axis square
-    subplot(1,5,3)
-    imagesc(xed,yed,accumarray([biny binx]+1,cr(:,2,2),[],@mean));colorbar;axis square
-    subplot(1,5,4)
-    imagesc(xed,yed,accumarray([biny binx]+1,cr(:,3,2),[],@mean));colorbar;axis square
-    subplot(1,5,5)
-    imagesc(xed,yed,accumarray([biny binx]+1,cr(:,4,2),[],@mean));colorbar;axis square
+    a2 = FearCloud_RSA('fix_counts',fixmat,1,15);
+    a  = FearCloud_RSA('beta_counts',fixmat,1,15);
+    b  = FearCloud_RSA('get_behavior');
+    b.rating_center_03 = abs(b.rating_center_03);
+    b.rating_center_04 = abs(b.rating_center_04);
+    b.rating_kappa_03  = log(b.rating_kappa_03  );
+    b.rating_kappa_04  = log(b.rating_kappa_04  );
+    b.rating_sigma_y_04 = [];
+    b.rating_sigma_y_03 = [];
+    b.rating_offset_03  = [];
+    b.rating_offset_04  = [];
+        
+    b.scr_center_04 = abs(b.scr_center_04);    
+    b.scr_kappa_04  = log(b.scr_kappa_04  );
+    b.scr_sigma_y_04 = [];        
+    b.scr_offset_04  = [];
+    b.subject = [];
     
+    b.si = b.rating_kappa_04 - b.rating_kappa_03;    
+    vnames = b.Properties.VariableNames;
+    for n = vnames([10 1 2 3 4 5 6 7 8 9 11])
+        b.(n{1})=double(b.(n{1}));
+    end    
+    data = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(b)];
+    
+    imagesc(corrcov(nancov(data)).^2,[0 .4])
+    hold on;    
+    plot([6 6]-.5+5,ylim,'r')
+    plot([6 6]-.5+10,ylim,'r')
+    plot([6 6]-.5+15,ylim,'r')
+    plot([6 6]-.5+20,ylim,'r')
+    plot([6 6]-.5+25,ylim,'r')
+    plot([6 6]-.5+30,ylim,'r')
+    plot(xlim,[6 6]-.5+30,'r')
+    plot(xlim,[6 6]-.5+25,'r')
+    plot(xlim,[6 6]-.5+20,'r')
+    plot(xlim,[6 6]-.5+15,'r')
+    plot(xlim,[6 6]-.5+10,'r')
+    plot(xlim,[6 6]-.5+5,'r')    
+    hold off
 end
 
 
