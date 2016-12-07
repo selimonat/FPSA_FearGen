@@ -7,7 +7,7 @@ condition_borders = {1:8 9:16};
 tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-current_subject_pool =0;
+current_subject_pool =1;
 
 
 if strcmp(varargin{1},'get_subjects');
@@ -61,37 +61,38 @@ elseif strcmp(varargin{1},'get_fixmat');
     end
     varargout{1} = fix;
 elseif strcmp(varargin{1},'get_behavior')
+    force    = 1;
     filename = sprintf('%s/midlevel/get_behavior.mat',path_project);
-    if exist(filename) == 0
-    fixmat = FearCloud_RSA('get_fixmat');
-    % get the SCR from phase 4 and 3. THe phase 3 is just the difference
-    % between CS+ and CS?
-    p = [];p2 = [];scr_amp_03=[];
-    subjects = unique(fixmat.subject)';
-    for ns = subjects(:)'
-        fprintf('subject:%03d...\n',ns);
-        dummy = Subject(ns).get_fit('scr',4).param_table;        
-        if ~isempty(dummy)
-            p     = [p ; dummy];
-        else
-            p     = [p ; num2cell(nan(1,size(p,2)))];
+    if exist(filename) == 0 | force
+        fixmat = FearCloud_RSA('get_fixmat');
+        % get the SCR from phase 4 and 3. THe phase 3 is just the difference
+        % between CS+ and CS?
+        p = [];p2 = [];scr_amp_03=[];
+        subjects = unique(fixmat.subject)';
+        for ns = subjects(:)'
+            fprintf('subject:%03d...\n',ns);
+            dummy = Subject(ns).get_fit('scr',4).param_table;
+            if ~isempty(dummy)
+                p     = [p ; dummy];
+            else
+                p     = [p ; num2cell(nan(1,size(p,2)))];
+            end
+            %
+            dummy      = Subject(ns).get_scr(3);
+            if ~isempty(dummy.y)
+                scr_amp_03 = [scr_amp_03;dummy.y_mean(4)-dummy.y_mean(8)];
+            else
+                scr_amp_03 = [scr_amp_03;NaN];
+            end
+            %
+            p2 = [p2;Subject(ns).get_fit('rating',3).param_table Subject(ns).get_fit('rating',4).param_table];
         end
-        %
-        dummy      = Subject(ns).get_scr(3);
-	if ~isempty(dummy.y)
-        	scr_amp_03 = [scr_amp_03;dummy.y_mean(4)-dummy.y_mean(8)];
-	else
-		scr_amp_03 = [scr_amp_03;NaN];
-	end
-        %
-        p2 = [p2;Subject(ns).get_fit('rating',3).param_table Subject(ns).get_fit('rating',4).param_table];
-    end
-    p            = [p p2 table(subjects(:),'VariableName',{'subject'}) table(scr_amp_03,'VariableName',{'scr_amp_03'})];
-    save(filename,'p');
+        p            = [p p2 table(subjects(:),'VariableName',{'subject'}) table(scr_amp_03,'VariableName',{'scr_03_amp'})];
+        save(filename,'p');
     else
-	    load(filename)
+        load(filename)
     end
-    varargout{1} = p;        
+    varargout{1} = p;
     
 elseif  strcmp(varargin{1},'get_fixmap')
     %% load fixation map for subject recorded at both phases for fixations FIX.
@@ -283,6 +284,8 @@ elseif strcmp(varargin{1},'searchlight')
                 cprintf([0 1 0],'Already cached...\n');
                 load(path_write);
             end
+	    subject
+	    size(out)
             B1(:,:,:,subc,phc)   = out;
             %
             %                 c = 0;
@@ -297,6 +300,33 @@ elseif strcmp(varargin{1},'searchlight')
         end
     end
     varargout{1} = B1;
+    
+               
+elseif strcmp(varargin{1},'searchlight_stimulus')
+    %applies the search light analysis to the V1 representations.
+        
+    b1         = varargin{2};
+    b2         = varargin{3};
+    filename   = 'stimulus_searchlight';
+    path_write = sprintf('%smidlevel/%s.mat',path_project,filename);
+    fun        = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block    
+    maps       = [];
+    for n = 1:8
+        maps(:,:,n) = imread(sprintf('%sstimuli/%02d.bmp',path_project,n));
+    end    
+    obj  = Fixmat([],[]);
+    maps = maps( obj.rect(1):obj.rect(1)+obj.rect(3)-1,  obj.rect(2):obj.rect(2)+obj.rect(4)-1,:);
+    
+    if exist(path_write) == 0
+        % create the query cell        
+        out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
+        save(path_write,'out');
+    else
+        cprintf([0 1 0],'Already cached...\n');
+        load(path_write);
+    end
+    varargout{1} = out;
+          
 elseif strcmp(varargin{1},'plot_searchlight')'
     %
     
@@ -733,94 +763,58 @@ elseif strcmp(varargin{1},'figure05');
 
 elseif strcmp(varargin{1},'behavior_correlation');
         
-    keyboard
+    
     b      = FearCloud_RSA('get_behavior');%amplitude of the scr response
     fixmat = FearCloud_RSA('get_fixmat');
-    cr     = FearCloud_RSA('beta_counts',fixmat,1,15);
     %
     a2 = FearCloud_RSA('fix_counts',fixmat,1,15);
     a  = FearCloud_RSA('beta_counts',fixmat,1,15);    
-    %%
-    b  = FearCloud_RSA('get_behavior');
-    b.rating_center_03 = abs(b.rating_center_03);
-    b.rating_center_04 = abs(b.rating_center_04);
-    b.rating_kappa_03  = log(b.rating_kappa_03  );
-    b.rating_kappa_04  = log(b.rating_kappa_04  );
-    b.rating_sigma_y_04 = [];
-    b.rating_sigma_y_03 = [];
-    b.rating_offset_03  = [];
-    b.rating_offset_04  = [];
-        
-    b.scr_center_04 = abs(b.scr_center_04);    
-    b.scr_kappa_04  = log(b.scr_kappa_04  );
-    b.scr_sigma_y_04 = [];        
-    b.scr_offset_04  = [];
-    b.subject = [];
+    %%    
+    try
+        b.rating_03_center  = abs(b.rating_03_center);
+        b.rating_04_center  = abs(b.rating_04_center);    
+        b.scr_04_center     = abs(b.scr_04_center);    
+    end    
+    b.rating_04_sigma_y     = [];
+    b.rating_03_sigma_y     = [];
+    b.rating_03_offset      = [];
+    b.rating_04_offset      = [];               
+    b.subject               = [];    
+    b.scr_04_offset         = [];       
+    b.scr_04_sigma_y        = [];
     
-    b.si = b.rating_kappa_04 - b.rating_kappa_03;    
-    vnames = b.Properties.VariableNames;
-    for n = vnames([10 1 2 3 4 5 6 7 8 9 11])
+    b.scr_04_logkappa       =  log(b.scr_04_kappa);
+    b.rating_03_logkappa    =  log(b.rating_03_kappa);
+    b.rating_04_logkappa    =  log(b.rating_04_kappa);
+    
+    b.si                    =  b.rating_03_kappa    - b.rating_04_kappa;    
+    b.silog                 =  b.rating_03_logkappa - b.rating_04_logkappa; 
+    vnames                  = b.Properties.VariableNames;
+    for n = sort(vnames)
         b.(n{1})=double(b.(n{1}));
     end    
-    data = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(b)];
-    
+    data                    = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(b)];
+    %%
+    figure;
     imagesc(corrcov(nancov(data)).^2,[0 .5])
     hold on;    
     plot([6 6]-.5+0,ylim,'r')
-    plot([6 6]-.5+5,ylim,'r')
+    plot([6 6]-.5+5,ylim,'r','linewidth',4)
     plot([6 6]-.5+10,ylim,'r')
-    plot([6 6]-.5+15,ylim,'r')
-    plot([6 6]-.5+19,ylim,'r')
-    plot([6 6]-.5+16,ylim,'r')
-    plot([6 6]-.5+22,ylim,'r')
-    plot([6 6]-.5+25,ylim,'r')
-    plot(xlim,[6 6]-.5+25,'r')
-    plot(xlim,[6 6]-.5+22,'r')
-    plot(xlim,[6 6]-.5+19,'r')
-    plot(xlim,[6 6]-.5+16,'r')
-    plot(xlim,[6 6]-.5+15,'r')
+    plot([6 6]-.5+15,ylim,'r','linewidth',4)
+%     plot([6 6]-.5+19,ylim,'r','linewidth',4)
+%     plot([6 6]-.5+16,ylim,'r')
+%     plot([6 6]-.5+22,ylim,'r')
+%     plot([6 6]-.5+25,ylim,'r','linewidth',4)
+%     plot(xlim,[6 6]-.5+25,'r','linewidth',4)
+%     plot(xlim,[6 6]-.5+22,'r')
+%     plot(xlim,[6 6]-.5+19,'r','linewidth',4)
+%     plot(xlim,[6 6]-.5+16,'r')
+    plot(xlim,[6 6]-.5+15,'r','linewidth',4)
     plot(xlim,[6 6]-.5+10,'r')
-    plot(xlim,[6 6]-.5+5,'r')    
+    plot(xlim,[6 6]-.5+5,'r','linewidth',4)    
     plot(xlim,[6 6]-.5+0,'r')    
     hold off
     colorbar;axis square;
-    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames([10 1 2 3 4 5 6 7 8 9 11])]);axis square;
+    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' sort(vnames)],'ticklabelinterpreter','none');axis square;
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
