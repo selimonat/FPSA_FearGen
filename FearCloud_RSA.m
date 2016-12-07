@@ -326,7 +326,21 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
         load(path_write);
     end
     varargout{1} = out;
-          
+    %
+    subplot(1,2,1);
+    imagesc(out(:,:,2));
+    hold on    
+    f   = Fixmat([],[]);
+    roi = f.GetFaceROIs;
+    [~,h] = contourf(mean(roi(:,:,1:4),3));
+    h.Fill = 'off';
+    axis image;
+    hold off;
+    subplot(1,2,2);    
+    b = f.EyeNoseMouth(out(:,:,2),0)
+    bar(b(1:4));
+    
+    
 elseif strcmp(varargin{1},'plot_searchlight')'
     %
     
@@ -421,73 +435,68 @@ elseif strcmp(varargin{1},'beta_counts')
     
 elseif strcmp(varargin{1},'get_mdscale')
     %%
-    sim    = varargin{2};
-    %     simmat = squareform(mean(sim));
+    sim    = varargin{2};%sim is a valid similarity matrix;    
     
-    Criterion='metricstress' ;
-    ndimen = 2;
-    viz = 1
+    Criterion='strain' ;
+    ndimen    = 2;
+    viz       = 1;
     if ndimen == 2
-        init   = [cosd(-135:45:180)' sind(-135:45:180)'];
-        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*0.1);
-        if viz 
-        plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
-        hold on;
-        plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
-        hold off;
-        for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+        init   = [cosd(-135:45:180)' sind(-135:45:180)'];        
+        [y stress disparities]      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*.1,'options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
+        if viz
+            plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+            hold on;
+            plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+            hold off;
+            for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end                        
         end
     elseif ndimen == 3
         init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
-        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01);
+        %y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01,'options',statset('display','iter','tolfun',10^-12,'tolx',10^-12));;
+        y      = mdscale(sim,ndimen,'Criterion',Criterion,'options',statset('display','iter','tolfun',10^-12,'tolx',10^-12));;
         if viz
-        plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
-        hold on;
-        plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
-        hold off;
-        for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+            plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
+            hold on;
+            plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
+            hold off;
+            for n = 1:16;text(y(n,1),y(n,2),y(n,3),mat2str(mod(n-1,8)+1),'fontsize',25);end
         end
     end
     varargout{1} = y;
 elseif strcmp(varargin{1},'get_mdscale_bootstrap')
-    %%
-    simmat    = varargin{2};    
-    subjects  = 1:size(simmat,1);
-    tfaces    = size(simmat,2);
-    Criterion = 'metricstress' ;
-    ndimen    = 2;
-    viz       = 1;
-    if ndimen == 2
-        init   = [cosd(-135:45:180)' sind(-135:45:180)'];
-        bs = 0;ts = 500;
-        y = nan(tfaces,2,ts);
-        while bs < ts
-            fprintf('bootstrapping %d of %d...\n',bs,ts);
-            bs        = bs + 1;
-            subs      = randsample(subjects,length(subjects),1);
-            sim       = squaremean(simmat(subs,:));
-            y(:,:,bs) = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*0);            
-            if viz
-                yy = mean(y,3);
-                plot(yy([1:8 1],1),yy([1:8 1],2),'o-','linewidth',3);
-                hold on;
-                plot(yy([1:8 1]+8,1),yy([1:8 1]+8,2),'ro-','linewidth',3);
-                hold off;
-                for n = 1:16;text(yy(n,1),yy(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
-            end
-        end
-    elseif ndimen == 3
-        init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
-        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01);
-        if viz
-        plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
-        hold on;
-        plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
-        hold off;
-        for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
-        end
+    %sim = FearCloud_RSA('get_rsa',1:100);
+    %FearCloud_RSA('get_mdscale_bootstrap',sim.correlation);
+    
+    %    
+    sim      = varargin{2};%this sim.correlation, not yet squareformed.
+    tsubject = size(sim,1);
+    subjects = 1:tsubject;    
+    tbs      = 100;
+    nbs      = 0;
+    y        = nan(16,2,tbs);
+    while nbs < tbs
+        fprintf('Bootstrap: %03d of %03d...\n',nbs,tbs);
+        sub          = randsample(subjects,tsubject,1);
+        simmat       = squareform(mean(sim(sub,:)));
+        y(:,:,nbs+1) = FearCloud_RSA('get_mdscale',simmat);
+        nbs          = nbs +1;
     end
-    varargout{1} = y;    
+    %% align to the mean
+    E_mean = mean(y,3);
+    ya = [];
+    for ns = 1:tsubject;
+        [d z transform] = procrustes(E_mean , y(:,:,ns) , 'Reflection',false);
+        ya(:,:,ns) = z;
+    end
+    y = mean(ya,3);
+    plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+    hold on;
+    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+    hold off;
+    for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+        
+    varargout{1} = y;
+    
 elseif strcmp(varargin{1},'anova')
     
     y = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
@@ -818,6 +827,11 @@ elseif strcmp(varargin{1},'behavior_correlation');
         b.rating_03_center  = abs(b.rating_03_center);
         b.rating_04_center  = abs(b.rating_04_center);    
         b.scr_04_center     = abs(b.scr_04_center);    
+        %corrected improvement:
+        %
+%         b.rating_04_center_improvement  = abs(b.rating_03_center-b.rating_04_center)*-1
+%         b.rating_04_center              = ;    
+%         b.scr_04_center                 = abs(b.scr_04_center);    
     end    
     b.rating_04_sigma_y     = [];
     b.rating_03_sigma_y     = [];
@@ -833,14 +847,15 @@ elseif strcmp(varargin{1},'behavior_correlation');
     
     b.si                    =  b.rating_03_kappa    - b.rating_04_kappa;    
     b.silog                 =  b.rating_03_logkappa - b.rating_04_logkappa; 
-    vnames                  = b.Properties.VariableNames;
-    for n = sort(vnames)
-        b.(n{1})=double(b.(n{1}));
+    vnames                  = sort(b.Properties.VariableNames);
+    bb = table();
+    for n = vnames
+        bb.(n{1})=double(b.(n{1}));
     end    
-    data                    = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(b)];
+    data                    = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(bb)];
     %%
     figure;
-    imagesc(corrcov(nancov(data)).^2,[0 .5])
+    imagesc(corrcov(nancov(data)),[-.4 .4])
     hold on;    
     plot([6 6]-.5+0,ylim,'r')
     plot([6 6]-.5+5,ylim,'r','linewidth',4)
@@ -860,5 +875,5 @@ elseif strcmp(varargin{1},'behavior_correlation');
     plot(xlim,[6 6]-.5+0,'r')    
     hold off
     colorbar;axis square;
-    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' sort(vnames)],'ticklabelinterpreter','none');axis square;
+    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
 end
