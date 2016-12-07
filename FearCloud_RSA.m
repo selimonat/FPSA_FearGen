@@ -426,24 +426,68 @@ elseif strcmp(varargin{1},'get_mdscale')
     
     Criterion='metricstress' ;
     ndimen = 2;
+    viz = 1
     if ndimen == 2
         init   = [cosd(-135:45:180)' sind(-135:45:180)'];
-        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*.1);
+        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*0.1);
+        if viz 
         plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
         hold on;
         plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
         hold off;
         for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+        end
     elseif ndimen == 3
         init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
         y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01);
+        if viz
         plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
         hold on;
         plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
         hold off;
         for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+        end
     end
-    
+    varargout{1} = y;
+elseif strcmp(varargin{1},'get_mdscale_bootstrap')
+    %%
+    simmat    = varargin{2};    
+    subjects  = 1:size(simmat,1);
+    tfaces    = size(simmat,2);
+    Criterion = 'metricstress' ;
+    ndimen    = 2;
+    viz       = 1;
+    if ndimen == 2
+        init   = [cosd(-135:45:180)' sind(-135:45:180)'];
+        bs = 0;ts = 500;
+        y = nan(tfaces,2,ts);
+        while bs < ts
+            fprintf('bootstrapping %d of %d...\n',bs,ts);
+            bs        = bs + 1;
+            subs      = randsample(subjects,length(subjects),1);
+            sim       = squaremean(simmat(subs,:));
+            y(:,:,bs) = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*0);            
+            if viz
+                yy = mean(y,3);
+                plot(yy([1:8 1],1),yy([1:8 1],2),'o-','linewidth',3);
+                hold on;
+                plot(yy([1:8 1]+8,1),yy([1:8 1]+8,2),'ro-','linewidth',3);
+                hold off;
+                for n = 1:16;text(yy(n,1),yy(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+            end
+        end
+    elseif ndimen == 3
+        init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
+        y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01);
+        if viz
+        plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
+        hold on;
+        plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
+        hold off;
+        for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+        end
+    end
+    varargout{1} = y;    
 elseif strcmp(varargin{1},'anova')
     
     y = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
