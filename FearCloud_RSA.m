@@ -437,7 +437,7 @@ elseif strcmp(varargin{1},'get_mdscale')
     %%
     sim    = varargin{2};%sim is a valid similarity matrix;    
     
-    Criterion='strain' ;
+    Criterion='metricsstress' ;
     ndimen    = 2;
     viz       = 1;
     if ndimen == 2
@@ -484,18 +484,26 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
     %% align to the mean
     E_mean = mean(y,3);
     ya = [];
-    for ns = 1:tsubject;
+    for ns = 1:tbs;
         [d z transform] = procrustes(E_mean , y(:,:,ns) , 'Reflection',false);
         ya(:,:,ns) = z;
     end
     y = mean(ya,3);
     plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
     hold on;
-    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
-    hold off;
-    for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);    
+    for node = 1:16;        
+        hold on
+        text(y(node,1),y(node,2),mat2str(mod(node-1,8)+1),'fontsize',25);        
+        error_ellipse(squeeze([ya(node,1,:);ya(node,2,:)])','color','k','linewidth',1);        
+    end
+        
+        axis square
+        
         
     varargout{1} = y;
+    
+    
     
 elseif strcmp(varargin{1},'anova')
     
