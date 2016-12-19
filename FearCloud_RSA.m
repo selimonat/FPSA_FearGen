@@ -7,53 +7,55 @@ condition_borders = {1:8 9:16};
 tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-current_subject_pool =1;
+current_subject_pool =0;
 
 
 if strcmp(varargin{1},'get_subjects');
-    
+    %% returns the subjects based on the CURRENT_SUBJECT_POOL variable;
     filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);
     if exist(filename) == 0
         if current_subject_pool == 0;
-            subjects = Project.subjects_bdnf;
+            subjects = Project.subjects_bdnf(Project.subjects_ET);
         elseif current_subject_pool == 1%find tuned people;
             
             fprintf('finding tuned subjects first...\n');
             p=[];sub=[];pval=[];;
-            for n = Project.subjects_bdnf;;
-                s = Subject(n);
-                p = [p ; s.feargen_rating(4).params];
-                pval = [pval ; s.feargen_rating(4).pval];
-                sub = [sub;n];
+            for n = Project.subjects_bdnf(Project.subjects_ET);
+                s    = Subject(n);
+                p    = [p ; s.get_fit('rating',4).params];
+                pval = [pval ; s.get_fit('rating',4).pval];
+                sub  = [sub;n];
             end
             valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
             save(filename,'subjects');
-        elseif current_subject_pool == 2;%males
-            subjects = Project.subjects_bdnf(Project.gender == 1);
-        elseif current_subject_pool == 3;%females
-            subjects = Project.subjects_bdnf(Project.gender == 2);
-        elseif current_subject_pool == 4
-            subjects = Project.subjects_bdnf(Project.BDNF == 1);
-        elseif current_subject_pool == 5
-            subjects = Project.subjects_bdnf(Project.BDNF == 2);
         end
     else
         load(filename);
     end
-    subjects = setdiff(subjects,[13 38]);
-    %subject 13's phase02 has no valid eye data, exluding that too.
-    %subject 30's correlation matrix is full of nans, will not investigate
-    %it further but just exclude.
     varargout{1} = subjects;
-    
+elseif strcmp(varargin{1},'get_trialcount')    
+    %% goes subject by subject and counts the number of trials in phase VARARGIN{2}
+    phase = varargin{2};
+    fixmat = FearCloud_RSA('get_fixmat');
+    s = 0;
+    for ns = unique(fixmat.subject)
+        s = s+1;
+        c = 0;
+        for nc = unique(fixmat.deltacsp)
+            c = c+1;
+            C(s,c) = (length(unique(fixmat.trialid(fixmat.subject == ns & fixmat.deltacsp == nc & fixmat.phase == phase))));
+        end
+    end
+    imagesc(C(:,1:8));
+    colorbar;
 elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
     filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d.mat',path_project,current_subject_pool);
-    fix = [];
+    fix      = [];
     if exist(filename) == 0
-        subjects = FearCloud_RSA('get_subjects',current_subject_pool)
+        subjects = FearCloud_RSA('get_subjects',current_subject_pool);
         fix      = Fixmat(subjects,[2 4]);
         save(filename,'fix');
     else
@@ -61,14 +63,15 @@ elseif strcmp(varargin{1},'get_fixmat');
     end
     varargout{1} = fix;
 elseif strcmp(varargin{1},'get_behavior')
-    force    = 1;
-    filename = sprintf('%s/midlevel/get_behavior.mat',path_project);
+    %%
+    force    = 0;
+    filename = sprintf('%s/midlevel/get_behavior_subjectpool_%02d.mat',path_project,current_subject_pool);
     if exist(filename) == 0 | force
-        fixmat = FearCloud_RSA('get_fixmat');
+        fixmat   = FearCloud_RSA('get_fixmat');%will return fixmat depending on the current_subject_pool
+        subjects = unique(fixmat.subject)';
         % get the SCR from phase 4 and 3. THe phase 3 is just the difference
         % between CS+ and CS?
-        p = [];p2 = [];scr_amp_03=[];
-        subjects = unique(fixmat.subject)';
+        p = [];p2 = [];scr_amp_03=[];        
         for ns = subjects(:)'
             fprintf('subject:%03d...\n',ns);
             dummy = Subject(ns).get_fit('scr',4).param_table;
@@ -78,7 +81,7 @@ elseif strcmp(varargin{1},'get_behavior')
                 p     = [p ; num2cell(nan(1,size(p,2)))];
             end
             %
-            dummy      = Subject(ns).get_scr(3);
+            dummy     = Subject(ns).get_scr(3);
             if ~isempty(dummy.y)
                 scr_amp_03 = [scr_amp_03;dummy.y_mean(4)-dummy.y_mean(8)];
             else
@@ -86,33 +89,51 @@ elseif strcmp(varargin{1},'get_behavior')
             end
             %
             p2 = [p2;Subject(ns).get_fit('rating',3).param_table Subject(ns).get_fit('rating',4).param_table];
-        end
-        p            = [p p2 table(subjects(:),'VariableName',{'subject'}) table(scr_amp_03,'VariableName',{'scr_03_amp'})];
+        end        
+        p = [p p2 table(subjects(:),'VariableName',{'subject'}) table(scr_amp_03,'VariableName',{'scr_03_amp'})];
         save(filename,'p');
     else
         load(filename)
     end
-    varargout{1} = p;
-    
+    varargout{1} = p;    
 elseif  strcmp(varargin{1},'get_fixmap')
     %% load fixation map for subject recorded at both phases for fixations FIX.
     % maps are mean corrected for each phase separately.
     fixmat  = varargin{2};
     subject = varargin{3};
-    fixs    = varargin{4};
+    fixs    = varargin{4};    
     %creaete the query cell
     maps    = [];
     for phase = [2 4];
         v    = [];
         c    = 0;
         for cond = -135:45:180
-            c    =  c+1;
+            c    =  c+1;            
             v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
         end
         fixmat.getmaps(v{:});
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');
     end
     varargout{1} = maps;
+elseif  strcmp(varargin{1},'get_fixmap_oddeven')
+    %% load fixation map for subject recorded at both phases for fixations FIX.
+    % maps are mean corrected for each phase separately.
+    fixmat  = varargin{2};
+    subject = varargin{3};
+    fixs    = varargin{4};    
+    %creaete the query cell
+    maps    = [];
+    for phase = [2 4];
+        v    = [];
+        c    = 0;
+        for cond = -135:45:180
+            c    =  c+1;            
+            v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
+        end
+        fixmat.getmaps_split(v{:});
+        maps = cat(2,maps,demean(fixmat.vectorize_maps')');
+    end
+    varargout{1} = maps;    
 elseif strcmp(varargin{1},'get_rsa')
     %% COMPUTE THE SIMILARITY MATRIX
     %sim = FearCloud_RSA('get_rsa',1:100)
@@ -133,6 +154,26 @@ elseif strcmp(varargin{1},'get_rsa')
         load(filename);
     end
     varargout{1} = sim;
+elseif strcmp(varargin{1},'get_rsa_oddeven')
+    %% COMPUTE THE SIMILARITY MATRIX using odd and even trials.
+    %sim = FearCloud_RSA('get_rsa',1:100)
+    fixations = varargin{2};
+    filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
+    %
+    if exist(filename) ==0 | 1
+        fixmat   = FearCloud_RSA('get_fixmat');
+        subc     = 0;
+        for subject = unique(fixmat.subject);
+            subc                    = subc + 1;
+            maps                    = FearCloud_RSA('get_fixmap_oddeven',fixmat,subject,fixations);
+            fprintf('Subject: %03d, Method: %s\n',subject,method);
+            sim.(method)(subc,:)    = pdist(maps',method);%
+        end
+        save(filename,'sim');
+    else
+        load(filename);
+    end
+    varargout{1} = sim;    
 elseif strcmp(varargin{1},'plot_rsa');
     %% plot correlation matrices without fisher
     figure;
@@ -256,7 +297,7 @@ elseif strcmp(varargin{1},'plot_betas')
     xlabel('regressors')
     
 elseif strcmp(varargin{1},'searchlight')
-    
+%%    
     fixmat   = varargin{2};
     b1       = varargin{3};
     b2       = varargin{4};
@@ -283,9 +324,7 @@ elseif strcmp(varargin{1},'searchlight')
             else
                 cprintf([0 1 0],'Already cached...\n');
                 load(path_write);
-            end
-	    subject
-	    size(out)
+            end	    
             B1(:,:,:,subc,phc)   = out;
             %
             %                 c = 0;
@@ -300,10 +339,9 @@ elseif strcmp(varargin{1},'searchlight')
         end
     end
     varargout{1} = B1;
-    
-               
+                  
 elseif strcmp(varargin{1},'searchlight_stimulus')
-    %applies the search light analysis to the V1 representations.
+    %% applies the search light analysis to the V1 representations.
         
     b1         = varargin{2};
     b2         = varargin{3};
@@ -339,15 +377,9 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
     subplot(1,2,2);    
     b = f.EyeNoseMouth(out(:,:,2),0)
     bar(b(1:4));
-    
-    
-elseif strcmp(varargin{1},'plot_searchlight')'
-    %
-    
-    %%
-    
+
 elseif strcmp(varargin{1},'searchlight_bs')
-    
+ %%   
     fixmat   = varargin{2}
     b1       = varargin{3};
     b2       = varargin{4};
@@ -376,6 +408,7 @@ elseif strcmp(varargin{1},'searchlight_bs')
     end
     varargout{1} = B1;
 elseif strcmp(varargin{1},'fun_handle')
+    %%
     maps = varargin{2};
     maps = reshape(maps,[size(maps,1)*size(maps,2) size(maps,3)]);
     if all(sum(abs(maps)))
@@ -387,7 +420,7 @@ elseif strcmp(varargin{1},'fun_handle')
     end
     varargout{1} = betas;
 elseif strcmp(varargin{1},'fix_counts')
-    
+%%    
     fixmat         = varargin{2};
     fixmat.unitize = 0;
     subjects       = unique(fixmat.subject);
@@ -406,6 +439,7 @@ elseif strcmp(varargin{1},'fix_counts')
     varargout{1} = count;
     
 elseif strcmp(varargin{1},'plot_counts')
+    %%
     c = varargin{2};
     t      = {'Before' 'After'};
     figure;
@@ -415,13 +449,12 @@ elseif strcmp(varargin{1},'plot_counts')
         set(gca,'xtick',1:2,'xticklabel',{'left' 'right'})
         title(t{np});
         ylabel('Fixation Counts');
-    end
-    
+    end    
 elseif strcmp(varargin{1},'beta_counts')
-    
-    fixmat      = varargin{2};
-    b1          = varargin{3};
-    b2          = varargin{4};
+    %%
+    fixmat      = FearCloud_RSA('get_fixmat');
+    b1          = 1;
+    b2          = 15;
     out         = FearCloud_RSA('searchlight',fixmat,b1,b2);
     for np = 1:2
         for ns = 1:size(out,4);
@@ -432,84 +465,100 @@ elseif strcmp(varargin{1},'beta_counts')
         end
     end
     varargout{1} = count;
-    
+    cr = count;
+    mean((cr(:,1,1)-cr(:,2,1))-(cr(:,1,2)-cr(:,2,2)))
 elseif strcmp(varargin{1},'get_mdscale')
     %%
-    sim    = varargin{2};%sim is a valid similarity matrix;    
-    
-    Criterion='metricsstress' ;
-    ndimen    = 2;
-    viz       = 1;
-    if ndimen == 2
-        init   = [cosd(-135:45:180)' sind(-135:45:180)'];        
-        [y stress disparities]      = mdscale(sim,ndimen,'Criterion',Criterion,'start',repmat(init,2,1)+rand(16,2).*.1,'options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
-        if viz
-            plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
-            hold on;
-            plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
-            hold off;
-            for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end                        
-        end
-    elseif ndimen == 3
-        init      = [[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)];[cosd(-135:45:180)' sind(-135:45:180)' zeros(8,1)]];
-        %y      = mdscale(sim,ndimen,'Criterion',Criterion,'start',init+rand(16,3).*.01,'options',statset('display','iter','tolfun',10^-12,'tolx',10^-12));;
-        y      = mdscale(sim,ndimen,'Criterion',Criterion,'options',statset('display','iter','tolfun',10^-12,'tolx',10^-12));;
-        if viz
-            plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
-            hold on;
-            plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
-            hold off;
-            for n = 1:16;text(y(n,1),y(n,2),y(n,3),mat2str(mod(n-1,8)+1),'fontsize',25);end
-        end
+    sim                         = varargin{2};%sim is a valid similarity matrix;    
+    ndimen                      = varargin{3};
+    Criterion                   ='strain' ;    
+    viz                         = 0;    
+    [dummy stress disparities]  = mdscale(sim,ndimen,'Criterion',Criterion,'start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
+    dummy                       = dummy';
+    Y                           = dummy(:);                       
+    varargout{1} = Y;
+    if viz
+        FearCloud_RSA('plot_mdscale',Y);
     end
-    varargout{1} = y;
+elseif strcmp(varargin{1},'plot_mdscale')
+    %%plots the results of the mds
+    Y      = varargin{2};
+    ndimen = length(Y)./16;    
+    y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;
+    if ndimen == 2
+        plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+        hold on;
+        plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+        hold off;
+        for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
+    elseif ndimen == 3
+        plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
+        hold on;
+        plot3(y([1:8 1]+8,1),y([1:8 1]+8,2),y([1:8 1]+8,3),'ro-','linewidth',3);
+        hold off;
+        for n = 1:16;text(y(n,1),y(n,2),y(n,3),mat2str(mod(n-1,8)+1),'fontsize',25);end
+    end
+    
 elseif strcmp(varargin{1},'get_mdscale_bootstrap')
     %sim = FearCloud_RSA('get_rsa',1:100);
-    %FearCloud_RSA('get_mdscale_bootstrap',sim.correlation);
-    
-    %    
+    %FearCloud_RSA('get_mdscale_bootstrap',sim.correlation);    
+    %%    
     sim      = varargin{2};%this sim.correlation, not yet squareformed.
+    dimen    = varargin{3};
     tsubject = size(sim,1);
     subjects = 1:tsubject;    
     tbs      = 100;
     nbs      = 0;
-    y        = nan(16,2,tbs);
+    y        = nan(16*dimen,tbs);
     while nbs < tbs
         fprintf('Bootstrap: %03d of %03d...\n',nbs,tbs);
         sub          = randsample(subjects,tsubject,1);
         simmat       = squareform(mean(sim(sub,:)));
-        y(:,:,nbs+1) = FearCloud_RSA('get_mdscale',simmat);
+        y(:,nbs+1)   = FearCloud_RSA('get_mdscale',simmat,dimen);
         nbs          = nbs +1;
     end
-    %% align to the mean
-    E_mean = mean(y,3);
-    ya = [];
-    for ns = 1:tbs;
-        [d z transform] = procrustes(E_mean , y(:,:,ns) , 'Reflection',false);
-        ya(:,:,ns) = z;
-    end
-    y = mean(ya,3);
-    plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
-    hold on;
-    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);    
-    for node = 1:16;        
-        hold on
-        text(y(node,1),y(node,2),mat2str(mod(node-1,8)+1),'fontsize',25);        
-        error_ellipse(squeeze([ya(node,1,:);ya(node,2,:)])','color','k','linewidth',1);        
-    end
-        
-        axis square
-        
-        
-    varargout{1} = y;
-    
-    
-    
+    y = zscore(y);
+    %% align to the mean separately for each phase
+    ya      = [];
+    tpoints = size(y,1);
+    yc       = permute(reshape(y,[dimen tpoints/dimen tbs]),[2 1 3]);%for alignment we need columns again
+    for ph = 1%:2
+        i      = [1:16]+8*(ph-1);%indices of the faces for before and after
+        E_mean = mean(yc(i,:,:),3);%average of this phase
+        for ns = 1:tbs;
+            [d z transform] = procrustes(E_mean' , yc(i,:,ns)' , 'Reflection',false);
+            ya(i,:,ns)      = z';
+        end
+    end    
+    %%
+    FearCloud_RSA('plot_mdscale',Vectorize(mean(ya,3)'));
+    %%    
+%     yam = mean(ya,3);
+%     plot(yam([1:8 1],1),yam([1:8 1],2),'o-','linewidth',3);
+%     hold on;
+%     plot(yam([1:8 1]+8,1),yam([1:8 1]+8,2),'ro-','linewidth',3);    
+%     for node = 1:16;        
+%         hold on
+%         text(yam(node,1),yam(node,2),mat2str(mod(node-1,8)+1),'fontsize',25);        
+%         error_ellipse(squeeze([ya(node,1,:);ya(node,2,:)])','color','k','linewidth',1);        
+%     end        
+%     axis square  
+%     varargout{1} = y;
+    %%
 elseif strcmp(varargin{1},'anova')
     
-    y = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
-    side = [ones(65,1);ones(65,1)*2;ones(65,1);ones(65,1)*2];
-    phase =[ones(65,1);ones(65,1);ones(65,1)*2;ones(65,1)*2];
+    fixmat   = FearCloud_RSA('get_fixmat');    
+    cr       = FearCloud_RSA('beta_counts',fixmat,1,15);
+    tsubject = length(unique(fixmat.subject))
+    
+    Y        = [cr(:,1,1) cr(:,2,1) cr(:,1,2) cr(:,2,2)];    
+    figure;
+    errorbar(mean(Y),std(Y)./sqrt(size(Y,1)));
+    y        = [cr(:,1,1);cr(:,2,1);cr(:,1,2);cr(:,2,2)];
+    side     = [ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1);ones(tsubject,1)*2];
+    phase    = [ones(tsubject,1);ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1)*2];
+    anovan(y,{side(:) phase(:)},'model','full')
+
     
 elseif strcmp(varargin{1},'figure03')
     
@@ -523,7 +572,7 @@ elseif strcmp(varargin{1},'figure03')
     fs = 12;
     figure;
     set(gcf,'position',[2132          23         600        1048]);
-    subplot(6,6,[1 2 3 7 8 9 13 14 15]);
+    subplot(9,6,[1 2 3 7 8 9 13 14 15]);
     h = imagesc(cormatz(1:8,1:8),[d u]);
     %     contourf(CancelDiagonals(cormatz(1:8,1:8),mean(diag(cormatz(1:8,1:8),-1))),4);
     axis square;
@@ -535,7 +584,7 @@ elseif strcmp(varargin{1},'figure03')
     %     set(h,'alphaData',~diag(ones(1,8)));
     title('Before');
     
-    subplot(6,6,[4 5 6 10 11 12 16 17 18]);
+    subplot(9,6,[4 5 6 10 11 12 16 17 18]);
     h=imagesc(cormatz(9:16,9:16),[d u]);
     %     contourf(CancelDiagonals(cormatz(9:16,9:16),mean(diag(cormatz(9:16,9:16),-1))),4);
     axis square;h2 = colorbar;set(h2,'location','east');h2.Position = [.91 .65 0.02 .1];h2.AxisLocation='out'
@@ -550,28 +599,49 @@ elseif strcmp(varargin{1},'figure03')
     end
     %axis off
     %     set(h,'alphaData',~diag(ones(1,8)));
+    %% plot the similarity to cs+
+    subplot(9,6,[25:27 19:21])    
+    Y       = FearCloud_RSA('get_mdscale',squareform(mean(sim.correlation)),2);
+    y      = reshape(Y,length(Y)/16,16)';
+    plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+    label={'' '' '' 'cs+' '' '' '' 'cs-'};
+    for n = 1:8;text(y(n,1),y(n,2),label{n},'fontsize',15);end    
+    box off;axis square;xlim([-.6 .6]);ylim([-.6 .6]);
+    set(gca,'XTickLabel',[],'YTickLabel',[],'xtick',0,'YTick',0);grid on;
+    hold off
+    %
+    subplot(9,6,[28:30 22:24])    
+    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+    label={'' '' '' 'cs+' '' '' '' 'cs-'};
+    for n = [1:8]+8;text(y(n,1),y(n,2),label{n-8},'fontsize',15);end    
+    box off;axis square;xlim([-.6 .6]);ylim([-.6 .6]);    
+    set(gca,'XTickLabel',[],'YTickLabel',[],'xtick',0,'YTick',0);grid on;
+    hold on
+    plot(y([1:8 1],1),y([1:8 1],2),'o-.','linewidth',2,'color',[114 189 255]/255);
+    hold off
+    
     %%
-    subplot(6,6,19:20)
+    subplot(9,6,[31:32 37:38])
     X = FearCloud_RSA('get_design_matrix');
     imagesc(squareform(X(:,1)),[-1 1]);axis square;axis off
-    title(sprintf('Constant\nSimilarity'))
-    subplot(6,6,21:22)
+    title(sprintf('Constant\nSimilarity'),'fontsize',8)
+    subplot(9,6,[33 34 39:40])
     X = FearCloud_RSA('get_design_matrix');
     imagesc(squareform(X(:,2)),[-1 1]);axis square;axis off
-    title(sprintf('Perceptual\nSimilarity'))
-    subplot(6,6,23:24)
+    title(sprintf('Perceptual\nSimilarity'),'fontsize',8)
+    subplot(9,6,[35:36 41:42])
     X = FearCloud_RSA('get_design_matrix');
     imagesc(squareform(X(:,3)),[-1 1]);axis square;axis off
-    title(sprintf('CS+\nSimilarity'))
+    title(sprintf('CS+\nSimilarity'),'fontsize',8)
     %%
     [betas ci] = FearCloud_RSA('get_betas',sim);
     
-    location = {[25 26 ] [27 28 ] [29 30 ]};
+    location = {[43 44 49 50] [45 46 51 52] [47 48 53 54]};
     color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
     c= -1;
     xticks =[];
     for n = 1:size(betas,1);%betas
-        subplot(6,6,location{n});
+        subplot(9,6,location{n});
         for m = 1:size(betas,2)%phases
             h=bar(m,betas(n,m),1,'facecolor',color{m,n},'edgecolor',color{m,n});
             hold on;
@@ -598,7 +668,7 @@ elseif strcmp(varargin{1},'figure03')
             ylabel('\beta');
         end
     end
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure03.png','-transparent');
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure03_subjectpool_%02d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure04');
     fixmat  = FearCloud_RSA('get_fixmat');
     M      = FearCloud_RSA('searchlight',fixmat,1,15);
@@ -788,7 +858,7 @@ elseif strcmp(varargin{1},'figure04');
     hold off
     %%
     colormap jet
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure04.png','-transparent');
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04_subjectpool_%02d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure05');
     %%
     figure;
@@ -820,7 +890,7 @@ elseif strcmp(varargin{1},'figure05');
     plot([3 4],[.0112 .0112],'k-')
     plot([3.5],[.0114],'k*')
     hold off;
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure05.png','-transparent');
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure05_subjectpool_%02d.png',current_subject_pool));
 
 elseif strcmp(varargin{1},'behavior_correlation');
         
@@ -849,12 +919,18 @@ elseif strcmp(varargin{1},'behavior_correlation');
     b.scr_04_offset         = [];       
     b.scr_04_sigma_y        = [];
     
-    b.scr_04_logkappa       =  log(b.scr_04_kappa);
-    b.rating_03_logkappa    =  log(b.rating_03_kappa);
-    b.rating_04_logkappa    =  log(b.rating_04_kappa);
+%     b.scr_04_logkappa       =  log(b.scr_04_kappa);
+%     b.rating_03_logkappa    =  log(b.rating_03_kappa);
+%     b.rating_04_logkappa    =  log(b.rating_04_kappa);    
     
     b.si                    =  b.rating_03_kappa    - b.rating_04_kappa;    
-    b.silog                 =  b.rating_03_logkappa - b.rating_04_logkappa; 
+%     b.silog                 =  b.rating_03_logkappa - b.rating_04_logkappa; 
+    %
+    addpath('/home/onat/Documents/Code/Matlab/CircStat/');
+    dummy = deg2rad([b.rating_04_center  b.rating_03_center]);
+%     b.sip                    =  ((pi - circ_mean(dummy'))./circ_std(dummy'))';
+    b.sip                    =  diff(dummy')';
+    %
     vnames                  = sort(b.Properties.VariableNames);
     bb = table();
     for n = vnames
@@ -863,12 +939,14 @@ elseif strcmp(varargin{1},'behavior_correlation');
     data                    = [a2(:,:,1) a2(:,:,2) a(:,:,1) a(:,:,2) table2array(bb)];
     %%
     figure;
-    imagesc(corrcov(nancov(data)),[-.4 .4])
+    imagesc(corrcov(nancov(data)).^2,[-.4 .4])
     hold on;    
     plot([6 6]-.5+0,ylim,'r')
     plot([6 6]-.5+5,ylim,'r','linewidth',4)
     plot([6 6]-.5+10,ylim,'r')
     plot([6 6]-.5+15,ylim,'r','linewidth',4)
+    plot([6 6]-.5+18,ylim,'r')
+    plot([6 6]-.5+21,ylim,'r')
 %     plot([6 6]-.5+19,ylim,'r','linewidth',4)
 %     plot([6 6]-.5+16,ylim,'r')
 %     plot([6 6]-.5+22,ylim,'r')
@@ -877,11 +955,15 @@ elseif strcmp(varargin{1},'behavior_correlation');
 %     plot(xlim,[6 6]-.5+22,'r')
 %     plot(xlim,[6 6]-.5+19,'r','linewidth',4)
 %     plot(xlim,[6 6]-.5+16,'r')
+    plot(xlim,[6 6]-.5+21,'r');
+    plot(xlim,[6 6]-.5+18,'r');
     plot(xlim,[6 6]-.5+15,'r','linewidth',4)
     plot(xlim,[6 6]-.5+10,'r')
     plot(xlim,[6 6]-.5+5,'r','linewidth',4)    
     plot(xlim,[6 6]-.5+0,'r')    
     hold off
     colorbar;axis square;
-    set(gca,'ytick',1:37,'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
+    set(gca,'ytick',1:size(data,2),'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
+    set(gca,'xtick',1:size(data,2),'xticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none','XTickLabelRotation',90);
+    SaveFigure('~/Dropbox/selim/Office/RSAofFDM/FigureCache/BehavioralCorrelation.png','-transparent')
 end
