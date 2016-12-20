@@ -13,7 +13,8 @@ current_subject_pool =0;
 if strcmp(varargin{1},'get_subjects');
     %% returns the subjects based on the CURRENT_SUBJECT_POOL variable;
     filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);
-    if exist(filename) == 0
+    force = 0;
+    if exist(filename) == 0 | force
         if current_subject_pool == 0;
             subjects = Project.subjects_bdnf(Project.subjects_ET);
         elseif current_subject_pool == 1%find tuned people;
@@ -48,13 +49,15 @@ elseif strcmp(varargin{1},'get_trialcount')
             C(s,c) = (length(unique(fixmat.trialid(fixmat.subject == ns & fixmat.deltacsp == nc & fixmat.phase == phase))));
         end
     end
+    varargout{1} = C;
     imagesc(C(:,1:8));
     colorbar;
 elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
     filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d.mat',path_project,current_subject_pool);
     fix      = [];
-    if exist(filename) == 0
+    force = 0;
+    if exist(filename) == 0 | force
         subjects = FearCloud_RSA('get_subjects',current_subject_pool);
         fix      = Fixmat(subjects,[2 4]);
         save(filename,'fix');
@@ -64,7 +67,7 @@ elseif strcmp(varargin{1},'get_fixmat');
     varargout{1} = fix;
 elseif strcmp(varargin{1},'get_behavior')
     %%
-    force    = 0;
+    force    = 1;
     filename = sprintf('%s/midlevel/get_behavior_subjectpool_%02d.mat',path_project,current_subject_pool);
     if exist(filename) == 0 | force
         fixmat   = FearCloud_RSA('get_fixmat');%will return fixmat depending on the current_subject_pool
@@ -139,8 +142,9 @@ elseif strcmp(varargin{1},'get_rsa')
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
+    force = 1;
     %
-    if exist(filename) ==0 ;
+    if exist(filename) ==0 | force;
         fixmat   = FearCloud_RSA('get_fixmat',1);
         subc     = 0;
         for subject = unique(fixmat.subject);
