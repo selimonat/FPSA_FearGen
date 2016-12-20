@@ -563,6 +563,93 @@ elseif strcmp(varargin{1},'anova')
     phase    = [ones(tsubject,1);ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1)*2];
     anovan(y,{side(:) phase(:)},'model','full')
 
+elseif strcmp(varargin{1},'figure02')
+    p = Project;
+    figure(1);
+    g = Group(FearCloud_RSA('get_subjects'));
+    ratings = g.getRatings(2:4);
+    g.tunings.rate{2} = Tuning(g.Ratings(2));
+    g.tunings.rate{3} = Tuning(g.Ratings(3));
+    g.tunings.rate{4} = Tuning(g.Ratings(4));
+    g.tunings.rate{2}.GroupFit(8);
+    g.tunings.rate{3}.GroupFit(8);
+    g.tunings.rate{4}.GroupFit(8);
+    
+    for n = 2:4
+        sn = n-1;
+        subpl(n) =  subplot(2,3,sn);
+        b = bar(-135:45:180,mean(ratings(:,:,n)));
+        hold on;
+        e = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
+        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
+        SetFearGenBarColors(b)
+        set(e,'LineWidth',2,'Color','k')
+        ylim([0 10])
+        xlim([-180 225])
+        axis square
+        box off
+    end
+    subplot(2,3,1);ylabel('Rating of p(shock)','FontSize',12)
+    hold on;
+    %add Groupfit line
+    params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
+    params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
+    x = -150:0.1:195;
+    subplot(2,3,1);
+    line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
+    subplot(2,3,2);
+    plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
+    line([0 180],[9 9],'Color','k','LineWidth',2)
+    text(45,9,'***','FontSize',20)
+    subplot(2,3,3);
+    plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
+    line([0 180],[9 9],'Color','k','LineWidth',2)
+    text(45,9,'***','FontSize',20)
+    subplot(2,3,1);title('Baseline','FontSize',14);
+    subplot(2,3,2);title('Conditioning','FontSize',14);
+    subplot(2,3,3);title('Generalization','FontSize',14);
+    
+    % SCR
+    g = Group(p.subjects_bdnf(p.subjects_scr));
+    out = g.getSCR(2.5:5.5);
+    av = mean(out.y);
+    sem = std(out.y)./sqrt(length(g.ids));
+    %fit baseline to see if there's tuning
+    data.y = out.y(:,1:8);
+    data.x = repmat(-135:45:180,[68 1])';
+    data.ids = NaN;
+    base = Tuning(data);
+    base.GroupFit(8);
+    %same for test (cond not possible)
+    data.y = out.y(:,17:24);
+    data.x = repmat(-135:45:180,[68 1]);
+    data.ids = NaN;
+    test = Tuning(data);
+    test.GroupFit(8);
+    params = test.groupfit.Est;
+    params(3) = deg2rad(params(3));
+    figure(1);
+    % plot SCR
+    subplot(2,3,4);
+    ylabel('SCR (z-score)')
+    b = bar(-135:45:180,av(1:8));SetFearGenBarColors(b);axis square;box off;hold on;
+    errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
+    line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
+    ylim([-.55 .55])
+    subplot(2,3,5);
+    b = bar(-135:45:180,av(9:16));SetFearGenBarColors(b);axis square;box off;hold on;
+    errorbar(-135:45:180,av(9:16),sem(9:16),'k.','LineWidth',1.5);
+    subplot(2,3,6);
+    b = bar(-135:45:180,av(17:24));SetFearGenBarColors(b);axis square;box off;hold on;
+    errorbar(-135:45:180,av(17:24),sem(17:24),'k.','LineWidth',1.5);
+    x = -150:0.1:195;
+    plot(x,VonMises(deg2rad(x),params(1),params(2),params(3),params(4)),'k-','LineWidth',2)
+    ylim([-.55 .55])
+    for n = 4:6
+        subplot(2,3,n)
+        set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',12)
+        xlim([-180 225])
+    end
     
 elseif strcmp(varargin{1},'figure03')
     
