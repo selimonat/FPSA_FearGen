@@ -305,19 +305,21 @@ elseif strcmp(varargin{1},'searchlight')
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %applies the search light analysis to the V1 representations.
         
-    b1         = varargin{2};
-    b2         = varargin{3};
-    filename   = 'stimulus_searchlight';
-    path_write = sprintf('%smidlevel/%s.mat',path_project,filename);
-    fun        = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block    
-    maps       = [];
+    b1          = varargin{2};
+    b2          = varargin{3};
+    noise_level = varargin{4};
+    filename    = 'stimulus_searchlight';
+    path_write  = sprintf('%smidlevel/%s_noiselevel_%02d.mat',path_project,filename,noise_level);
+    fun         = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block    
+    maps        = [];
     for n = 1:8
         maps(:,:,n) = imread(sprintf('%sstimuli/%02d.bmp',path_project,n));
     end    
     obj  = Fixmat([],[]);
+    maps = maps + rand(size(maps))*noise_level;
     maps = maps( obj.rect(1):obj.rect(1)+obj.rect(3)-1,  obj.rect(2):obj.rect(2)+obj.rect(4)-1,:);
     
-    if exist(path_write) == 0
+    if exist(path_write) == 0 | 1
         % create the query cell        
         out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
         save(path_write,'out');
