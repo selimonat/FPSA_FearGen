@@ -7,7 +7,7 @@ condition_borders = {1:8 9:16};
 tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
-current_subject_pool =0;
+current_subject_pool =1;
 
 
 if strcmp(varargin{1},'get_subjects');
@@ -134,7 +134,11 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
             v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
         end
         fixmat.getmaps_split(v{:});
-        maps = cat(2,maps,demean(fixmat.vectorize_maps')');
+        if ~isempty(fixmat.maps)
+            maps = cat(2,maps,demean(fixmat.vectorize_maps')');
+        else
+            maps = [];
+        end
     end
     varargout{1} = maps;    
 elseif strcmp(varargin{1},'get_rsa')
@@ -142,7 +146,7 @@ elseif strcmp(varargin{1},'get_rsa')
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
-    force = 1;
+    force = 0;
     %
     if exist(filename) ==0 | force;
         fixmat   = FearCloud_RSA('get_fixmat',1);
@@ -163,15 +167,21 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
+    force     = 0;
     %
-    if exist(filename) ==0 | 1
+    if exist(filename) ==0 | force
         fixmat   = FearCloud_RSA('get_fixmat');
         subc     = 0;
-        for subject = unique(fixmat.subject);
+        for subject = setdiff(unique(fixmat.subject),58);
             subc                    = subc + 1;
             maps                    = FearCloud_RSA('get_fixmap_oddeven',fixmat,subject,fixations);
-            fprintf('Subject: %03d, Method: %s\n',subject,method);
-            sim.(method)(subc,:)    = pdist(maps',method);%
+            if size(maps,2) == 32;
+                fprintf('Subject: %03d, Method: %s\n',subject,method);
+                sim.(method)(subc,:)    = pdist(maps',method);%
+            else
+                fprintf('no map found...\n');
+                subc = subc - 1;
+            end
         end
         save(filename,'sim');
     else
@@ -231,7 +241,7 @@ elseif strcmp(varargin{1},'get_betas')
         while n < tbootstrap
             n                  = n +1;
             i                  = randsample(1:tsub,tsub,1);
-            Y                  = ( 1-squareform(mean(data(:,:,i),3)) );
+            Y                  = ( 1-squareform(nanmean(data(:,:,i),3)) );
             betas(n,:,nblock)  = X\Y';
         end
     end
