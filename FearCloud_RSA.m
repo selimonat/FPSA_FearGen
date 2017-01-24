@@ -320,14 +320,16 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
     %
 elseif strcmp(varargin{1},'plot_betas')
     %%
-    if nargin == 1
-        sim        = FearCloud_RSA('get_rsa',1:100);
+    if nargin == 2
+        fix        = varargin{2};
+        sim        = FearCloud_RSA('get_rsa',fix);
         [betas ci] = FearCloud_RSA('get_betas',sim);
-    else
+    elseif nargin==3
         betas = varargin{2};
         ci    = varargin{3};
     end
     %
+    figure
     color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
     c= -1;
     xticks =[];
@@ -812,164 +814,77 @@ elseif strcmp(varargin{1},'figure03')
     end
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure03_subjectpool_%02d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure04');
-    fixmat  = FearCloud_RSA('get_fixmat');
-    M      = FearCloud_RSA('searchlight',fixmat,1,15);
-    M      = squeeze(nanmean(M,4));
-    M      = reshape(M,[500 500 6]);
-    fs     = 15;
-    %%    1st column
-    figure;
-    set(gcf,'position',[ 2132         528        1579         543]);
-    d       = -.1;
-    u       = .6;
-    G      = make_gaussian2D(51,51,32,32,26,26);
-    G      = G./sum(G(:));
-    h       = subplot(2,4,1);
-    map     = M(:,:,1);
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(mapc,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.5+.5);
+        
+    fixmat      = FearCloud_RSA('get_fixmat');
+    M           = FearCloud_RSA('searchlight',fixmat,1,15);
+    Mori        = squeeze(nanmean(M,4));
+    %%
+    M           = Mori;
+    crop_amount = [0 0];
+    M           = M( 1+crop_amount(1):end-crop_amount(1), 1+crop_amount(2):end-crop_amount(2),:,:,:,:,:);
+%     M           = padarray(M,[crop_amount],'replicate','both');
+    M           = reshape(M,[size(M,1) size(M,2) 6]);
+    fs          = 15;%font size
+    stim        = fixmat.stimulus;
+    stim        = stim( 1+crop_amount(1):end-crop_amount(1), 1+crop_amount(2):end-crop_amount(2),:,:,:,:,:);
     %
-    [~,h2]  = contourf(X,Y,mapc,3);
-    h2.Fill = 'off';
-    hold off
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs);
+    G           = make_gaussian2D(51,51,45,45,26,26);
+    G           = G./sum(G(:));
+    mask        = conv2(M(:,:,4),G,'same');
+    
+    k = .22;
+    M(:,:,4) = conv2(M(:,:,4),G,'same');
+    M(:,:,1) = conv2(M(:,:,1),G,'same');
+    %    
+    figure(12122);clf
+    set(gcf,'position',[1952         361        1743         714]);
+    spi = [1 2 3 5 6 7];
+    cmap = repmat([0 .5 ; 0 .15; 0 0.1],2,1);
+    [X Y]   = meshgrid(1:size(M,1),1:size(M,2));    
+    for n = 1:6
+        h(n)       = subplot(2,4,spi(n));
+        imagesc(stim,cmap(n,:));
+        hold on;
+%         imagesc(M(:,:,n).*r);
+        if n == 1 | n == 4
+           [dummy,h2] = contourf(M(:,:,n),[-.3 -.3+k -.3+k*2 -.3+k*3 -.3+k*4 -.3+k*5],'color','none');axis ij;                            
+        else
+           [~,h2]  = contourf(M(:,:,n).*(mask <= k),20,'color','none');axis ij;                                          
+        end        
+        
+        hold on           
+        [~,h3]     = contourf(mask,[k k ]);axis ij;                    
+        h3.Fill    = 'off';
+        hold off           
+        %    
+        h4=colorbar;set(gca,'xticklabel','','yticklabel','')
+        set(h4,'box','off','ticklength',0,'ticks',cmap(n,:),'fontsize',fs);      
+        hold off;
+        drawnow;        
+        contourf_transparency(h2,0.5);;           
+        colormap jet 
+%         axis off;
+                
+        if spi(n) == 1
+            ylabel('BEFORE','fontsize',15);
+        elseif spi(n) == 4;
+            ylabel('AFTER','fontsize',15);
+        end
+        %
+        if spi(n) == 1
+            title(sprintf('Constant\nSimilarity'));
+        elseif spi(n) == 2
+            title(sprintf('Perceptual\nSimilarity'));            
+        elseif spi(n) == 3
+            title(sprintf('CS+\nSimilarity'));
+%         elseif n == 5
+%             title(sprintf('Fixation\n probability'))
+        end
+        axis square;        
     end
-    ylabel('BEFORE','fontsize',15)
-    title(sprintf('Constant\nSimilarity'));
-    %
-    h       = subplot(2,4,5);
-    map     = M(:,:,4);
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(mapc,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.5+.5);
-    %
-    [~,h2]  = contourf(X,Y,mapc,3);
-    h2.Fill = 'off';
-    hold off
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
-    end
-    ylabel('AFTER','fontsize',15)
-    %% 2nd column
-    G      = make_gaussian2D(51,51,4.5,4.5,26,26);
-    G      = G./sum(G(:));
-    d       = 0;
-    u       = .17;
-    tcont   = 6;
-    h       = subplot(2,4,2);
-    %     mask      = conv2(M(:,:,1),G,'same')>0.1;
-    map       = M(:,:,2);
-    %     map(mask) = NaN;
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(map,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.8+.2);
-    %
-    [~,h2]  = contourf(X,Y,mapc,tcont);
-    h2.Fill = 'off';
-    hold off
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
-    end
-    title(sprintf('Perceptual\nSimilarity'));
-    %
-    h       = subplot(2,4,6);
-    map     = M(:,:,5);
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(map,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.8+.2);
-    %
-    [~,h2]  = contourf(X,Y,mapc,tcont);
-    h2.Fill = 'off';
-    hold off
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
-    end
-    %% 3rd column
-    G      = make_gaussian2D(51,51,4.5,4.5,26,26);
-    G      = G./sum(G(:));
-    d       = 0;
-    u       = .17;
-    tcont   = 6;
-    h       = subplot(2,4,3);
-    %     mask      = conv2(M(:,:,1),G,'same')>0.1;
-    map       = M(:,:,3);
-    %     map(mask) = NaN;
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(map,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.8+.2);
-    %
-    [~,h2]  = contourf(X,Y,mapc,tcont);
-    h2.Fill = 'off';
-    hold off
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
-    end
-    title(sprintf('CS+\nSimilarity'));
-    %
-    h       = subplot(2,4,7);
-    map     = M(:,:,6);
-    map     = inpaint_nans(map);
-    mapc    = conv2(map,G,'valid');
-    mapc    = padarray(mapc,[25 25],NaN);
-    mapc    = inpaint_nans(mapc);
-    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
-    %plot the image;
-    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
-    hold on;
-    h       = imagesc(map,[d u]);
-    set(h,'alphaData',Scale(abs(map))*.8+.2);
-    %
-    [~,h2]  = contourf(X,Y,mapc,tcont);
-    h2.Fill = 'off';
-    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
-    end
-    hold off
+    %%   
     %% 4th column
-    h       = subplot(2,4,4);
+    h(7)       = subplot(2,4,4);    
     v = [];
     c = 0;
     %     fixmat.unitize = 0;
@@ -984,16 +899,13 @@ elseif strcmp(varargin{1},'figure04');
     %plot the image;
     imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
     hold on;
-    h       = imagesc(map,[d u]);
+    hi       = imagesc(map,[0 u]);
     hold off
-    set(h,'alphaData',.8);
+    set(hi,'alphaData',.5);
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
-    try
-    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
-    end
-    title(sprintf('Fixation\n probability'))
+    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)    
     %================================================================
-    h       = subplot(2,4,8);
+    h(8)       = subplot(2,4,8);
     v = [];
     c = 0;
     for sub = unique(fixmat.subject)
@@ -1007,16 +919,19 @@ elseif strcmp(varargin{1},'figure04');
     %plot the image;
     imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
     hold on;
-    h       = imagesc(map,[d u]);
-    set(h,'alphaData',.8);
-    try
+    hi       = imagesc(map,[0 u]);
+    set(hi,'alphaData',.5);
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
     end
     set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
-    hold off
-    %%
+    hold off    
+    %%    
+    for n = 1:8
+        subplotChangeSize(h(n),.05,.05)
+        axis square;
+    end
     colormap jet
-%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04_subjectpool_%02d.png',current_subject_pool));
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04_ver2_subjectpool_%02d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure05');
     %%
     figure;
@@ -1049,7 +964,49 @@ elseif strcmp(varargin{1},'figure05');
     plot([3.5],[.0114],'k*')
     hold off;
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure05_subjectpool_%02d.png',current_subject_pool));
-
+elseif strcmp(varargin{1},'figure_single_subject')
+    fs = 15;
+    fixmat                  = FearCloud_RSA('get_fixmat');
+    fixmat.kernel_fwhm      = 25;
+    sub                     = varargin{2};    
+    %
+    c           = 0;    
+    for nphase = [4]
+        for ncond = [-45 0 45 90 135 180 -135 -90];
+            c    = c+1;
+            v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
+        end
+    end
+    fixmat.getmaps(v{:});
+    %fixmat.maps = cat(3,fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]),fixmat.maps(:,:,9:end)-repmat(mean(fixmat.maps(:,:,9:end),3),[1 1 8]));    
+    fixmat.maps = fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]);
+    % 
+    %[d u] = GetColorMapLimits(fixmat.maps(:),1);
+    grids  = linspace(min(fixmat.maps(:)),max(fixmat.maps(:)),15);    
+    t      = {'-45' 'CS+' '+45' '90' '135' 'CS-' '-135' '-90'};
+    figure;set(gcf,'position',[1952         361        1743         714]);
+    for n = 1:8
+        hhhh(n)=subplot(2,4,n);
+        imagesc(fixmat.stimulus);
+        hold on
+        [~,h2] = contourf(fixmat.maps(:,:,n),grids,'color','none');
+        caxis([grids(4) grids(end-6)]);
+        drawnow;
+        contourf_transparency(h2,0.4);;                   
+        %if n == 8
+            %h4 = colorbar;        
+            %set(h4,'box','off','ticklength',0,'ticks',[[grids(4) grids(end-4)]],'fontsize',fs);      
+        %end
+        hold off
+        axis image;        
+        axis off;
+        title(t{n});        
+    end    
+%     colormap jet
+    for n = 1:8;
+        subplotChangeSize(hhhh(n),.1,.1);
+    end
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d.png',sub));
 elseif strcmp(varargin{1},'behavior_correlation');
         
     
