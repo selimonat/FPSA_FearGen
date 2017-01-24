@@ -162,6 +162,43 @@ elseif strcmp(varargin{1},'get_rsa')
         load(filename);
     end
     varargout{1} = sim;
+    
+elseif strcmp(varargin{1},'get_rsa2')
+    %% same as get_rsa but works using a fixmat as input.    
+    force      = 0;
+    %%
+    window_size    = varargin{2};
+    window_overlap = varargin{3};    
+    t              = 0:1:(window_size-1);
+    start_times    = 0:window_overlap:1500-window_size+1;
+    time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
+    %%
+    filename  = sprintf('%s/midlevel/rsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d.mat',path_project,window_size,window_overlap,current_subject_pool);
+    %%
+    if exist(filename) ==0 | force;
+        tc = 0;
+        for t = 1:size(time,1)-1
+            tc = tc+1            
+            fixmat   = FearCloud_RSA('get_fixmat');
+            fixmat.UpdateSelection('start',time(t,:),'stop',time(t+1,:));
+            fixmat.ApplySelection;
+            subc     = 0;
+            for subject = unique(fixmat.subject);
+                subc                    = subc + 1;
+                maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
+                fprintf('Subject: %03d, Method: %s\n',subject,method);
+                sim.(method)(subc,:,tc)    = pdist(maps',method);%
+            end
+            try
+            figure(1);imagesc(squareform(nanmean(sim.correlation(:,:,tc))));drawnow;
+            end
+        end
+        save(filename,'sim');
+    else
+        load(filename);
+    end
+    varargout{1} = sim;
+    
 elseif strcmp(varargin{1},'get_rsa_oddeven')
     %% COMPUTE THE SIMILARITY MATRIX using odd and even trials.
     %sim = FearCloud_RSA('get_rsa',1:100)
@@ -186,8 +223,9 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
         save(filename,'sim');
     else
         load(filename);
-    end
+    end    
     varargout{1} = sim;    
+        
 elseif strcmp(varargin{1},'plot_rsa');
     %% plot correlation matrices without fisher
     figure;
@@ -214,7 +252,7 @@ elseif strcmp(varargin{1},'get_block')
 elseif strcmp(varargin{1},'get_design_matrix');
     %% Linear Model on that with constant, physical similarity, aversive generalization components
     x             = [pi/4:pi/4:2*pi];
-    const         = ones(8);
+    const         = .144*ones(8);
     const         = squareform(CancelDiagonals(const,0));
     % phys = Scale([cos(x') sin(x')]*[cos(x') sin(x')]');
     phys          = [cos(x') sin(x')]*[cos(x') sin(x')]';
@@ -373,7 +411,7 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
     maps = maps + rand(size(maps))*noise_level;
     maps = maps( obj.rect(1):obj.rect(1)+obj.rect(3)-1,  obj.rect(2):obj.rect(2)+obj.rect(4)-1,:);
     
-    if exist(path_write) == 0 | 1
+    if exist(path_write) == 0 
         % create the query cell        
         out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
         save(path_write,'out');
@@ -383,18 +421,19 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
     end
     varargout{1} = out;
     %
-    subplot(1,2,1);
+%     subplot(1,2,1);
+    figure;
     imagesc(out(:,:,2));
-    hold on    
-    f   = Fixmat([],[]);
-    roi = f.GetFaceROIs;
-    [~,h] = contourf(mean(roi(:,:,1:4),3));
-    h.Fill = 'off';
-    axis image;
-    hold off;
-    subplot(1,2,2);    
-    b = f.EyeNoseMouth(out(:,:,2),0)
-    bar(b(1:4));
+%     hold on    
+%     f   = Fixmat([],[]);
+%     roi = f.GetFaceROIs;
+%     [~,h] = contourf(mean(roi(:,:,1:4),3));
+%     h.Fill = 'off';
+%     axis image;
+%     hold off;
+%     subplot(1,2,2);    
+%     b = f.EyeNoseMouth(out(:,:,2),0)
+%     bar(b(1:4));
 
 elseif strcmp(varargin{1},'searchlight_bs')
  %%   
@@ -883,6 +922,7 @@ elseif strcmp(varargin{1},'figure04');
     hi       = imagesc(map,[0 u]);
     set(hi,'alphaData',.5);
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
+    end
     set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
     hold off    
     %%    
