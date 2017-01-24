@@ -924,6 +924,103 @@ elseif strcmp(varargin{1},'figure05');
     plot([3.5],[.0114],'k*')
     hold off;
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure05_subjectpool_%02d.png',current_subject_pool));
+elseif strcmp(varargin{1},'figure_single_subject_indices')
+    varargout{1} = [31 60 54 53 47 44 46 39 21];
+
+elseif strcmp(varargin{1},'figure_groupmaps');
+    %will plot 8 evoked fixation maps individually corrected for blank
+    
+    subjects                = FearCloud_RSA('get_subjects');
+    fixmat                  = FearCloud_RSA('get_fixmat');        
+    correction              = 1;
+    %    
+    for nphase = [4]
+        M = [];
+        for sub = subjects(:)'            
+            c           = 0;    
+            for ncond = [0 45 90 135 180 -135 -90 -45];
+                c    = c+1;
+                v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
+            end
+            fixmat.getmaps(v{:});
+            %mean correction
+            if correction
+                M = cat(4,M,fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]));
+            else
+                M = cat(4,M,fixmat.maps(:,:,1:8));
+            end
+        end
+    end
+    
+    fixmat.maps = mean(M,4);
+    FearCloud_RSA('fdm_plot',fixmat);
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/GroupAverage_SubjectPool_%s_Correction_%02d.png',current_subject_pool,correction));
+
+elseif strcmp(varargin{1},'count_tuning')    
+    
+    fixmat         = FearCloud_RSA('get_fixmat');
+    fixmat.unitize = 0;
+    subjects       = unique(fixmat.subject);
+    c = 0;
+    for ns = subjects(:)'
+        fprintf('Counting fixations in subject: %03d.\n',ns)
+        c = c+1;
+        p = 0;
+        for phase = [2 4]
+            p  = p + 1;
+            cc = 0;
+            v  = [];
+            for ncond = fixmat.realcond
+                cc   = cc+1;
+                v{cc} = {'subject' ns 'deltacsp' ncond 'phase' phase};
+            end
+            %
+            fixmat.getmaps(v{:});
+            %
+            for iii = 1:size(fixmat.maps,3)
+                dummy_counts(iii,:) = fixmat.EyeNoseMouth(fixmat.maps(:,:,iii),1);
+            end                                                
+            count(:,:,c,p) = dummy_counts;%[faces organs subjects phases]            
+        end
+    end
+    varargout{1} = count; 
+elseif strcmp(varargin{1},'plot_count_tuning')
+    fs = 15;
+    counts = FearCloud_RSA('count_tuning');
+    counts = counts*100;
+    m_counts = mean(counts,3);
+    s_counts = std(counts,1,3)./sqrt(size(counts,3));    
+    %%
+    set(gcf,'position',[2811         668         989         417]);
+    t={'right eye', 'left eye' 'nose' 'mouth'};
+    for n = 1:4
+        H(n) = subplot(2,4,n)
+        Project.plot_bar(m_counts(:,n,1,1));
+        title(sprintf('%s',t{n}),'fontsize',fs);
+        if n == 1
+            ylabel(sprintf('%s of fixations\n (before)','%'));
+        end
+        hold on;
+        errorbar(m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
+        hold off;
+        if n ~= 1;
+            set(gca,'xticklabel','');
+        end
+        %
+        H(n+4)= subplot(2,4,n+4)
+        Project.plot_bar(m_counts(:,n,1,2));
+        hold on;
+        if n == 1
+            ylabel(sprintf('%s of fixations\n (after)','%'));
+        end
+        errorbar(m_counts(:,n,1,2),s_counts(:,n,1,2),'ko');
+        hold off;
+        set(gca,'xticklabel','')
+    end    
+    subplotChangeSize(H,.025,.025);
+%     EqualizeSubPlotYlim(gcf);
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
+    
 elseif strcmp(varargin{1},'figure_single_subject')
     fs = 15;
     fixmat                  = FearCloud_RSA('get_fixmat');
@@ -931,28 +1028,38 @@ elseif strcmp(varargin{1},'figure_single_subject')
     sub                     = varargin{2};    
     %
     c           = 0;    
-    for nphase = [4]
-        for ncond = [-45 0 45 90 135 180 -135 -90];
-            c    = c+1;
-            v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
-        end
+    nphase = 4
+    for ncond = [0 45 90 135 180 -135 -90 -45];
+        c    = c+1;
+        v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
     end
+    
     fixmat.getmaps(v{:});
     %fixmat.maps = cat(3,fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]),fixmat.maps(:,:,9:end)-repmat(mean(fixmat.maps(:,:,9:end),3),[1 1 8]));    
     fixmat.maps = fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]);
     % 
     %[d u] = GetColorMapLimits(fixmat.maps(:),1);
+    FearCloud_RSA('fdm_plot',fixmat);
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
+    
+elseif strcmp(varargin{1},'fdm_plot');
+    %an alternative to plot FDM for the paper.
+    fs   = 15;
+    contour_lines = 1;
+    fixmat = varargin{2};
     grids  = linspace(min(fixmat.maps(:)),max(fixmat.maps(:)),15);    
-    t      = {'-45' 'CS+' '+45' '90' '135' 'CS-' '-135' '-90'};
-    figure;set(gcf,'position',[1952         361        1743         714]);
+%     grids  = prctile(fixmat.maps(fixmat.maps ~= 0),0:10:100);
+    t      = {'CS+' '+45' '+90' '+135' 'CS-' '-135' '-90' '-45'};
+    colors = GetFearGenColors;
+    colors = circshift(colors(1:8,:),-3);
+    figure;set(gcf,'position',[1952 361 1743 714]);
+    colormap jet;
     for n = 1:8
         hhhh(n)=subplot(2,4,n);
         imagesc(fixmat.stimulus);
         hold on
         [~,h2] = contourf(fixmat.maps(:,:,n),grids,'color','none');
-        caxis([grids(4) grids(end-6)]);
-        drawnow;
-        contourf_transparency(h2,0.4);;                   
+        caxis([grids(2) grids(end)]);
         %if n == 8
             %h4 = colorbar;        
             %set(h4,'box','off','ticklength',0,'ticks',[[grids(4) grids(end-4)]],'fontsize',fs);      
@@ -960,13 +1067,32 @@ elseif strcmp(varargin{1},'figure_single_subject')
         hold off
         axis image;        
         axis off;
-        title(t{n});        
-    end    
-%     colormap jet
-    for n = 1:8;
-        subplotChangeSize(hhhh(n),.1,.1);
+        if strcmp(t{n}(1),'+') | strcmp(t{n}(1),'-')
+            title(sprintf('%s%c',t{n},char(176)),'fontsize',fs);        
+        else
+            title(sprintf('%s',t{n}),'fontsize',fs);        
+        end
+        %
+        drawnow;
+        pause(.5);
+        contourf_transparency(h2,0.4);;                   
+        %
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',5);
     end
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d.png',sub));
+    pause(1);
+    for n = 1:8;
+        subplotChangeSize(hhhh(n),.075,.075);
+    end
+    
+    if contour_lines
+        
+        hold on;
+        fixmat.maps = fixmat.GetFaceROIs;
+        for n = 1:4
+            contour(fixmat.maps(:,:,n),'k--','linewidth',.5);
+        end
+    end
+    
 elseif strcmp(varargin{1},'behavior_correlation');
         
     
