@@ -165,7 +165,7 @@ elseif strcmp(varargin{1},'get_rsa')
     
 elseif strcmp(varargin{1},'get_rsa2')
     %% same as get_rsa but works using a fixmat as input.    
-    force      = 0;
+    force          = 0;
     %%
     window_size    = varargin{2};
     window_overlap = varargin{3};    
@@ -922,7 +922,7 @@ elseif strcmp(varargin{1},'figure04');
     hi       = imagesc(map,[0 u]);
     set(hi,'alphaData',.5);
     h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
-    end
+
     set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
     hold off    
     %%    
