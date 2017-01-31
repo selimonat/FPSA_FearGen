@@ -204,7 +204,7 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
-    force     = 0;
+    force     = 1;
     %
     if exist(filename) ==0 | force
         fixmat   = FearCloud_RSA('get_fixmat');
@@ -1024,6 +1024,12 @@ elseif strcmp(varargin{1},'count_tuning')
         end
     end
     varargout{1} = count; 
+    groups.g1 = repmat([1:8]',[1 5 62 2]);
+    groups.g2 = repmat(1:5,[8 1 62 2]);
+    groups.g3 = repmat(reshape(1:62,[1 1 62]),[8 5 1 2]);
+    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[1 5 62 1]);
+    varargout{2} = groups;
+    %
 elseif strcmp(varargin{1},'plot_count_tuning')
     fs = 15;
     counts = FearCloud_RSA('count_tuning');
@@ -1062,6 +1068,7 @@ elseif strcmp(varargin{1},'plot_count_tuning')
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
     
 elseif strcmp(varargin{1},'figure_single_subject')
+    %selected subjects are 44 and 47
     fs = 15;
     fixmat                  = FearCloud_RSA('get_fixmat');
     fixmat.kernel_fwhm      = 25;
@@ -1080,7 +1087,7 @@ elseif strcmp(varargin{1},'figure_single_subject')
     % 
     %[d u] = GetColorMapLimits(fixmat.maps(:),1);
     FearCloud_RSA('fdm_plot',fixmat);
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d_onerow_thick.png',sub,nphase));
     
 elseif strcmp(varargin{1},'fdm_plot');
     %an alternative to plot FDM for the paper.
@@ -1095,7 +1102,7 @@ elseif strcmp(varargin{1},'fdm_plot');
     figure;set(gcf,'position',[1952 361 1743 714]);
     colormap jet;
     for n = 1:8
-        hhhh(n)=subplot(2,4,n);
+        hhhh(n)=subplot(1,8,n);
         imagesc(fixmat.stimulus);
         hold on
         [~,h2] = contourf(fixmat.maps(:,:,n),grids,'color','none');
@@ -1115,13 +1122,13 @@ elseif strcmp(varargin{1},'fdm_plot');
         %
         drawnow;
         pause(.5);
-        contourf_transparency(h2,0.4);;                   
+        contourf_transparency(h2,0.5);;                   
         %
-        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',5);
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
     pause(1);
     for n = 1:8;
-        subplotChangeSize(hhhh(n),.075,.075);
+        subplotChangeSize(hhhh(n),.01,.01);
     end
     
     if contour_lines
