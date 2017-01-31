@@ -135,7 +135,7 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
         end
         fixmat.getmaps_split(v{:});
         if ~isempty(fixmat.maps)
-            maps = cat(2,maps,(fixmat.vectorize_maps')');
+            maps = cat(2,maps,demean(fixmat.vectorize_maps')');
         else
             maps = [];
         end
@@ -222,7 +222,7 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
                 subc = subc - 1;
             end
         end
-%         save(filename,'sim');
+        save(filename,'sim');
     else
         load(filename);
     end    
@@ -1026,6 +1026,12 @@ elseif strcmp(varargin{1},'count_tuning')
         end
     end
     varargout{1} = count; 
+    groups.g1 = repmat([1:8]',[1 5 62 2]);
+    groups.g2 = repmat(1:5,[8 1 62 2]);
+    groups.g3 = repmat(reshape(1:62,[1 1 62]),[8 5 1 2]);
+    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[1 5 62 1]);
+    varargout{2} = groups;
+    %
 elseif strcmp(varargin{1},'plot_count_tuning')
     fs = 15;
     counts = FearCloud_RSA('count_tuning');
@@ -1064,6 +1070,7 @@ elseif strcmp(varargin{1},'plot_count_tuning')
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
     
 elseif strcmp(varargin{1},'figure_single_subject')
+    %selected subjects are 44 and 47
     fs = 15;
     fixmat                  = FearCloud_RSA('get_fixmat');
     fixmat.kernel_fwhm      = 25;
@@ -1117,13 +1124,13 @@ elseif strcmp(varargin{1},'fdm_plot');
         %
         drawnow;
         pause(.5);
-        contourf_transparency(h2,0.4);;                   
+        contourf_transparency(h2,0.5);;                   
         %
-        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',5);
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
     pause(1);
     for n = 1:8;
-        subplotChangeSize(hhhh(n),.075,.075);
+        subplotChangeSize(hhhh(n),.01,.01);
     end
     
     if contour_lines
