@@ -1038,6 +1038,9 @@ elseif strcmp(varargin{1},'count_tuning')
 % % % bla(:,[10 75])  = [];
 % % % bla(2601:end,:) = [];
 % % % imagesc(bla);
+% % % Y = Vectorize(a(:,:,:,1)-a(:,:,:,2));
+% % % t = table(Y(:),abs(groups.g1(1:2600)-4)',categorical( groups.g2(1:2600)'),'variablenames',{'count' 'faces' 'roi'});
+% % % a = fitglm(t,'count ~ faces + roi + faces:roi');
 %%
 % % out = fitglm(bla,aa(:))
     %
