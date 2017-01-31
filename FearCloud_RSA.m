@@ -135,7 +135,7 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
         end
         fixmat.getmaps_split(v{:});
         if ~isempty(fixmat.maps)
-            maps = cat(2,maps,demean(fixmat.vectorize_maps')');
+            maps = cat(2,maps,(fixmat.vectorize_maps')');
         else
             maps = [];
         end
@@ -202,9 +202,11 @@ elseif strcmp(varargin{1},'get_rsa2')
 elseif strcmp(varargin{1},'get_rsa_oddeven')
     %% COMPUTE THE SIMILARITY MATRIX using odd and even trials.
     %sim = FearCloud_RSA('get_rsa',1:100)
+    %decide if demean or not the fixmap!!!!!!!!!!!!!!!!!!!
+    
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
-    force     = 0;
+    force     = 1;
     %
     if exist(filename) ==0 | force
         fixmat   = FearCloud_RSA('get_fixmat');
@@ -220,7 +222,7 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
                 subc = subc - 1;
             end
         end
-        save(filename,'sim');
+%         save(filename,'sim');
     else
         load(filename);
     end    
@@ -1080,7 +1082,7 @@ elseif strcmp(varargin{1},'figure_single_subject')
     % 
     %[d u] = GetColorMapLimits(fixmat.maps(:),1);
     FearCloud_RSA('fdm_plot',fixmat);
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
+%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
     
 elseif strcmp(varargin{1},'fdm_plot');
     %an alternative to plot FDM for the paper.
@@ -1095,7 +1097,7 @@ elseif strcmp(varargin{1},'fdm_plot');
     figure;set(gcf,'position',[1952 361 1743 714]);
     colormap jet;
     for n = 1:8
-        hhhh(n)=subplot(2,4,n);
+        hhhh(n)=subplot(1,8,n);
         imagesc(fixmat.stimulus);
         hold on
         [~,h2] = contourf(fixmat.maps(:,:,n),grids,'color','none');
