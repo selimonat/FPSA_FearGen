@@ -1026,11 +1026,20 @@ elseif strcmp(varargin{1},'count_tuning')
         end
     end
     varargout{1} = count; 
-    groups.g1 = repmat([1:8]',[1 5 62 2]);
-    groups.g2 = repmat(1:5,[8 1 62 2]);
-    groups.g3 = repmat(reshape(1:62,[1 1 62]),[8 5 1 2]);
-    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[1 5 62 1]);
+    groups.g1 = repmat([1:8]',[1 5 65 2]);
+    groups.g2 = repmat(1:5,[8 1 65 2]);
+    groups.g3 = repmat(reshape(1:65,[1 1 65]),[8 5 1 2]);
+    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 65 1]);
     varargout{2} = groups;
+% % %     
+% % %     fi              = demean(abs(groups.g1(:)-4));
+% % % bla             = [dummyvar([ groups.g2(:) groups.g3(:)])];
+% % % bla             = [fi fi.*bla(:,1) fi.*bla(:,2) fi.*bla(:,3) fi.*bla(:,4) bla(:,1:end)];
+% % % bla(:,[10 75])  = [];
+% % % bla(2601:end,:) = [];
+% % % imagesc(bla);
+%%
+% % out = fitglm(bla,aa(:))
     %
 elseif strcmp(varargin{1},'plot_count_tuning')
     fs = 15;
@@ -1067,7 +1076,7 @@ elseif strcmp(varargin{1},'plot_count_tuning')
     end    
     subplotChangeSize(H,.025,.025);
 %     EqualizeSubPlotYlim(gcf);
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
+%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
     
 elseif strcmp(varargin{1},'figure_single_subject')
     %selected subjects are 44 and 47
