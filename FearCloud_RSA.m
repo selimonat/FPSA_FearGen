@@ -170,7 +170,7 @@ elseif strcmp(varargin{1},'get_rsa2')
     window_size    = varargin{2};
     window_overlap = varargin{3};    
     t              = 0:1:(window_size-1);
-    start_times    = 0:window_overlap:1500-window_size+1;
+    start_times    = 0:window_overlap:1500-window_size+1
     time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
     %%
     filename  = sprintf('%s/midlevel/rsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d.mat',path_project,window_size,window_overlap,current_subject_pool);
@@ -315,9 +315,9 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
         end
     end
     % get errorbars for that
-    ci           = std(betas)./sqrt(tsub);
-    varargout{1} = squeeze(mean(betas));
-    varargout{2} = [mean(betas)-ci/2 ;mean(betas)+ci/2];
+    ci           = nanstd(betas)./sqrt(tsub);
+    varargout{1} = squeeze(nanmean(betas));
+    varargout{2} = [nanmean(betas)-ci/2 ;nanmean(betas)+ci/2];
     varargout{3} = betas;
     %
 elseif strcmp(varargin{1},'plot_betas')
@@ -440,8 +440,8 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
 elseif strcmp(varargin{1},'searchlight_bs')
  %%   
     fixmat   = varargin{2}
-    b1       = varargin{3};
-    b2       = varargin{4};
+    b1       = varargin{3};%1
+    b2       = varargin{4};%15
     %
     tsub     = length(unique(fixmat.subject));
     fun      = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
@@ -531,7 +531,7 @@ elseif strcmp(varargin{1},'get_mdscale')
     sim                         = varargin{2};%sim is a valid similarity matrix;    
     ndimen                      = varargin{3};
     Criterion                   ='strain' ;    
-    viz                         = 0;    
+    viz                         = 1;    
     [dummy stress disparities]  = mdscale(sim,ndimen,'Criterion',Criterion,'start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
     dummy                       = dummy';
     Y                           = dummy(:);                       
@@ -815,11 +815,205 @@ elseif strcmp(varargin{1},'figure03')
         end
     end
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure03_subjectpool_%02d.png',current_subject_pool));
+    
+elseif strcmp(varargin{1},'figure04old');
+    fixmat  = FearCloud_RSA('get_fixmat');
+    M       = FearCloud_RSA('searchlight',fixmat,1,15);
+    M       = squeeze(nanmean(M,4));
+    M       = reshape(M,[500 500 6]);
+    fs      = 15;
+    %%    1st column
+    figure;
+    set(gcf,'position',[ 2132         528        1579         543]);
+    d       = -.1;
+    u       = .6;
+    G      = make_gaussian2D(51,51,32,32,26,26);
+    G      = G./sum(G(:));
+    h       = subplot(2,4,1);
+    map     = M(:,:,1);
+    map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(mapc,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.5+.5);
+    %
+    [~,h2]  = contourf(X,Y,mapc,3);
+    h2.Fill = 'off';
+    hold off
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
+    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs);
+    ylabel('BEFORE','fontsize',15)
+    title(sprintf('Constant\nSimilarity'));
+    %
+    h       = subplot(2,4,5);
+    map     = M(:,:,4);
+    map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(mapc,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.5+.5);
+    %
+    [~,h2]  = contourf(X,Y,mapc,3);
+    h2.Fill = 'off';
+    hold off
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
+    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
+    ylabel('AFTER','fontsize',15)
+    %% 2nd column
+    G      = make_gaussian2D(51,51,4.5,4.5,26,26);
+    G      = G./sum(G(:));
+    d       = 0;
+    u       = .17;
+    tcont   = 6;
+    h       = subplot(2,4,2);
+%     keyboard
+    %     mask      = conv2(M(:,:,1),G,'same')>0.1;
+    map       = M(:,:,2);
+    %     map(mask) = NaN;
+   map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.8+.2);
+    %
+    [~,h2]  = contourf(X,Y,mapc,tcont);
+    h2.Fill = 'off';
+    hold off
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
+    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
+    title(sprintf('Perceptual\nSimilarity'));
+    %
+    h       = subplot(2,4,6);
+    map     = M(:,:,5);
+   map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.8+.2);
+    %
+    [~,h2]  = contourf(X,Y,mapc,tcont);
+    h2.Fill = 'off';
+    hold off
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
+    set(h3,'box','off','ticklength',0,'ticks',[d u],'fontsize',fs)
+    %% 3rd column
+    G      = make_gaussian2D(51,51,4.5,4.5,26,26);
+    G      = G./sum(G(:));
+    d       = 0;
+    u       = .17;
+    tcont   = 6;
+    h       = subplot(2,4,3);
+    %     mask      = conv2(M(:,:,1),G,'same')>0.1;
+    map       = M(:,:,3);
+    %     map(mask) = NaN;
+    map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.8+.2);
+    %
+    [~,h2]  = contourf(X,Y,mapc,tcont);
+    h2.Fill = 'off';
+    hold off
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','')
+    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
+    title(sprintf('CS+\nSimilarity'));
+    %
+    h       = subplot(2,4,7);
+    map     = M(:,:,6);
+    map     = inpaint_nans(map);
+    mapc    = conv2(map,G,'valid');
+    mapc    = padarray(mapc,[25 25],NaN);
+    mapc    = inpaint_nans(mapc);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    set(h,'alphaData',Scale(abs(map))*.8+.2);
+    %
+    [~,h2]  = contourf(X,Y,mapc,tcont);
+    h2.Fill = 'off';
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
+    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
+    hold off
+    %% 4th column
+    h       = subplot(2,4,4);
+    v = [];
+    c = 0;
+    %     fixmat.unitize = 0;
+    for sub = unique(fixmat.subject)
+        c    = c+1;
+        v{c} = {'subject' sub 'deltacsp' fixmat.realcond 'phase' 2};
+    end
+    fixmat.getmaps(v{:});
+    map     = nanmean(fixmat.maps,3);
+    [d u]   = GetColorMapLimits(map,7);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    hold off
+    set(h,'alphaData',.8);
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
+    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
+    title(sprintf('Fixation\n probability'))
+    %================================================================
+    h       = subplot(2,4,8);
+    v = [];
+    c = 0;
+    for sub = unique(fixmat.subject)
+        c    = c+1;
+        v{c} = {'subject' sub 'deltacsp' fixmat.realcond 'phase' 4};
+    end
+    fixmat.getmaps(v{:});
+    map     = mean(fixmat.maps,3);
+    [d u] = GetColorMapLimits(map,7);
+    [X Y]   = meshgrid(1:size(map,1),1:size(map,2));
+    %plot the image;
+    imagesc(X(1,:),Y(:,1)',fixmat.stimulus);
+    hold on;
+    h       = imagesc(map,[d u]);
+    set(h,'alphaData',.8);
+    h3=colorbar;axis image;set(gca,'xticklabel','','yticklabel','');
+    set(h3,'box','off','ticklength',0,'ticks',[0 u],'fontsize',fs)
+    hold off
+    %%
+    colormap jet
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04old_subjectpool_%02d.png',current_subject_pool));
+    
+    
 elseif strcmp(varargin{1},'figure04');
         
     fixmat      = FearCloud_RSA('get_fixmat');
     M           = FearCloud_RSA('searchlight',fixmat,1,15);
-    Mori        = squeeze(nanmean(M,4));
+    Mori        = squeeze(nanmedian(M,4));
     %%
     M           = Mori;
     crop_amount = [0 0];
@@ -832,12 +1026,12 @@ elseif strcmp(varargin{1},'figure04');
     %
     G           = make_gaussian2D(51,51,45,45,26,26);
     G           = G./sum(G(:));
-    mask        = conv2(M(:,:,4),G,'same');
+%     mask        = conv2(M(:,:,4),G,'same');
     
     k = .22;
-    M(:,:,4) = conv2(M(:,:,4),G,'same');
-    M(:,:,1) = conv2(M(:,:,1),G,'same');
-    %    
+%     M(:,:,4) = conv2(M(:,:,4),G,'same');
+%     M(:,:,1) = conv2(M(:,:,1),G,'same');
+    %%
     figure(12122);clf
     set(gcf,'position',[1952         361        1743         714]);
     spi = [1 2 3 5 6 7];
@@ -933,7 +1127,7 @@ elseif strcmp(varargin{1},'figure04');
         axis square;
     end
     colormap jet
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04_ver2_subjectpool_%02d.png',current_subject_pool));
+%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure04_ver2_subjectpool_%02d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure05');
     %%
     figure;
@@ -996,7 +1190,7 @@ elseif strcmp(varargin{1},'figure_groupmaps');
     
     fixmat.maps = mean(M,4);
     FearCloud_RSA('fdm_plot',fixmat);
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/GroupAverage_SubjectPool_%s_Correction_%02d.png',current_subject_pool,correction));
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/GroupAverage_SubjectPool_%02d_Correction_%02d.png',current_subject_pool,correction));
 
 elseif strcmp(varargin{1},'count_tuning')    
     
@@ -1047,6 +1241,7 @@ elseif strcmp(varargin{1},'count_tuning')
 elseif strcmp(varargin{1},'plot_count_tuning')
     fs = 15;
     counts = FearCloud_RSA('count_tuning');
+    counts = diff(counts,1,4);
     counts = counts*100;
     m_counts = mean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));    
@@ -1054,32 +1249,36 @@ elseif strcmp(varargin{1},'plot_count_tuning')
     set(gcf,'position',[2811         668         989         417]);
     t={'right eye', 'left eye' 'nose' 'mouth'};
     for n = 1:4
-        H(n) = subplot(2,4,n)
+        H(n) = subplot(1,4,n)
         Project.plot_bar(m_counts(:,n,1,1));
-        title(sprintf('%s',t{n}),'fontsize',fs);
+        set(gca,'XTickLabel','');
+        hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
         if n == 1
-            ylabel(sprintf('%s of fixations\n (before)','%'));
+            ylabel(sprintf('\\Delta %%\n(after-before)'));
         end
         hold on;
         errorbar(m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
         hold off;
         if n ~= 1;
-            set(gca,'xticklabel','');
+            set(gca,'xticklabel','');            
+        end        
+        ylim([-10 10])
+        if n < 3
+            h = text(4,1,'CS+');set(h,'HorizontalAlignment','center');
+            h = text(8,1,'CS-');set(h,'HorizontalAlignment','center');
+            h = text(6,1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
+            h = text(2,1,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
+        else
+            h = text(4,-1,'CS+');set(h,'HorizontalAlignment','center');
+            h = text(8,-1,'CS-');set(h,'HorizontalAlignment','center');
+            h = text(6,-1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
+            h = text(2,-1,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
         end
-        %
-        H(n+4)= subplot(2,4,n+4)
-        Project.plot_bar(m_counts(:,n,1,2));
-        hold on;
-        if n == 1
-            ylabel(sprintf('%s of fixations\n (after)','%'));
-        end
-        errorbar(m_counts(:,n,1,2),s_counts(:,n,1,2),'ko');
-        hold off;
-        set(gca,'xticklabel','')
+        set(gca,'XAxisLocation','origin')
+        set(gca,'XGrid','on','YGrid','off')
     end    
     subplotChangeSize(H,.025,.025);
-%     EqualizeSubPlotYlim(gcf);
-%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
     
 elseif strcmp(varargin{1},'figure_single_subject')
     %selected subjects are 44 and 47
@@ -1228,4 +1427,17 @@ elseif strcmp(varargin{1},'behavior_correlation');
     set(gca,'ytick',1:size(data,2),'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
     set(gca,'xtick',1:size(data,2),'xticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none','XTickLabelRotation',90);
     SaveFigure('~/Dropbox/selim/Office/RSAofFDM/FigureCache/BehavioralCorrelation.png','-transparent')
+    elsel
+    model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
+%
+elseif strcmp(varargin{1},'figure01');
+    subplot(3,2,1);
+    imagesc(1-model);colorbar
+    % ori   = mdscale(1-model,2,'Criterion','strain','start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
+    [ori] = mdscale(1-model,2);
+    subplot(3,2,2);
+    plot((ori([1:8 1],1)),(ori([1:8 1],2)),'Ro-')
+    xlim([-1 1]);
+    ylim([-1 1]);
+    axis square
 end
