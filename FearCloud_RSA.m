@@ -315,9 +315,9 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
         end
     end
     % get errorbars for that
-    ci           = std(betas)./sqrt(tsub);
-    varargout{1} = squeeze(mean(betas));
-    varargout{2} = [mean(betas)-ci/2 ;mean(betas)+ci/2];
+    ci           = nanstd(betas)./sqrt(tsub);
+    varargout{1} = squeeze(nanmean(betas));
+    varargout{2} = [nanmean(betas)-ci/2 ;nanmean(betas)+ci/2];
     varargout{3} = betas;
     %
 elseif strcmp(varargin{1},'plot_betas')
@@ -531,7 +531,7 @@ elseif strcmp(varargin{1},'get_mdscale')
     sim                         = varargin{2};%sim is a valid similarity matrix;    
     ndimen                      = varargin{3};
     Criterion                   ='strain' ;    
-    viz                         = 0;    
+    viz                         = 1;    
     [dummy stress disparities]  = mdscale(sim,ndimen,'Criterion',Criterion,'start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
     dummy                       = dummy';
     Y                           = dummy(:);                       
@@ -544,11 +544,17 @@ elseif strcmp(varargin{1},'plot_mdscale')
     Y      = varargin{2};
     ndimen = length(Y)./16;    
     y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;
+    colors = GetFearGenColors;
+    colors = [colors(1:8,:);colors(1:8,:)];
     if ndimen == 2
-        plot(y([1:8 1],1),y([1:8 1],2),'o-','linewidth',3);
+        plot(y([1:8 1],1),y([1:8 1],2),'.-.','linewidth',3,'color',[.6 .6 .6]);
         hold on;
-        plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
+        plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'k.-.','linewidth',3);
+        for nface = 1:16
+            plot(y(nface,1),y(nface,2),'.','color',colors(nface,:),'markersize',120,'markerface',colors(nface,:));
+        end
         hold off;
+        %
         for n = 1:16;text(y(n,1),y(n,2),mat2str(mod(n-1,8)+1),'fontsize',25);end
     elseif ndimen == 3
         plot3(y([1:8 1],1),y([1:8 1],2),y([1:8 1],3),'o-','linewidth',3);
