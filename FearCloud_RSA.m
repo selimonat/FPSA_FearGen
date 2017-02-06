@@ -1438,7 +1438,7 @@ elseif strcmp(varargin{1},'behavior_correlation');
 %
 elseif strcmp(varargin{1},'figure01');
     %%
-    params = {{[.5 .5] 0} {[5 5] 0} {[1.5 1] 0} {[5 5] 8}}
+    params = {{[.5 .5] 0} {[2 2] 0} {[1 2] 0} {[4 4] 3}}
     for ncol = 1:4
         
         [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1);
