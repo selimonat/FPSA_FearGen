@@ -1446,13 +1446,43 @@ elseif strcmp(varargin{1},'behavior_correlation');
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
 %
 elseif strcmp(varargin{1},'figure01');
-    subplot(3,2,1);
-    imagesc(1-model);colorbar
-    % ori   = mdscale(1-model,2,'Criterion','strain','start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
-    [ori] = mdscale(1-model,2);
-    subplot(3,2,2);
-    plot((ori([1:8 1],1)),(ori([1:8 1],2)),'Ro-')
-    xlim([-1 1]);
-    ylim([-1 1]);
-    axis square
+    %%
+    params = {{[.5 .5] 0} {[5 5] 0} {[1.5 1] 0} {[5 5] 8}}
+    for ncol = 1:4
+        
+        [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1);
+        model     = 1-corrcov(model);
+        % ori   = mdscale(1-model,2,'Criterion','strain','start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
+        colors    = GetFearGenColors;
+        colors    = [colors(1:8,:);colors(1:8,:)];
+        %
+        [y]       = mdscale(model,2);
+        subplot(2,4,1+(ncol-1));
+        plot(y([1:8 1],1),y([1:8 1],2),'.-.','linewidth',3,'color',[0.6 0.6 0.6]);
+        hold on;
+        for nface = 1:8
+            plot(y(nface,1),y(nface,2),'.','color',colors(nface,:),'markersize',80,'markerface',colors(nface,:));
+        end
+        hold off;
+        xlim([-1 1]);
+        ylim([-1 1]);
+        axis square;axis off
+        %
+        subplot(2,4,5+(ncol-1));
+        axis square
+        imagesc(model,[0 3]);
+        axis off;
+        axis square;
+        h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+        h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+        h = text(0,2,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',10);
+        h = text(0,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',10);                
+        
+        h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+        h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+        h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',10);
+        h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',10);                
+        
+%         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')
+    end    
 end
