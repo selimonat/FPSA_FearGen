@@ -8,13 +8,13 @@ tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 current_subject_pool =1;
-runs                 = 1:3;%runs of the test phase
+runs              = 1;%runs of the test phase
 
 
 if strcmp(varargin{1},'get_subjects');
     %% returns the subjects based on the CURRENT_SUBJECT_POOL variable;
     filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);
-    force    = 1;
+    force    = 0;
     if exist(filename) == 0 | force
         if current_subject_pool == 0;
             subjects = Project.subjects_bdnf(Project.subjects_ET);
@@ -65,7 +65,9 @@ elseif strcmp(varargin{1},'get_fixmat');
         valid    = zeros(1,length(fix.x));        
         for run = runs(:)'
             valid = valid + ismember(fix.trialid , (1:120)+120*(run-1))&ismember(fix.phase,4);%run selection opeates only for phase 4
-        end                     
+        end       
+        %we dont want to discard phase02 fixations
+        valid = valid + ismember(fix.phase,2);
         fix.replaceselection(valid);
         fix.ApplySelection;                
         save(filename,'fix');
@@ -153,7 +155,7 @@ elseif strcmp(varargin{1},'get_rsa')
     %% COMPUTE THE SIMILARITY MATRIX
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
-    filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
+    filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     force = 1;
     %
     if exist(filename) ==0 | force;
@@ -181,7 +183,7 @@ elseif strcmp(varargin{1},'get_rsa2')
     start_times    = 0:window_overlap:1500-window_size+1
     time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
     %%
-    filename  = sprintf('%s/midlevel/rsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d.mat',path_project,window_size,window_overlap,current_subject_pool);
+    filename  = sprintf('%s/midlevel/rsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,window_size,window_overlap,current_subject_pool,runs(1),runs(end));
     %%
     if exist(filename) ==0 | force;
         tc = 0;
@@ -213,7 +215,7 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
     %decide if demean or not the fixmap!!!!!!!!!!!!!!!!!!!
     
     fixations = varargin{2};
-    filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
+    filename  = sprintf('%s/midlevel/rsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     force     = 1;
     %
     if exist(filename) ==0 | force
@@ -366,7 +368,7 @@ elseif strcmp(varargin{1},'searchlight')
     fixmat   = varargin{2};
     b1       = varargin{3};
     b2       = varargin{4};
-    filename = DataHash({fixmat.kernel_fwhm,b1,b2});
+    filename = DataHash({fixmat.kernel_fwhm,b1,b2,runs});
     %
     tsub     = length(unique(fixmat.subject));
     fun      = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
