@@ -8,7 +8,7 @@ tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 current_subject_pool =1;
-runs              = 1;%runs of the test phase
+runs              = 1:3;%runs of the test phase
 
 
 if strcmp(varargin{1},'get_subjects');
@@ -57,7 +57,7 @@ elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
     filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d_runs_%03d_%03d.mat',path_project,current_subject_pool,runs(1),runs(end));
     fix      = [];
-    force    = 1;
+    force    = 0;
     if exist(filename) == 0 | force
         subjects = FearCloud_RSA('get_subjects',current_subject_pool);
         fix      = Fixmat(subjects,[2 4]);
@@ -250,6 +250,32 @@ elseif strcmp(varargin{1},'plot_rsa');
     set(gca,'fontsize',15)
     axis off
     %
+elseif strcmp(varargin{1},'model_rsa');
+    
+    sim = FearCloud_RSA('get_rsa',1:100);
+    %%
+    B = FearCloud_RSA('get_block',sim,1,1);
+    T = FearCloud_RSA('get_block',sim,2,2);
+    %
+    for n = 1:size(sim.correlation,1)
+        BB(n,:) = squareform(B(:,:,n));
+        TT(n,:) = squareform(T(:,:,n));
+    end
+    %
+    YY      = [BB TT]';
+    phase   = repmat([repmat(1,size(YY,1)/2,1); repmat(2,size(YY,1)/2,1)],1,size(YY,2))
+    subject = repmat(1:size(sim.correlation,1),size(YY,1),1);
+    Y       = YY(:);
+    S       = subject(:);
+    
+    w        = [cos(x);sin(x)];        
+    cmat     = repmat(repmat(squareform_force(w'*w),2,1),1,size(subject,2));    
+    t        = table(Y(:),cmat(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'Y' 'model' 'subject' 'phase'});       
+    a = fitglm(t,'Y ~ model + subject + phase + model:phase')
+    %%        
+    
+%%
+
 elseif strcmp(varargin{1},'get_block')
     %% will get the Yth, Xth block from the RSA.
     sim = varargin{2};
