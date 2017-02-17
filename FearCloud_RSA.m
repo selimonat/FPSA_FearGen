@@ -8,12 +8,13 @@ tbootstrap        = 1000;
 method            = 'correlation';
 block_extract     = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 current_subject_pool =1;
+runs                 = 1:3;%runs of the test phase
 
 
 if strcmp(varargin{1},'get_subjects');
     %% returns the subjects based on the CURRENT_SUBJECT_POOL variable;
     filename = sprintf('%s/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);
-    force = 0;
+    force    = 1;
     if exist(filename) == 0 | force
         if current_subject_pool == 0;
             subjects = Project.subjects_bdnf(Project.subjects_ET);
@@ -38,9 +39,9 @@ if strcmp(varargin{1},'get_subjects');
     varargout{1} = subjects;
 elseif strcmp(varargin{1},'get_trialcount')    
     %% goes subject by subject and counts the number of trials in phase VARARGIN{2}
-    phase = varargin{2};
+    phase  = varargin{2};
     fixmat = FearCloud_RSA('get_fixmat');
-    s = 0;
+    s      = 0;
     for ns = unique(fixmat.subject)
         s = s+1;
         c = 0;
@@ -54,12 +55,19 @@ elseif strcmp(varargin{1},'get_trialcount')
     colorbar;
 elseif strcmp(varargin{1},'get_fixmat');
     %% load the fixation data from the baseline and test phases
-    filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d.mat',path_project,current_subject_pool);
+    filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d_runs_%03d_%03d.mat',path_project,current_subject_pool,runs(1),runs(end));
     fix      = [];
-    force = 0;
+    force    = 1;
     if exist(filename) == 0 | force
         subjects = FearCloud_RSA('get_subjects',current_subject_pool);
         fix      = Fixmat(subjects,[2 4]);
+        %further split according to runs if wanted.        
+        valid    = zeros(1,length(fix.x));        
+        for run = runs(:)'
+            valid = valid + ismember(fix.trialid , (1:120)+120*(run-1))&ismember(fix.phase,4);%run selection opeates only for phase 4
+        end                     
+        fix.replaceselection(valid);
+        fix.ApplySelection;                
         save(filename,'fix');
     else
         load(filename)
@@ -146,7 +154,7 @@ elseif strcmp(varargin{1},'get_rsa')
     %sim = FearCloud_RSA('get_rsa',1:100)
     fixations = varargin{2};
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d.mat',path_project,fixations(1),fixations(end),current_subject_pool);
-    force = 0;
+    force = 1;
     %
     if exist(filename) ==0 | force;
         fixmat   = FearCloud_RSA('get_fixmat',1);
@@ -345,7 +353,8 @@ elseif strcmp(varargin{1},'plot_betas')
             xticks = [xticks c];
         end
     end
-    ylim([-.15 .12]);
+    %ylim([-.5 .25]);
+    axis tight
     hold off;
     box off
     set(gca,'xtick',xticks,'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' },'XTickLabelRotation',45)
@@ -715,7 +724,7 @@ elseif strcmp(varargin{1},'figure02')
 elseif strcmp(varargin{1},'figure03')
     
     sim     = varargin{2};
-    cormatz = 1-squareform(nanmean(sim.correlation));
+    cormatz = 1-squareform(nanmedian(sim.correlation));
     cormatz = CancelDiagonals(cormatz,NaN);
     [d u]   = GetColorMapLimits(cormatz,2.5);
     labels = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
