@@ -9,10 +9,13 @@ block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z);
 tbootstrap           = 1000;
 method               = 'correlation';
 current_subject_pool = 1;
-runs                 = 1;%runs of the test phase
+runs                 = 1:3;%runs of the test phase
 criterion            ='strain' ;    
+
+
 %% overwrite default parameters with the input
-for nf = 1:2:length(varargin)
+invalid_varargin = zeros(1,length(varargin),'logical');
+for nf = 1:length(varargin)
     if strcmp(varargin{nf}     , 'tbootstrap')
         tbootstrap           = varargin{nf+1};
     elseif strcmp(varargin{nf} , 'method')
@@ -23,8 +26,11 @@ for nf = 1:2:length(varargin)
         runs                 = varargin{nf+1};
     elseif strcmp(varargin{nf} , 'criterion')                        
         criterion            = varargin{nf+1};
+    else
+        invalid_varargin(nf) = true;%detect which varargins modify the default values and delete them
     end
 end
+varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have clean varargin cellarray we can continue
 %%
 if strcmp(varargin{1},'get_subjects');
     %% returns the subjects based on the CURRENT_SUBJECT_POOL variable;
@@ -75,7 +81,7 @@ elseif strcmp(varargin{1},'get_fixmat');
     force    = 0;
     if exist(filename) == 0 | force
         subjects = FearCloud_RSA('get_subjects',current_subject_pool);
-        fix      = Fixmat(subjects,[2 4]);
+        fix      = Fixmat(subjects,[2 4]);%all SUBJECTS, PHASES and RUNS
         %further split according to runs if wanted.        
         valid    = zeros(1,length(fix.x));        
         for run = runs(:)'
@@ -173,8 +179,8 @@ elseif strcmp(varargin{1},'get_rsa')
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     force     = 0;
     %
-    if exist(filename) ==0 | force;
-        fixmat   = FearCloud_RSA('get_fixmat',1);
+    if exist(filename) ==0 | force;        
+        fixmat   = FearCloud_RSA('get_fixmat');%returns by defaults all the 3 runs;    
         subc     = 0;
         for subject = unique(fixmat.subject);
             subc                    = subc + 1;
@@ -188,7 +194,7 @@ elseif strcmp(varargin{1},'get_rsa')
     end
     varargout{1} = sim;    
 elseif strcmp(varargin{1},'get_rsa2')
-    %% same as get_rsa but works using a fixmat as input.    
+    %% time resolved rsa
     force          = 0;
     %
     window_size    = varargin{2};
@@ -224,25 +230,33 @@ elseif strcmp(varargin{1},'get_rsa2')
     varargout{1} = sim;   
     
 elseif strcmp(varargin{1},'get_rsa_fair')
-    %% COMPUTE THE SIMILARITY MATRIX
-    %sim = FearCloud_RSA('get_rsa',1:100)
-    runs      = 1:3
-    fixations = varargin{2};
-    filename  = sprintf('%s/midlevel/rsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
-    force     = 0;
-    %
-    if exist(filename) ==0 | force;
-        fixmat   = FearCloud_RSA('get_fixmat',1);
-        subc     = 0;
-        for subject = unique(fixmat.subject);
-            subc                    = subc + 1;
-            maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
-            fprintf('Subject: %03d, Method: %s\n',subject,method);
-            sim.(method)(subc,:)    = pdist(maps',method);%
+    %% gets an RSA matrix per run to be fair to the baseline condition.
+    %the rsa for the 3 test phases are individually computed and averaged.
+    %Doing it the otherway (i.e. average FDMs from the 3 phases and compute
+    %RSA) would have lead to less noisy FDMs and thus differences btw B and
+    %T simply because the number of trials are different.
+    %sim = FearCloud_RSA('get_rsa',1:100)    
+    fixations = varargin{2};%which fixations    
+    runs      = varargin{3};%whichs runs would you like to have 
+    force     = 1;
+    %  
+    for run = runs
+        filename     = sprintf('%s/midlevel/rsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_run_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,run(1));
+        if exist(filename) ==0 | force;       
+            fixmat   = FearCloud_RSA('get_fixmat','runs',run);
+            subc     = 0;
+            for subject = unique(fixmat.subject);
+                subc                    = subc + 1;
+                maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
+                fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
+                sim.(method)(subc,:,run)= pdist(maps',method);%
+            end            
+            %average across runs
+            sim.(method) = mean(sim.(method),3);
+            save(filename,'sim');
+        else
+            load(filename);
         end
-        save(filename,'sim');
-    else
-        load(filename);
     end
     varargout{1} = sim;        
     
@@ -292,7 +306,7 @@ elseif strcmp(varargin{1},'plot_rsa');
 elseif strcmp(varargin{1},'model_rsa');
     %%
     %the full B and T similarity matrix;
-    sim = FearCloud_RSA('get_rsa',1:100);%
+    sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
     %%we only want the B and T parts
     B = FearCloud_RSA('get_block',sim,1,1);
     T = FearCloud_RSA('get_block',sim,2,2);
@@ -317,8 +331,9 @@ elseif strcmp(varargin{1},'model_rsa');
     model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),2,1),1,size(subject,2));%
     model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),2,1),1,size(subject,2));%
     %
-    t          = table(Y(:),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'Y' 'cossin' 'cos' 'sin' 'subject' 'phase'});
-    a          = fitglm(t,'Y ~ subject + phase + cos:phase + sin:phase')
+    t          = table(1-Y(:),fisherz(1-Y(:)),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'Y' 'Yz' 'cossin' 'cos' 'sin' 'subject' 'phase'});
+    %%
+    a          = fitglm(t,'Y ~ subject + phase')
 elseif strcmp(varargin{1},'get_block')
     %% will get the Yth, Xth block from the RSA.
     sim = varargin{2};
