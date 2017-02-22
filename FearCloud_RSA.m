@@ -238,7 +238,7 @@ elseif strcmp(varargin{1},'get_rsa_fair')
     %sim = FearCloud_RSA('get_rsa',1:100)    
     fixations = varargin{2};%which fixations    
     runs      = varargin{3};%whichs runs would you like to have 
-    force     = 1;
+    force     = 0;
     %  
     for run = runs
         filename     = sprintf('%s/midlevel/rsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_run_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,run(1));
@@ -303,7 +303,7 @@ elseif strcmp(varargin{1},'plot_rsa');
 %     filename = sprintf( '/home/onat/Dropbox/selim/Office/RSAofFDM/FigureCache/rsa_%d_%d_subject_%d.png', runs(1) , runs(end), current_subject_pool );
 %     SaveFigure(filename);
     %
-elseif strcmp(varargin{1},'model_rsa');
+elseif strcmp(varargin{1},'model_rsa_testcircular');
     %%
     %the full B and T similarity matrix;
     sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
@@ -316,35 +316,66 @@ elseif strcmp(varargin{1},'model_rsa');
         TT(n,:) = squareform(T(:,:,n));
     end
     YY       = [BB TT]';%now every column is a RSA per subject, where B and T are appended
+    BB       = BB';
+    TT       = TT';
     %
-    phase    = repmat([repmat(1,size(YY,1)/2,1); repmat(2,size(YY,1)/2,1)],1,size(YY,2));
-    subject  = repmat(1:size(sim.correlation,1),size(YY,1),1);
-    Y        = YY(:);
+    phase    = repmat([repmat(1,size(BB,1)/2,1); repmat(2,size(BB,1)/2,1)],1,size(BB,2));
+    subject  = repmat(1:size(sim.correlation,1),size(BB,1),1);    
     S        = subject(:);
     P        = phase(:);
     %% our model:
     %a circular RSA matrix for B and T replicated by the number of subjects
     x        = [pi/4:pi/4:2*pi];
     w        = [cos(x);sin(x)];        
-    model1   = repmat(repmat(squareform_force(w'*w),2,1),1,size(subject,2));%        
+    model1   = repmat(repmat(squareform_force(w'*w),1,1),1,size(subject,2));%        
     %
-    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),2,1),1,size(subject,2));%
-    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),2,1),1,size(subject,2));%
+    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),1,1),1,size(subject,2));%
+    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
     %
-    t          = table(1-Y(:),fisherz(1-Y(:)),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'Y' 'Yz' 'cossin' 'cos' 'sin' 'subject' 'phase'});
-    %%
-    a          = fitglm(t,'Y ~ subject + phase')
+    t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'B' 'T' 'cossin' 'cos' 'sin' 'subject' 'phase'});
+    %%    
+    a          = fitlm(t,'B ~ 1 + cossin');
+    keyboard
 elseif strcmp(varargin{1},'get_block')
-    %% will get the Yth, Xth block from the RSA.
-    sim = varargin{2};
-    y   = varargin{3};
-    x   = varargin{4};
-    r   = [];
+    %% will get the Yth, Xth block from the RSA and return it as correlation matrix or sqform.
+    sim  = varargin{2};
+    y    = varargin{3};
+    x    = varargin{4};
+    r    = [];
+    sqfm = [];
     for ns = 1:size(sim.correlation,1)
         dummy = squareform(sim.correlation(ns,:));
-        r     = cat(3,r,block_extract(dummy,y,x,1));
+        B     = block_extract(dummy,y,x,1);
+        r     = cat(3,r,B);
+        sqfm  = [sqfm;squareform(B)];
     end
     varargout{1} = r;
+    varargout{2} = sqfm;
+    
+elseif strcmp(varargin{1},'NvsO')
+    %% compares neighboring correlation to opposing correlations
+    sim   = varargin{2};
+    phase = varargin{3};
+    r     = FearCloud_RSA('get_block',sim,phase,phase);
+    for ns = 1:size(r,3)
+        c.N(:,ns) = diag(1-r(:,:,ns),1);
+        c.O(:,ns) = diag(1-r(:,:,ns),4);
+    end    
+    varargout{1} = c;
+elseif strcmp(varargin{1},'CompareB2T_RSA')
+    %% returns the coordinates and pvalue of the similarity entries.
+    %the full B and T similarity matrix;
+    sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
+    %%we only want the B and T parts
+    [~,B] = FearCloud_RSA('get_block',sim,1,1);
+    [~,T] = FearCloud_RSA('get_block',sim,2,2);
+    %fisher transform and make a ttest
+    [h p ] = ttest(fisherz(B)-fisherz(T));
+    h      = squareform_force(h);
+    p      = squareform_force(p);
+    [i]    = find(p < .04);
+    p      = p(i);
+    varargout{1} = [i p];
 elseif strcmp(varargin{1},'get_design_matrix');
     %% Linear Model on that with constant, physical similarity, aversive generalization components
     x             = [pi/4:pi/4:2*pi];
