@@ -10,7 +10,7 @@ function [R AVEHP result HP]=SVM_simulations_BDNF(phase,varargin)
 %.25 in the test. This is taken into account by the HOLDOUT_RATIO. This
 %script will run train-test cycles for different smootheness levels and
 %with different numbers of eigenvectors (up to TEIG).
-random = 0;
+random = 1;
 
 tbootstrap       = 1000;%number of bootstraps
 % phase            = 2;%baseline or test
@@ -21,7 +21,11 @@ R                = [];%result storage
 AVE              = [];%result storate
 HP               = [];
 eigval           = [];
-sample120first = 1;
+sample120first   = 1;
+%safety addup if user doesn't switch that option manually
+if nargin>1 || phase==2
+    sample120first = 0;
+end
 
 subjects = FearCloud_RSA('get_subjects');
 % subjects        = Project.subjects_bdnf(Project.subjects_ET);
@@ -94,7 +98,7 @@ for kernel_fwhm = 29.6%10:10:100;
     trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
     %% LIBSVM business
     cev = 0;
-    for neig    = 1:teig%test different numbers of eigenvectors
+    for neig    = 8;%1:teig%test different numbers of eigenvectors
         cev = cev+1;
         sub_counter = 0;
         result      = [];
@@ -112,7 +116,7 @@ for kernel_fwhm = 29.6%10:10:100;
                 % so first we chose a subset of 120 trials, then do the
                 % usual holdout procedure on that.
                 if sample120first == 1
-                    P120 = cvpartition(Ycond,'Holdout',2/3); % we just take this to get 1/3 (11 rep) of the data, respecting conditions
+                    P120 = cvpartition(Ycond,'Holdout',2/3); % we just take this to get 1/3 (11 rep) (and thus rid of 2/3) of the data, respecting conditions
                     %now replace Ycond and X, we just need this subsample
                     %of trials
                     Ycond   = Ycond(P120.training);%labels of the fixation maps for this subject in this phase.
@@ -155,10 +159,12 @@ for kernel_fwhm = 29.6%10:10:100;
 %     drawnow
 end
 try
-    save(sprintf('C:/Users/Lea/Documents/Experiments/project_bdnf/data/midlevel/svm_analysis/findingparams/SVM_simulations_phase%d_NEV1to%d_FWHM30_alltrials.mat',phase,neig),'R','AVEHP','HP','eigval')
+    if nargin == 1
+        save(sprintf('C:/Users/Lea/Documents/Experiments/project_bdnf/data/midlevel/svm_analysis/findingparams/SVM_simulations_phase%d_NEV%d_FWHM30_r%d_alltrials.mat',phase,neig,random),'result','R','AVEHP','HP','eigval')
+    else
+        save([sprintf('C:/Users/Lea/Documents/Experiments/project_bdnf/data/midlevel/svm_analysis/findingparams/SVM_simulations_phase%d_NEV%d_FWHM30_r%d_',phase,neig,random) '_part' varargin{1} '.mat'],'result','R','AVEHP','HP','eigval')
+    end
     disp('saved successfully')
-    keyboard
 catch
     fprintf('couldnt save, do sth!')
-    keyboard
 end
