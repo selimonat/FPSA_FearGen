@@ -484,38 +484,65 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
 %     axis square  
 %     varargout{1} = y;
     
-elseif strcmp(varargin{1},'model_rsa');
+elseif strcmp(varargin{1},'model_rsa_testcircular');
     %%
-    %the full B and T similarity matrices;
+    %the full B and T similarity matrix;
     sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
     %%we only want the B and T parts
-    B   = FearCloud_RSA('get_block',sim,1,1);
-    T   = FearCloud_RSA('get_block',sim,2,2);
+    B = FearCloud_RSA('get_block',sim,1,1);
+    T = FearCloud_RSA('get_block',sim,2,2);
     %once we have these, we go back to compact form and concant the stuff
     for n = 1:size(sim.correlation,1)
         BB(n,:) = squareform(B(:,:,n));
         TT(n,:) = squareform(T(:,:,n));
     end
     YY       = [BB TT]';%now every column is a RSA per subject, where B and T are appended
+    BB       = BB';
+    TT       = TT';
     %
-    phase    = repmat([repmat(1,size(YY,1)/2,1); repmat(2,size(YY,1)/2,1)],1,size(YY,2));
-    subject  = repmat(1:size(sim.correlation,1),size(YY,1),1);
-    Y        = YY(:);
+    phase    = repmat([repmat(1,size(BB,1)/2,1); repmat(2,size(BB,1)/2,1)],1,size(BB,2));
+    subject  = repmat(1:size(sim.correlation,1),size(BB,1),1);    
     S        = subject(:);
     P        = phase(:);
     %% our model:
     %a circular RSA matrix for B and T replicated by the number of subjects
     x        = [pi/4:pi/4:2*pi];
     w        = [cos(x);sin(x)];        
-    model1   = repmat(repmat(squareform_force(w'*w),2,1),1,size(subject,2));%        
+    model1   = repmat(repmat(squareform_force(w'*w),1,1),1,size(subject,2));%        
     %
-    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),2,1),1,size(subject,2));%
-    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),2,1),1,size(subject,2));%
+    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),1,1),1,size(subject,2));%
+    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
     %
-    t          = table(1-Y(:),fisherz(1-Y(:)),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'Y' 'Yz' 'cossin' 'cos' 'sin' 'subject' 'phase'});
-    %%
-    a          = fitglm(t,'Y ~ subject + phase')
-
+    t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'B' 'T' 'cossin' 'cos' 'sin' 'subject' 'phase'});
+    %%    
+    a          = fitlm(t,'B ~ 1 + cossin');
+    keyboard
+  
+elseif strcmp(varargin{1},'NvsO')
+    %% compares neighboring correlation to opposing correlations
+    sim   = varargin{2};
+    phase = varargin{3};
+    r     = FearCloud_RSA('get_block',sim,phase,phase);
+    for ns = 1:size(r,3)
+        c.N(:,ns) = diag(1-r(:,:,ns),1);
+        c.O(:,ns) = diag(1-r(:,:,ns),4);
+    end    
+    varargout{1} = c;
+elseif strcmp(varargin{1},'CompareB2T_RSA')
+    %% returns the coordinates and pvalue of the similarity entries.
+    %the full B and T similarity matrix;
+    sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
+    %%we only want the B and T parts
+    [~,B] = FearCloud_RSA('get_block',sim,1,1);
+    [~,T] = FearCloud_RSA('get_block',sim,2,2);
+    %fisher transform and make a ttest
+    [h p ] = ttest(fisherz(B)-fisherz(T));
+    h      = squareform_force(h);
+    p      = squareform_force(p);
+    [i]    = find(p < .04);
+    p      = p(i);
+    varargout{1} = [i p];
+    
 elseif strcmp(varargin{1},'get_design_matrix');
     %% Linear Model on that with constant, physical similarity, aversive generalization components
     x             = [pi/4:pi/4:2*pi];
