@@ -21,7 +21,7 @@ function [varargout]=FearCloud_RSA(varargin);
 %
 
 %% Set the default parameters
-path_project         = '/Users/onat/Documents/project_bdnf/data/';          % location of the project folder
+path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -245,10 +245,7 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
             maps = [];
         end
     end
-    varargout{1} = maps;    
-    
-
-    
+    varargout{1} = maps;           
 elseif strcmp(varargin{1},'plot_fdm');
     %% plot routing for FDMs used in the paper.
     fs            = 15;
@@ -957,6 +954,9 @@ elseif strcmp(varargin{1},'anova')
 elseif strcmp(varargin{1},'figure01');
     %% this id the cartoon figure where hypotheses are presented;
     set(gcf,'position',[2588         146        1212         659]);
+    %few fun definition to write axis labels
+    small_texth = @(h) evalc('h = text(4,9,''CS+'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);h = text(8,9,''CS-'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);hold on;plot([4 4],[ylim],''k--'',''color'',[0 0 0 .4]);plot([xlim],[4 4],''k--'',''color'',[0 0 0 .4])');
+    small_textv = @(h) evalc('h = text(.5,4,''CS+'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);h = text(.5,8,''CS-'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);');
     params = {{[.5 .5] 0} {[4.5 4.5] 0} {[4.5 2.5] 0} {[1 1] 2}};
     titles = {sprintf('Circular\nOrganization') sprintf('Better\nDiscrimination') sprintf('Relevant\nDiscrimination') sprintf('CS+\nSpeciality')};
     width  = 2.3;
@@ -972,7 +972,10 @@ elseif strcmp(varargin{1},'figure01');
         colors    = GetFearGenColors;
         colors    = [colors(1:8,:);colors(1:8,:)];
         %
-        [y]       = mdscale(model,2,'Criterion',criterion,'start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
+        [y]       = mdscale(model,2,'Criterion',criterion,'start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));        
+        if y(4,1) < 0%simply make all red node located at the same position on the figure;
+            y = circshift(y,[4,0]);
+        end
         % % row 1
         subplot(6,12,spi{1}+(ncol-1)*3);
         plot(y([1:8 1],1),y([1:8 1],2),'.-.','linewidth',2,'color',[0.6 0.6 0.6]);
@@ -988,21 +991,27 @@ elseif strcmp(varargin{1},'figure01');
         
         % row 2        
         if ncol < 4
-            subplot(6,12,spi{2}+(ncol-1)*3);
-            w
+            subplot(6,12,spi{2}+(ncol-1)*3);            
             imagesc(w(1,:)'*w(1,:),[d(ncol) u(ncol)]);
             axis off;axis square;
+            small_texth();small_textv();
+            
             subplot(6,12,spi{3}+(ncol-1)*3);
             imagesc(w(2,:)'*w(2,:),[d(ncol) u(ncol)]);
             axis off;axis square;
+            small_texth();
         else
             subplot(6,12,spi{2}+(ncol-1)*3);
             imagesc(w(1:2,:)'*w(1:2,:),[d(ncol) u(ncol)]);
             axis off;axis square;
+            small_texth();small_textv();
+            
             subplot(6,12,spi{3}+(ncol-1)*3);
             imagesc(w(3,:)'*w(3,:),[d(ncol)-2 u(ncol)+2]);
             axis off;axis square;
+            small_texth();
         end
+        
         
         % row 3        
         subplot(6,12,spi{4}+(ncol-1)*3);
@@ -1012,17 +1021,17 @@ elseif strcmp(varargin{1},'figure01');
         axis square;
         h = text(.5,4,'CS+');set(h,'HorizontalAlignment','right','fontsize',10);
         h = text(.5,8,'CS-');set(h,'HorizontalAlignment','right','fontsize',10);
-        h = text(.5,2,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',8);
-        h = text(.5,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',8);                
+        h = text(.5,2,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',6);
+        h = text(.5,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',6);                
         
         h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',10);
         h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',10);
-        h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8);
-        h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8);                
-        
+        h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',6);
+        h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',6);                
+                
 %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')       
     end  
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01.png'));
+%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01.png'));
     
 elseif strcmp(varargin{1},'figure03')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
@@ -1038,83 +1047,101 @@ elseif strcmp(varargin{1},'figure03')
     g.tunings.rate{3}.GroupFit(8);
     g.tunings.rate{4}.GroupFit(8);
     %%
+    f = figure(1022);
+    set(f,'position',[2452         450         794         481])
+    clf
     for n = 2:4
         sn = n-1;
         subpl(n) =  subplot(2,3,sn+3);
-        b        = bar(-135:45:180,mean(ratings(:,:,sn)));
+        Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
 %         Project.plot_bar(mean(ratings(:,:,sn)));
         hold on;
         e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'k.');
         set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
-        SetFearGenBarColors(b)
+%         SetFearGenBarColors(b)
         set(e,'LineWidth',2,'Color','k')
         ylim([0 10])
         xlim([-180 225])
         axis square
         box off
     end
-    %%
+    %
     subplot(2,3,1+3);ylabel('Rating of p(shock)','FontSize',12)
     hold on;
     %add Groupfit line
     params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
     params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
     x = -150:0.1:195;
+    
     subplot(2,3,1+3);
     line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
     subplot(2,3,2+3);
     plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
-    line([0 180],[9 9],'Color','k','LineWidth',2)
-    text(45,9,'***','FontSize',20)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
     subplot(2,3,3+3);
     plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
-    line([0 180],[9 9],'Color','k','LineWidth',2)
-    text(45,9,'***','FontSize',20)
-    subplot(2,3,1+3);title('Baseline','FontSize',14);
-    subplot(2,3,2+3);title('Conditioning','FontSize',14);
-    subplot(2,3,3+3);title('Generalization','FontSize',14);
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)        
     
     %% SCR
-    g = Group(p.subjects_bdnf(p.subjects_scr));
-    out = g.getSCR(2.5:5.5);
-    av = mean(out.y);
-    sem = std(out.y)./sqrt(length(g.ids));
+    g        = Group(p.subjects_bdnf(p.subjects_scr));
+    out      = g.getSCR(2.5:5.5);
+    av       = mean(out.y);
+    sem      = std(out.y)./sqrt(length(g.ids));
     %fit baseline to see if there's tuning
-    data.y = out.y(:,1:8);
-    data.x = repmat(-135:45:180,[68 1])';
+    data.y   = out.y(:,1:8);
+    data.x   = repmat(-135:45:180,[68 1])';
     data.ids = NaN;
-    base = Tuning(data);
+    base     = Tuning(data);
     base.GroupFit(8);
     %same for test (cond not possible)
-    data.y = out.y(:,17:24);
-    data.x = repmat(-135:45:180,[68 1]);
+    data.y   = out.y(:,17:24);
+    data.x   = repmat(-135:45:180,[68 1]);
     data.ids = NaN;
-    test = Tuning(data);
+    test     = Tuning(data);
     test.GroupFit(8);
-    params = test.groupfit.Est;
-    params(3) = deg2rad(params(3));
-    figure(1);
-    % plot SCR
-    subplot(2,3,4-3);
-    ylabel('SCR (z-score)')
-    b = bar(-135:45:180,av(1:8));SetFearGenBarColors(b);axis square;box off;hold on;
+    params   = test.groupfit.Est;
+    params(3)= deg2rad(params(3));
+   
+    %% plot SCR
+    figure(1022);
+    subplot(2,3,4-3);    
+    Project.plot_bar(-135:45:180,av(1:8));;axis square;box off;hold on;
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
-    ylim([-.55 .55])
+    ylim([-.6 .6]);
+    ylabel('SCR (z-score)')
+    
+    
     subplot(2,3,5-3);
-    b = bar(-135:45:180,av(9:16));SetFearGenBarColors(b);axis square;box off;hold on;
+    Project.plot_bar(-135:45:180,av(9:16));axis square;box off;hold on;
     errorbar(-135:45:180,av(9:16),sem(9:16),'k.','LineWidth',1.5);
+    ylim([0 2])
+    line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
+    text(40,max(ylim)+.05,'***','FontSize',20);
+    
     subplot(2,3,6-3);
-    b = bar(-135:45:180,av(17:24));SetFearGenBarColors(b);axis square;box off;hold on;
+    Project.plot_bar(-135:45:180,av(17:24));axis square;box off;hold on;
     errorbar(-135:45:180,av(17:24),sem(17:24),'k.','LineWidth',1.5);
     x = -150:0.1:195;
     plot(x,VonMises(deg2rad(x),params(1),params(2),params(3),params(4)),'k-','LineWidth',2)
-    ylim([-.55 .55])
+    ylim([-.6 .6])
+    line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
+    text(40,max(ylim)+.05,'***','FontSize',20);
+    
+    
     for n = 4:6
         subplot(2,3,n-3)
         set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',12)
         xlim([-180 225])
     end
+    
+     subplot(2,3,1+3);title('Baseline','FontSize',14);
+    subplot(2,3,2+3);title('Conditioning','FontSize',14);
+    subplot(2,3,3+3);title('Generalization','FontSize',14);
+    
 elseif strcmp(varargin{1},'figure_04A')
     %% selected subjects are 44 and 47
     fs = 15;
@@ -1484,7 +1511,6 @@ end
 % Nature Scientific Data, 2017
 % Niklas Wilming, Selim Onat, Jos? P. Ossand?n, Alper A??k, Tim C.
 % Kietzmann, Kai Kaspar, Ricardo R. Gameiro, Alexandra Vormberg & Peter K?nig 
-%
 % (4) Comparing the similarity and spatial structure of neural
 % representations: A pattern-component model 
 % Diedrichsen Jm et al.
