@@ -30,7 +30,7 @@ current_subject_pool = 1;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-url                  = 'https://www.dropbox.com/s/ldevteefmn27ygf/project_bdnf.tar.gz?dl=0';%URL to the data
+url                  = 'https://www.dropbox.com/s/2fhoyye9741cwhz/project_RSAofFDM.tar.gz?dl=1'
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
 for nf = 1:length(varargin)
@@ -60,7 +60,7 @@ if strcmp(varargin{1},'download_project');
 % %     download_folder      = fileparts(fileparts(path_project));
 % %     cd(download_folder);
 % %         if exist(path_project) == 0
-% %             s                 = urlwrite(url,target_folder);
+% %             s                 = urlwrite(url,download_folder);
 % %             unzip('target_folder/*.zip')    
 % %         end
 % %     cd(target_folder);
@@ -77,7 +77,7 @@ if strcmp(varargin{1},'download_project');
 % % addpath(pwd)
 % % cd ..
 
-    
+
     
 elseif strcmp(varargin{1},'get_subjects');
     %% returns subject indices based on the CURRENT_SUBJECT_POOL variable. 
@@ -790,7 +790,7 @@ elseif strcmp(varargin{1},'searchlight')
                     % create the query cell
                     maps             = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
                     maps             = reshape(maps(:,conds),[500 500 length(conds)]);
-                    out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
+                    out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true,'DisplayWaitbar',false);
                     save(path_write,'out');
                 else
                     cprintf([0 1 0],'Already cached...\n');
