@@ -573,7 +573,8 @@ elseif strcmp(varargin{1},'get_model_rsa_table')
         model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),1,1),1,size(subject,2));%
         model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
         %
-        [cmat]     = getcorrmat(0,3,1,1);
+        %getcorrmat(amp_circ, amp_gau, amp_const, amp_diag, varargin)
+        [cmat]     = getcorrmat(0,1,1,1,0.86);%see model_rsa_testgaussian_optimizer
         model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
         %% add all this to a TABLE object.
         t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'B' 'T' 'cossin' 'cos' 'sin' 'gau' 'subject' 'phase'});
@@ -587,22 +588,26 @@ elseif strcmp(varargin{1},'model_rsa_testcircular');
     fixations  = varargin{2};
     t          = FearCloud_RSA('get_model_rsa_table',fixations);
     %% test the model for B, T
-    a          = fitlm(t,'B ~ 1 + cossin')    
-    b          = fitlm(t,'T ~ 1 + cossin')
-    c          = fitlm(t,'T ~ 1 + cossin*phase')
+    a          = fitlm(t,'B ~ 1 + cossin');   
+    b          = fitlm(t,'T ~ 1 + cossin');
+    c          = fitlm(t,'T ~ 1 + cossin*phase');
     [a.ModelCriterion.BIC b.ModelCriterion.BIC c.ModelCriterion.BIC]
     varargout{1} = b;
     
-elseif strcmp(varargin{1},'model_rsa_testcircular_singlesubject');
+elseif strcmp(varargin{1},'model_rsa_singlesubject');
     %%
     fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations);
+    t          = FearCloud_RSA('get_model_rsa_table',fixations);    
     %% test the model for B, T
+    
     Model.circular.w1 = [];
     Model.flexible.w1 = [];
     Model.flexible.w2 = [];
+    Model.gaussian.w1 = [];
+    Model.gaussian.w2 = [];
+    Model.gaussian.w3 = [];
     for ns = unique(t.subject)'
-        ns
+        fprintf('Fitting an circular and flexibile LM to subject %03d...\n',ns);
         t2                = t(ismember(t.subject,categorical(ns)),:);
         B                 = fitlm(t2,'B ~ 1 + cossin');
         T                 = fitlm(t2,'T ~ 1 + cossin');
@@ -612,9 +617,105 @@ elseif strcmp(varargin{1},'model_rsa_testcircular_singlesubject');
         T                 = fitlm(t2,'T ~ 1 + cos + sin');
         Model.flexible.w1 = [Model.flexible.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];        
         Model.flexible.w2 = [Model.flexible.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];                        
+        %
+        B                 = fitlm(t2,'B ~ 1 + cos + sin + gau');
+        T                 = fitlm(t2,'T ~ 1 + cos + sin + gau');
+        Model.gaussian.w1 = [Model.gaussian.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];        
+        Model.gaussian.w2 = [Model.gaussian.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];                        
+        Model.gaussian.w3 = [Model.gaussian.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];                        
     end
-%     bar(mean(C),'k');hold on;errorbar(mean(C),std(C)./sqrt(61),'ro','marker','none');hold off;
     varargout{1} = Model;
+elseif strcmp(varargin{1},'model_rsa_singlesubject_plot');        
+    %%
+    fixations = varargin{2};    
+    C         = FearCloud_RSA('model_rsa_singlesubject',fixations);
+    %%
+    % circular model
+    M         = mean(C.circular.w1);
+    SEM       = std(C.circular.w1)./sqrt(61);
+    %flexible model
+    Mc        = mean(C.flexible.w1);
+    SEMc      = std(C.flexible.w1)./sqrt(61);
+    Ms        = mean(C.flexible.w2);
+    SEMs      = std(C.flexible.w2)./sqrt(61);
+    %gaussian model
+    Mcg       = mean(C.gaussian.w1);
+    SEMcg     = std(C.gaussian.w1)./sqrt(61);
+    Msg       = mean(C.gaussian.w2);
+    SEMsg     = std(C.gaussian.w2)./sqrt(61);
+    Mg        = mean(C.gaussian.w3);
+    SEMg      = std(C.gaussian.w3)./sqrt(61);
+    %% get the p-values
+    [H   P]     = ttest(C.circular.w1(:,1)-C.circular.w1(:,2));%compares baseline vs test the circular model parameters
+    
+    [Hc Pc]     = ttest(C.flexible.w1(:,1)-C.flexible.w1(:,2));%compares cosine before to after
+    [Hs Ps]     = ttest(C.flexible.w2(:,1)-C.flexible.w2(:,2));%compares sine before to after    
+    [Hcs Pcs]   = ttest(C.flexible.w1(:,2)-C.flexible.w2(:,2));%compares cosine after to sine after
+    % same as before 
+    [Hgc Pgc]   = ttest(C.gaussian.w1(:,1)-C.gaussian.w1(:,2));%compares cosine before to after   
+    [Hgcs Pgcs] = ttest(C.gaussian.w1(:,2)-C.gaussian.w2(:,2));%compares cosine after to sine after
+    [Hgg Pgg]   = ttest(C.gaussian.w3(:,1)-C.gaussian.w3(:,2));%compares sine before to after    
+    
+    %%    
+    %%    
+    figure;
+    set(gcf,'position',[675   514   632   580]);
+    X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
+    Y    = [M Mc Ms Mcg Msg Mg];
+    Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
+    bw   = .5;
+    hold off;
+    for n = 1:size(Y,2)        
+        h    = bar(X(n),Y(n));
+        hold on
+        errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1,'capsize',6);                
+        if ismember(n,[1 3 5 7 9 11])
+            set(h,'FaceAlpha',.1,'FaceColor','k','EdgeAlpha',1,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+        else
+            set(h,'FaceAlpha',.8,'FaceColor','k','EdgeAlpha',1,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+        end
+    end    
+    box off;
+    %% xticks
+    xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
+    label = {'\itw_{\rmcirc.}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmGaus.}' };
+    for nt = 1:length(xtick)
+        h = text(xtick(nt),-.01,label{nt},'horizontalalignment','center','fontsize',16,'rotation',45,'fontangle','italic','fontname','times new roman');
+    end
+    set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
+    %
+    ylabel('\beta','fontsize',20);    
+    SetTickNumber(gca,3,'y');
+    axis square
+    %% asteriks
+    hold on
+    ylim([min(ylim) .16]);
+    h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);    
+    h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+    h= line([X(4)-bw/2 X(6)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+    
+    h= line([X(7)-bw/2 X(8)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+    h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+    h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
+    %
+    text(mean(X(1:2))  ,max(ylim)-.0075, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X(3:4))  ,max(ylim)-.0075, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X([4 6])),max(ylim)      , pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+    %% model names
+    h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
+    set(h(1),'color','k','linewidth',1,'clipping','off');    
+    text(mean(X(1:2)),-.035,sprintf('circular\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
+    h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
+    set(h(1),'color','k','linewidth',1,'clipping','off');    
+    text(mean(X(3:6)),-.035,sprintf('flexible\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
+    
+    h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
+    set(h(1),'color','k','linewidth',1,'clipping','off');    
+    text(mean(X(7:end)),-.035,sprintf('flexible\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
+    %    
 elseif strcmp(varargin{1},'model_rsa_testflexible');
     %%
     fixations  = varargin{2};
@@ -630,7 +731,7 @@ elseif strcmp(varargin{1},'model_rsa_testflexible');
 elseif strcmp(varargin{1},'model_rsa_testgaussian');
     
     fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations);  
+    t          = FearCloud_RSA('get_model_rsa_table',fixations); sdf 
     a          = fitlm(t,'T ~ 1 + cos + sin');
     b          = fitlm(t,'T ~ 1 + cos + sin + gau');
     [a.ModelCriterion.BIC b.ModelCriterion.BIC]
@@ -639,24 +740,44 @@ elseif strcmp(varargin{1},'model_rsa_testgaussian');
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');    
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model         
-    t          = FearCloud_RSA('get_model_rsa_table');  
-    amp        = [];
-    sd         = [];
-    c          = 0;
-    for amps = linspace(0.25,2,25);
-        amp = [amp amps];
-        for sds = linspace(0.25,5,25);
-            c = c + 1;
-            sd = [sd sds];
-            [cmat]     = getcorrmat(0,amps,0,1,sds);
-            imagesc(cmat,[-1 1]);colorbar;drawnow;
-            model3_g   = Vectorize(repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2)));%                
+    t           = FearCloud_RSA('get_model_rsa_table',1:100);  
+    tsubject    = length(unique(t.subject));
+    res         = 50;
+    amps        = linspace(0.25,2,res);        
+    sds         = linspace(0.25,3,res);        
+    c           = 0;
+    
+    for amp = amps
+        for sd = sds
+            c          = c + 1;            
+            %
+            [cmat]     = getcorrmat(0,amp,0,1,sd);
+            imagesc(cmat,[-1 1]);
+            colorbar;title('Currently fitted Gau component');drawnow;
+            model3_g   = Vectorize(repmat(repmat(squareform_force(cmat),1,1),1,tsubject));%                
             %
             t.gau      = model3_g(:);
-            a          = fitlm(t,'T ~ 1 + cossin + gau');
-            BIC2(c)    = a.ModelCriterion.BIC
+            a          = fitlm(t,'T ~ 1 + cos + sin + gau');
+            BIC2(c)    = a.ModelCriterion.BIC;
         end
-    end
+    end    
+    BIC2         = reshape(BIC2,res,res);
+    varargout{1} = BIC2;
+   
+    %% prepare the output;    
+    [y x]  = find(BIC2 == min(BIC2(:)));
+    amp    = amps(x);
+    sd     = sds(y);
+    clf
+    imagesc(amps,sds,reshape(BIC2,res,res));    
+    hold on
+    plot(amp,sd,'ko','markersize',25);
+    hold off;
+    title( 'BIC = f(amp,sd)');
+    xlabel('amp');
+    ylabel('sd');
+    fprintf('The best amplitude and sd parameters are as follows:\n AMP: %3.5g, SD: %3.5g\n',amp,sd);            
+
 elseif strcmp(varargin{1},'model_rsa_parameter_timecourse')
     for nfix = 1:5;
         a{nfix} = FearCloud_RSA('model_rsa_testflexible',nfix);
@@ -1271,11 +1392,11 @@ elseif strcmp(varargin{1},'figure_04C')
 %     SaveFigure(filename);
 %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));  
 elseif strcmp(varargin{1},'figure_05')
-    %% 
-    keyboard
+    
     %%
     clf
     sim     = varargin{2};
+    %%
     cormatz = 1-squareform(nanmean(sim.correlation));
 %     cormatz = CancelDiagonals(cormatz,NaN);
     [d u]   = GetColorMapLimits(cormatz,2.5);
@@ -1350,85 +1471,12 @@ elseif strcmp(varargin{1},'figure_05')
     end
     text(y(8+4,1)-.02,y(8+4,2)+.065,'CS+','FontWeight','bold');
     text(y(8+8,1)-.08,y(8+8,2)+.07,['CS-'],'FontWeight','bold');
-    box off;axis square;axis tight;axis off
-    
+    box off;axis square;axis tight;axis off    
     %%
+    %subplot(9,6,[22 23 24 28 29 30])    
+    %FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure05_final_part1.png','-transparent');
     
-    
-    label  ={'' '' '' 'cs+' '' '' '' 'cs-'};
-    for n = 1:8;text(y(n,1),y(n,2),label{n},'fontsize',15);end    
-    
-    set(gca,'XTickLabel',[],'YTickLabel',[],'xtick',0,'YTick',0);grid on;
-    
-    
-    
-    hold on;
-    for nface = 1:8
-        plot(y(nface,1),y(nface,2),'.','color',colors(nface,:),'markersize',50,'markerface',colors(nface,:));
-    end
-    
-%     hold off
-    %
-%     subplot(9,6,[28:30 22:24])    
-    hold on
-    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'ro-','linewidth',3);
-    label={'' '' '' 'cs+' '' '' '' 'cs-'};
-    for n = [1:8]+8;text(y(n,1),y(n,2),label{n-8},'fontsize',15);end    
-    box off;axis square;xlim([-.6 .6]);ylim([-.6 .6]);    
-    set(gca,'XTickLabel',[],'YTickLabel',[],'xtick',0,'YTick',0);grid on;
-    hold on
-%     plot(y([1:8 1],1),y([1:8 1],2),'o-.','linewidth',2,'color',[114 189 255]/255);
-    hold off
-    
-    %%
-    subplot(9,6,[31:32 37:38])
-    X = FearCloud_RSA('get_design_matrix');
-    imagesc(squareform(X(:,1)),[-1 1]);axis square;axis off
-    title(sprintf('Constant\nSimilarity'),'fontsize',8)
-    subplot(9,6,[33 34 39:40])
-    X = FearCloud_RSA('get_design_matrix');
-    imagesc(squareform(X(:,2)),[-1 1]);axis square;axis off
-    title(sprintf('Perceptual\nSimilarity'),'fontsize',8)
-    subplot(9,6,[35:36 41:42])
-    X = FearCloud_RSA('get_design_matrix');
-    imagesc(squareform(X(:,3)),[-1 1]);axis square;axis off
-    title(sprintf('CS+\nSimilarity'),'fontsize',8)
-    %%
-    [betas ci] = FearCloud_RSA('get_betas',sim);
-    
-    location = {[43 44 49 50] [45 46 51 52] [47 48 53 54]};
-    color = {[1 0 0] [.5 0 0];[0 0 1] [0 0 .5];[.8 .8 .8] [.4 .4 .4]}';
-    c= -1;
-    xticks =[];
-    for n = 1:size(betas,1);%betas
-        subplot(9,6,location{n});
-        for m = 1:size(betas,2)%phases
-            h=bar(m,betas(n,m),1,'facecolor',color{m,n},'edgecolor',color{m,n});
-            hold on;
-            errorbar(m,betas(n,m),betas(n,m)-ci(1,n,m),betas(n,m)-ci(2,n,m),'k')
-            box off;
-            if n ==2
-                plot([1 2],[.14 .14],'k-');
-                plot([1.5],[.15],'k*');
-            elseif n == 3
-                plot([1 2],[.035 .035],'k-');
-                plot([1.5],[.04],'k*');
-            end
-        end
-        xlim([0 3])
-        hold off;
-        if ~ismac
-            set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' },'XTickLabelRotation',45);
-        else
-            set(gca,'xtick',[1 2],'xticklabel','','color','none','xticklabel',{'before' 'after' 'before' 'after' 'before' 'after' });
-        end
-        SetTickNumber(gca,3,'y');
-        axis square
-        if n == 1
-            ylabel('\beta');
-        end
-    end
-    %SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure03_subjectpool_%02d.png',current_subject_pool));
     
 
 elseif strcmp(varargin{1},'selected_subjects')
