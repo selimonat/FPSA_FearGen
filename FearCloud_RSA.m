@@ -21,7 +21,7 @@ function [varargout]=FearCloud_RSA(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder
+path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -30,7 +30,7 @@ current_subject_pool = 1;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-url                  = 'https://www.dropbox.com/s/2fhoyye9741cwhz/project_RSAofFDM.tar.gz?dl=1'
+url                  = 'https://www.dropbox.com/s/2fhoyye9741cwhz/project_RSAofFDM.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
 for nf = 1:length(varargin)
@@ -54,28 +54,30 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 
 %%
 if strcmp(varargin{1},'download_project');
-% %     keyboard
-% %     %download data
-% %     fprintf('Downloading the source data...\n')
-% %     download_folder      = fileparts(fileparts(path_project));
-% %     cd(download_folder);
-% %         if exist(path_project) == 0
-% %             s                 = urlwrite(url,download_folder);
-% %             unzip('target_folder/*.zip')    
-% %         end
-% %     cd(target_folder);
-% %     %download dependencies
-% %     fprintf('Downloading the source code...\n')
-% %     mkdir code
-% %     system(['git clone https://github.com/selimonat/fancycarp.git']);
-% %         cd(sprintf('%s%s%s',target_folder,filesep,'fancycarp'));
-% %     addpath(pwd)
-% %     system(['git checkout bdnf']);
-% %         cd('..');
-% %     system(['git clone https://github.com/selimonat/globalfunctions.git']);
-% %         cd(sprintf('%s%s%s',target_folder,filesep,'globalfunctions'));
-% % addpath(pwd)
-% % cd ..
+    keyboard
+    %download data
+    fprintf('Downloading the source data...\n');
+    download_folder      = fileparts(fileparts(fileparts(path_project)));    
+    
+    if exist(path_project) == 0
+        s                 = urlwrite(url,'dummy');
+        untar('/tmp/dummy',download_folder);    
+    end
+    
+    %download dependencies
+    fprintf('Downloading the analysis code and adding it to path...\n')
+    cd(fileparts(fileparts(path_project)));
+    mkdir code
+    cd code
+    system(['git clone https://github.com/selimonat/fancycarp.git']);
+    cd('./fancycarp');
+    system(['git checkout bdnf']);
+    addpath(pwd)        
+    cd('..');
+    system(['git clone https://github.com/selimonat/globalfunctions.git']);
+    cd('./globalfunctions');
+    addpath(pwd)
+    cd ..
 
 
     
@@ -590,6 +592,29 @@ elseif strcmp(varargin{1},'model_rsa_testcircular');
     c          = fitlm(t,'T ~ 1 + cossin*phase')
     [a.ModelCriterion.BIC b.ModelCriterion.BIC c.ModelCriterion.BIC]
     varargout{1} = b;
+    
+elseif strcmp(varargin{1},'model_rsa_testcircular_singlesubject');
+    %%
+    fixations  = varargin{2};
+    t          = FearCloud_RSA('get_model_rsa_table',fixations);
+    %% test the model for B, T
+    Model.circular.w1 = [];
+    Model.flexible.w1 = [];
+    Model.flexible.w2 = [];
+    for ns = unique(t.subject)'
+        ns
+        t2                = t(ismember(t.subject,categorical(ns)),:);
+        B                 = fitlm(t2,'B ~ 1 + cossin');
+        T                 = fitlm(t2,'T ~ 1 + cossin');
+        Model.circular.w1 = [Model.circular.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];        
+        %
+        B                 = fitlm(t2,'B ~ 1 + cos + sin');
+        T                 = fitlm(t2,'T ~ 1 + cos + sin');
+        Model.flexible.w1 = [Model.flexible.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];        
+        Model.flexible.w2 = [Model.flexible.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];                        
+    end
+%     bar(mean(C),'k');hold on;errorbar(mean(C),std(C)./sqrt(61),'ro','marker','none');hold off;
+    varargout{1} = Model;
 elseif strcmp(varargin{1},'model_rsa_testflexible');
     %%
     fixations  = varargin{2};
@@ -598,6 +623,9 @@ elseif strcmp(varargin{1},'model_rsa_testflexible');
     b          = fitlm(t,'T ~ 1 + cos + sin');
     [a.ModelCriterion.BIC b.ModelCriterion.BIC]    
     varargout{1} =b;
+
+
+    
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian');
     
@@ -638,6 +666,8 @@ elseif strcmp(varargin{1},'model_rsa_parameter_timecourse')
         e(nfix,:) = a{nfix}.Coefficients.Estimate(2:end);
     end;
     bar(e)
+    
+    
 elseif strcmp(varargin{1},'NvsO')
     %% compares neighboring correlation to opposing correlations
     % BLOCK = 1 | 2 for baseline | test, respectively
