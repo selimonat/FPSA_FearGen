@@ -594,6 +594,7 @@ elseif strcmp(varargin{1},'model_rsa_testcircular');
     [a.ModelCriterion.BIC b.ModelCriterion.BIC c.ModelCriterion.BIC]
     varargout{1} = b;
     
+    
 elseif strcmp(varargin{1},'model_rsa_singlesubject');
     %%
     fixations  = varargin{2};
@@ -666,7 +667,8 @@ elseif strcmp(varargin{1},'model_rsa_singlesubject_plot');
     bw   = .5;
     hold off;
     for n = 1:size(Y,2)        
-        h    = bar(X(n),Y(n));
+        h       = bar(X(n),Y(n));
+        legh(n) = h;
         hold on
         errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1,'capsize',6);                
         if ismember(n,[1 3 5 7 9 11])
@@ -676,6 +678,8 @@ elseif strcmp(varargin{1},'model_rsa_singlesubject_plot');
         end
     end    
     box off;
+    L          = legend(legh(1:2),{'Before' 'After'},'box','off');
+    L.FontSize = 12;
     %% xticks
     xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
     label = {'\itw_{\rmcirc.}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmGaus.}' };
@@ -1141,18 +1145,24 @@ elseif strcmp(varargin{1},'figure_01');
         ylim([-1 1]);
         axis square;axis off
         title(titles{ncol});
-        
+        if ncol == 1
+                text(-1.7,max(ylim)/2-.4,sprintf('MDS'),'fontsize',12,'rotation',90,'horizontalalignment','center');
+        end
+            
         % row 2        
         if ncol < 4
             subplot(6,12,spi{2}+(ncol-1)*3);            
             imagesc(w(1,:)'*w(1,:),[d(ncol) u(ncol)]);
             axis off;axis square;
             small_texth();small_textv();
+            if ncol == 1
+                text(-6.5,max(ylim)/2,sprintf('Covariance\nComponents'),'fontsize',12,'rotation',90,'horizontalalignment','center');
+            end
             
             subplot(6,12,spi{3}+(ncol-1)*3);
             imagesc(w(2,:)'*w(2,:),[d(ncol) u(ncol)]);
             axis off;axis square;
-            small_texth();
+            small_texth();            
         else
             subplot(6,12,spi{2}+(ncol-1)*3);
             imagesc(w(1:2,:)'*w(1:2,:),[d(ncol) u(ncol)]);
@@ -1182,6 +1192,10 @@ elseif strcmp(varargin{1},'figure_01');
         h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',6);
         h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',6);                
                 
+        if ncol == 1
+                text(-2.5,max(ylim)/2,sprintf('Theoretical\nSimilarity\Matrices'),'fontsize',12,'rotation',90,'horizontalalignment','center');
+            end
+        
 %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')       
     end  
 %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01.png'));
@@ -1476,7 +1490,10 @@ elseif strcmp(varargin{1},'figure_05')
     %subplot(9,6,[22 23 24 28 29 30])    
     %FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
 %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure05_final_part1.png','-transparent');
-    
+
+elseif strcmp(varargin{1},'figure_05D')
+
+    FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
     
 
 elseif strcmp(varargin{1},'selected_subjects')
