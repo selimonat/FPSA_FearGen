@@ -1373,7 +1373,7 @@ elseif strcmp(varargin{1},'figure_03')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
     p                 = Project;
     figure(1);
-    g                 = Group(FearCloud_RSA('get_subjects'));
+    g                 = Group(p.subjects_bdnf(p.subjects_ET));
     ratings           = g.getRatings(2:4);
     g.tunings.rate{2} = Tuning(g.Ratings(2));
     g.tunings.rate{3} = Tuning(g.Ratings(3));
@@ -1422,19 +1422,19 @@ elseif strcmp(varargin{1},'figure_03')
     text(30,8.5,'***','FontSize',20)        
     
     %% SCR
-    g        = Group(p.subjects_bdnf(p.subjects_scr));
+    g        = Group(p.subjects_bdnf(logical(p.subjects_ET.*p.subjects_scr)));
     out      = g.getSCR(2.5:5.5);
     av       = mean(out.y);
     sem      = std(out.y)./sqrt(length(g.ids));
     %fit baseline to see if there's tuning
     data.y   = out.y(:,1:8);
-    data.x   = repmat(-135:45:180,[68 1])';
+    data.x   = repmat(-135:45:180,[length(g.ids) 1])';
     data.ids = NaN;
     base     = Tuning(data);
     base.GroupFit(8);
     %same for test (cond not possible)
     data.y   = out.y(:,17:24);
-    data.x   = repmat(-135:45:180,[68 1]);
+    data.x   = repmat(-135:45:180,[length(g.ids) 1]);
     data.ids = NaN;
     test     = Tuning(data);
     test.GroupFit(8);
@@ -1478,6 +1478,11 @@ elseif strcmp(varargin{1},'figure_03')
     subplot(2,3,2+3);title('Conditioning','FontSize',14);
     subplot(2,3,3+3);title('Generalization','FontSize',14);
     
+    
+    %
+    diff = (out.y(:,12)-out.y(:,16))./out.y(:,16);
+    mean(diff)
+    std(diff)
 elseif strcmp(varargin{1},'figure_04A')
     %% selected subjects are 44 and 47
     fs                      = 15;
