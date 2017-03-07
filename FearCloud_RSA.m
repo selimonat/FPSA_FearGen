@@ -21,7 +21,7 @@ function [varargout]=FearCloud_RSA(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -1255,25 +1255,28 @@ elseif strcmp(varargin{1},'SVM')
     
     for opt = 1:4
         load(['C:\Users\Lea\Documents\Experiments\project_bdnf\data\midlevel\svm_analysis\findingparams\' sprintf('SVM_NEV%d_FWHM30_r0_opt%d.mat',neigs(opt),opt)])
-        M = mean(mean(result,2),3);
-        SE = std(mean(result,2),[],3)./sqrt(size(result,3));
-        figure(100);
-        subplot(1,5,opt);
-        b = bar(M);SetFearGenBarColors(b);
+        M0(:,:,opt) = mean(result,2);
+%         SE4(:,opt) = std(mean(result,2),[],3)./sqrt(size(result,3));
+    end
+    testM = mean(M0(:,:,2:4),3);
+    testSE= std(M0(:,:,2:4),[],3)./sqrt(size(M0,3));
+    perf = cat(3,M0(:,:,1),testM);
+   
+    M = squeeze(mean(perf,2));
+    SE = squeeze(std(perf,[],2)./sqrt(size(perf,2)));
+    figure(100);
+    labels = {'Base' 'Test'};
+    for n = 1:2
+        subplot(1,2,n);
+        Project.plot_bar(-135:45:180,M(:,n),SE(:,n));
         hold on;
-        errorbar(M,SE,'k.','LineWidth',2)
         ylim([.3 .7])
-        set(gca,'YTick',.3:.1:.7,'XTick',[4 8],'XTickLabel',{'CS+' 'CS-'});
+        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'});
         box off
         axis square
         ylabel('Classified as CS+')
-    end
-    labels = {'baseline' 'test_1' 'test_2' 'test_3' 'test_{all}'};
-    for n = 1:4
-        subplot(1,5,n)
-        ylim([.25 .75])
         set(gca,'YTick',[.3 .5 .7])
-        xlim([0 9])
+        xlim([-170 215])
         title(labels{n})
     end
 
