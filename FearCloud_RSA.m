@@ -54,6 +54,7 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 
 %%
 if strcmp(varargin{1},'download_project');
+    %downloads the data and stimuli
     keyboard
     %download data
     fprintf('Downloading the source data...\n');
