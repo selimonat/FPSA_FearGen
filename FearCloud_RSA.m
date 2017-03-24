@@ -1319,7 +1319,67 @@ elseif strcmp(varargin{1},'SVM')
     ylabel('difference (Test - Base)')
       set(gca,'YTick',[0 .05 .1])
 elseif strcmp(varargin{1},'figure_01');
+    %% this is the figure of faces, FDMs and dissimilarity matrices
+    % get V1 dissimilarity
+    
+    path2v1 = [strrep(path_project,'data','stimuli') 'V1\V1_*'];
+    dummy           = dir([path2v1 '*.mat']);
+    v1files         = [repmat([fileparts(path2v1) filesep],length(dummy),1) vertcat(dummy(:).name)];
+    tfiles          = size(v1files,1);
+    im0              = [];
+    im               = [];
+    c =0;
+    for i = 1:tfiles
+        c = c+1;
+        dummy       = load(v1files(i,:));
+        im0(:,:,c)   = dummy.v1;
+    end
+    im = im0  - repmat(mean(im0,3),[1 1 8]); % mean correction
+    dissv1 = 1-corr(reshape(im,[400*400,8])); %dissimilarity v1
+    
+    figure(1)
+    subplot(2,1,1)
+    imagesc(dissv1,[-.7 2.7]);
+    axis square;colorbar
+    set(gca,'fontsize',15);
+    axis off;
+    bla = CancelDiagonals(bla,NaN);
+    subplot(2,1,1);
+    [d u]   = GetColorMapLimits(bla,2.5);
+    imagesc(bla,[d u]);
+    axis square;colorbar
+    set(gca,'fontsize',15);
+    axis off;
+    
+    exemplsub = 62;
+    
+    
+    subplot(2,1,2);
+    subs = FearCloud_RSA('get_subjects');
+    mat = FearCloud_RSA('get_rsa',1:100);
+    cormatz = 1-squareform(mat.correlation(subs==62,:));
+    cormatz = cormatz(9:end,9:end);
+    [d u]   = GetColorMapLimits(cormatz,2.5);
+     imagesc(cormatz,[d u]);
+    axis square;colorbar
+    set(gca,'fontsize',15);
+    axis off;
+    
+    
+    fix = Fixmat(exemplsub,4);
+    
+    figure(exemplsub);
+    fix.contourplot(5,[0 .5 .6 .7 .8 .9]);
+    colors        = GetFearGenColors;
+    colors        = circshift(colors(1:8,:),-3);
+    for n = 1:8
+        subplot(3,3,n);
+        h = gca;
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
+    end
+    
     %% this id the cartoon figure where hypotheses are presented;
+    figure
     set(gcf,'position',[2588         146        1212         659]);
     %few fun definition to write axis labels
     small_texth = @(h) evalc('h = text(4,9,''CS+'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);h = text(8,9,''CS-'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);hold on;plot([4 4],[ylim],''k--'',''color'',[0 0 0 .4]);plot([xlim],[4 4],''k--'',''color'',[0 0 0 .4])');
