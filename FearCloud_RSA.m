@@ -21,7 +21,7 @@ function [varargout]=FearCloud_RSA(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
