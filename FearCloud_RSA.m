@@ -1321,8 +1321,8 @@ elseif strcmp(varargin{1},'SVM')
 elseif strcmp(varargin{1},'figure_01');
     %% this is the figure of faces, FDMs and dissimilarity matrices
     % get V1 dissimilarity
-    
-    path2v1 = [strrep(path_project,'data','stimuli') 'V1\V1_*'];
+    p = Project;
+    path2v1 = [strrep(p.path_project,'data','stimuli') 'V1\V1_*'];
     dummy           = dir([path2v1 '*.mat']);
     v1files         = [repmat([fileparts(path2v1) filesep],length(dummy),1) vertcat(dummy(:).name)];
     tfiles          = size(v1files,1);
@@ -1339,43 +1339,60 @@ elseif strcmp(varargin{1},'figure_01');
     
     figure(1)
     subplot(2,1,1)
-    imagesc(dissv1,[-.7 2.7]);
-    axis square;colorbar
+    dissv1 = CancelDiagonals(dissv1,NaN);
+    [d u]   = GetColorMapLimits(dissv1,2.5);
+    imagesc(dissv1,[0 1.8]);
+    axis square;c = colorbar;
+    set(c,'Ytick',caxis)
     set(gca,'fontsize',15);
-    axis off;
-    bla = CancelDiagonals(bla,NaN);
-    subplot(2,1,1);
-    [d u]   = GetColorMapLimits(bla,2.5);
-    imagesc(bla,[d u]);
-    axis square;colorbar
-    set(gca,'fontsize',15);
-    axis off;
+    axis off
     
-    exemplsub = 62;
+    %chose exemplary subject
+%     figure;
+%     subs = FearCloud_RSA('get_subjects');
+%     sim = FearCloud_RSA('get_rsa',1:100);
+%     for n = 1:61;
+%         subplot(8,8,n);
+%         dissmatz = squareform(sim.correlation(n,:));
+%         dissmatz = CancelDiagonals(dissmatz,0);
+%         dissmatz = dissmatz(9:end,9:end);
+%         [d u]   = GetColorMapLimits(dissmatz,2.5);
+%         imagesc(dissmatz,[0 2]);
+%             axis square;
+%     end
+
+    
+    exemplsub = 45;
     
     
     subplot(2,1,2);
     subs = FearCloud_RSA('get_subjects');
     mat = FearCloud_RSA('get_rsa',1:100);
-    cormatz = 1-squareform(mat.correlation(subs==62,:));
-    cormatz = cormatz(9:end,9:end);
-    [d u]   = GetColorMapLimits(cormatz,2.5);
-     imagesc(cormatz,[d u]);
-    axis square;colorbar
+    dissmat = squareform(mat.correlation(subs==exemplsub,:)); %get_rsa uses pdist, which is 1-r already, so no 1-squareform necessary.
+    dissmat = dissmat(9:end,9:end);
+    dissmat = CancelDiagonals(dissmat,NaN);
+%     [d2 u2]   = GetColorMapLimits(dissmat,2.5);
+    imagesc(dissmat,[0 1.8]);
+    axis square;c = colorbar;
+    set(c,'Ytick',caxis)
     set(gca,'fontsize',15);
     axis off;
     
     
     fix = Fixmat(exemplsub,4);
-    
+    s   = Subject(exemplsub);
     figure(exemplsub);
-    fix.contourplot(5,[0 .5 .6 .7 .8 .9]);
+    fix.contourplot(4,[.2 .3 .4 .5 .6]);
     colors        = GetFearGenColors;
-    colors        = circshift(colors(1:8,:),-3);
+    
+    colors        = circshift(colors(1:8,:),s.csp-4); %need to resort them so that csp is red. (check again)
+   
     for n = 1:8
         subplot(3,3,n);
         h = gca;
-        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
+        x = xlim;
+        y = ylim;
+        rectangle('position',[x(1) y(1) diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
     
     %% this id the cartoon figure where hypotheses are presented;
@@ -1545,7 +1562,7 @@ elseif strcmp(varargin{1},'figure_03')
     %% plot SCR
     figure(1022);
     subplot(2,3,4-3);
-    Project.plot_bar(-135:45:180,av(1:8));;axis square;box off;hold on;
+    Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
     ylim([-.6 .6]);
