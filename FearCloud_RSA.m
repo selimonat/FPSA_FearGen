@@ -258,17 +258,17 @@ elseif strcmp(varargin{1},'plot_fdm');
     end
     fs            = 15;        
     
-    grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
+%     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
    
-%     grids         = linspace(-.0002,.0002,15);
+    grids         = linspace(min(fixmat.maps(:)),max(fixmat.maps(:)),15);
     t             = circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]);
     colors        = GetFearGenColors;
     colors        = circshift(colors(1:8,:),0);
     figure;set(gcf,'position',[1952 361 1743 714]);
     colormap jet;
     %%
-    for n = 1:8
-        hhhh(n)=subplot(1,8,n);
+    for n = 1:size(fixmat.maps,3)
+        hhhh(n)=subplot(2,8,n);
         imagesc(fixmat.stimulus);
         hold on
 % % %         imagesc(fixmat.maps(:,:,n))
@@ -281,19 +281,21 @@ elseif strcmp(varargin{1},'plot_fdm');
         hold off
         axis image;
         axis off;
-        if strcmp(t{n}(1),'+') | strcmp(t{n}(1),'-')
-            title(sprintf('%s%c',t{n},char(176)),'fontsize',fs);
+        if strcmp(t{mod(n-1,8)+1}(1),'+') | strcmp(t{mod(n-1,8)+1}(1),'-')
+            title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs);
         else
-            title(sprintf('%s',t{n}),'fontsize',fs);
+            title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs);
         end
         %
         drawnow;
         pause(.5);
         %
-        alphas = [repmat(.5,1,numel(h2.FacePrims))];      
-        contourf_transparency(h2,alphas);;
+        try
+            alphas = [repmat(.5,1,numel(h2.FacePrims))];      
+            contourf_transparency(h2,alphas);
+        end
         %%
-        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(mod(n-1,8)+1,:),'linewidth',7);
     end
     pause(1);
     for n = 1:8;
@@ -1613,23 +1615,24 @@ elseif strcmp(varargin{1},'figure_04A')
     fs                      = 15;
     fixmat                  = FearCloud_RSA('get_fixmat');
     fixmat.kernel_fwhm      = 25;
-    for sub                     = varargin{2};
-        %
-        c           = 0;
+    c                       = 0;
+    for sub                     = [44 47];%varargin{2};
+        %    
         nphase = 4
         for ncond = circshift([0 45 90 135 180 -135 -90 -45],[1 3]);
             c    = c+1;
             v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
         end
-        
+    end
         fixmat.getmaps(v{:});
         %fixmat.maps = cat(3,fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]),fixmat.maps(:,:,9:end)-repmat(mean(fixmat.maps(:,:,9:end),3),[1 1 8]));        
-        fixmat.maps = fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]);
+        fixmat.maps(:,:,1:8)  = fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]);
+        fixmat.maps(:,:,9:16) = fixmat.maps(:,:,9:16)-repmat(mean(fixmat.maps(:,:,9:16),3),[1 1 8]);
         %
         %[d u] = GetColorMapLimits(fixmat.maps(:),1);
         FearCloud_RSA('plot_fdm',fixmat,0);
         %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
-    end
+    
 elseif strcmp(varargin{1},'figure_04B');
     %% will plot 8 evoked fixation maps individually corrected for blank
     
