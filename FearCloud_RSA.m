@@ -251,28 +251,30 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
     varargout{1} = maps;
 elseif strcmp(varargin{1},'plot_fdm');
     %% plot routine for FDMs used in the paper based on a FIXMAT. use the second VARARGIN to plot ROIs on top.
-    fixmat        = varargin{2};
-    contour_lines = 0
+    maps          = varargin{2};
+    tsubject      = size(maps,3)/8;    
+    contour_lines = 0;%FACIAL ROIs Plot or not.
+    fs            = 15;%fontsize;
     if nargin == 3
         contour_lines = varargin{3};
-    end
-    fs            = 15;        
-    
-%     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
-   
-    grids         = linspace(min(fixmat.maps(:)),max(fixmat.maps(:)),15);
-    t             = circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]);
+    end    
+%     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];           
+%     [d u]         = GetColorMapLimits(maps(:),2.5);
+%     grids         = [linspace(d,u,5)];
+    t             = repmat(circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]),1,tsubject);
     colors        = GetFearGenColors;
-    colors        = circshift(colors(1:8,:),0);
-    figure;set(gcf,'position',[1952 361 1743 714]);
+    colors        = repmat(circshift(colors(1:8,:),0),tsubject,1);    
     colormap jet;
     %%
-    for n = 1:size(fixmat.maps,3)
-        hhhh(n)=subplot(2,8,n);
-        imagesc(fixmat.stimulus);
+    for n = 1:size(maps,3)  
+        if mod(n-1,8)+1 == 1;
+            figure;set(gcf,'position',[1952 361 1743 714]);
+        end
+        hhhh(n)=subplot(1,8,mod(n-1,8)+1);
+        imagesc(Fixmat([],[]).stimulus);
         hold on
-% % %         imagesc(fixmat.maps(:,:,n))
-        [~,h2] = contourf(fixmat.maps(:,:,n),grids,'color','none');
+        grids         = linspace(min(Vectorize(maps(:))),max(Vectorize(maps(:))),21);
+        [a,h2]        = contourf(maps(:,:,n),grids,'color','none');
         caxis([grids(2) grids(end)]);
         %if n == 8
         %h4 = colorbar;
@@ -291,22 +293,26 @@ elseif strcmp(varargin{1},'plot_fdm');
         pause(.5);
         %
         try
-            alphas = [repmat(.5,1,numel(h2.FacePrims))];      
-            contourf_transparency(h2,alphas);
+            %%            
+%             I      = find(ismember(a(1,:),h2.LevelList));
+%             [~,i]  = max(a(2,I));
+%             alphas = [repmat(.5,1,length(I))];      
+%             alphas(i) = 0;
+            contourf_transparency(h2,.75);
         end
         %%
         rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(mod(n-1,8)+1,:),'linewidth',7);
     end
     pause(1);
-    for n = 1:8;
+    for n = 1:size(maps,3);
         subplotChangeSize(hhhh(n),.01,.01);
     end
     
     if contour_lines
         hold on;
-        fixmat.maps = fixmat.GetFaceROIs;
+        rois = Fixmat([],[]).GetFaceROIs;
         for n = 1:4
-            contour(fixmat.maps(:,:,n),'k--','linewidth',1);
+            contour(rois(:,:,n),'k--','linewidth',1);
         end
     end
     
@@ -635,8 +641,8 @@ elseif strcmp(varargin{1},'model_rsa_singlesubject');
         Model.gaussian.w3 = [Model.gaussian.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
     end
     varargout{1} = Model;
-elseif strcmp(varargin{1},'model_rsa_singlesubject_plot');
-    %%
+elseif strcmp(varargin{1},'figure_03E');
+    %% plots the main model comparison figure;
     fixations = varargin{2};
     C         = FearCloud_RSA('model_rsa_singlesubject',fixations);
     %%
@@ -1496,7 +1502,7 @@ elseif strcmp(varargin{1},'figure_01B');
     end
     %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'));
     
-elseif strcmp(varargin{1},'figure_03')
+elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
     p                 = Project;
     figure(1);
@@ -1610,31 +1616,34 @@ elseif strcmp(varargin{1},'figure_03')
     differ = (out.y(:,12)-out.y(:,16))./out.y(:,16);
     mean(differ)
     std(differ)
-elseif strcmp(varargin{1},'figure_04A')
-    %% selected subjects are 44 and 47
+elseif strcmp(varargin{1},'figure_03A')
+    %% selected subjects are 44 and 47, 31.
     fs                      = 15;
+    roi_contours            = 0;
     fixmat                  = FearCloud_RSA('get_fixmat');
-    fixmat.kernel_fwhm      = 25;
+    fixmat.kernel_fwhm      = 30;
     c                       = 0;
-    for sub                     = [44 47];%varargin{2};
-        %    
-        nphase = 4
+    nphase = 4;%we plot the generalization phase only.
+    maps = [];
+    for sub                     = varargin{2};
+        %  
+        c  = 0;
         for ncond = circshift([0 45 90 135 180 -135 -90 -45],[1 3]);
             c    = c+1;
             v{c} = {'subject' sub 'deltacsp' ncond 'phase' nphase};
         end
-    end
+        %cocktail blank correction
         fixmat.getmaps(v{:});
-        %fixmat.maps = cat(3,fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]),fixmat.maps(:,:,9:end)-repmat(mean(fixmat.maps(:,:,9:end),3),[1 1 8]));        
-        fixmat.maps(:,:,1:8)  = fixmat.maps(:,:,1:8)-repmat(mean(fixmat.maps(:,:,1:8),3),[1 1 8]);
-        fixmat.maps(:,:,9:16) = fixmat.maps(:,:,9:16)-repmat(mean(fixmat.maps(:,:,9:16),3),[1 1 8]);
-        %
-        %[d u] = GetColorMapLimits(fixmat.maps(:),1);
-        FearCloud_RSA('plot_fdm',fixmat,0);
-        %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/SingleSubjects_%02d_phase_%02d.png',sub,nphase));
+        dummy = fixmat.maps;
+        dummy = dummy - repmat(mean(dummy,3),[1 1 8]);
+        maps  = cat(3,maps,dummy);
+    end
     
-elseif strcmp(varargin{1},'figure_04B');
-    %% will plot 8 evoked fixation maps individually corrected for blank
+    FearCloud_RSA('plot_fdm',maps,roi_contours);
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours));
+    
+elseif strcmp(varargin{1},'figure_03Group');
+    %% will plot 8 evoked fixation maps for Group average (we dont have this anymore)
     
     subjects                = FearCloud_RSA('get_subjects');
     fixmat                  = FearCloud_RSA('get_fixmat');
@@ -1661,55 +1670,76 @@ elseif strcmp(varargin{1},'figure_04B');
     fixmat.maps = mean(M,4);
     FearCloud_RSA('plot_fdm',fixmat,1);
     %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/GroupAverage_SubjectPool_%02d_Correction_%02d.png',current_subject_pool,correction));
-elseif strcmp(varargin{1},'figure_04C')
-    %%
-    fs       = 15;
+elseif strcmp(varargin{1},'figure_03B')
+    %% count based approach
+    fs       = 12;
     counts   = FearCloud_RSA('count_tuning');
     counts   = diff(counts,1,4);
     counts   = counts*100;
     m_counts = mean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));
+    %% fit
+    X_fit = [];
+    Y_fit = [];
+    for nroi = 1:4
+        data.y   = squeeze(counts(:,nroi,:))';
+        data.x   = repmat(-135:45:180,size(counts,3),1);
+        data.ids = [1:size(counts,3)]';
+        t        = [];
+        t        = Tuning(data);
+        t.GroupFit(5);
+        X_fit = [X_fit ;t.groupfit.x_HD];
+        
+        if t.groupfit.pval > -log10(.05)
+            Y_fit = [Y_fit ;t.groupfit.fit_HD];
+        else
+            Y_fit = [Y_fit ;repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)])];
+        end
+    end
+    
     %%
-    figure;set(gcf,'position',[1947 802 815 270]);
-    t={'right eye', 'left eye' 'nose' 'mouth'};
+    figure;set(gcf,'position',[2191         449         711         559]);
+    t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
     for n = 1:4
-        H(n) = subplot(1,4,n)
+        H(n) = subplot(2,2,n)
         Project.plot_bar(-135:45:180,m_counts(:,n,1,1));
         set(gca,'XTickLabel','');
         hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
-        if n == 1
+        if n == 1 | n == 3
             ylabel(sprintf('\\Delta %%\n(after-before)'));
-        end
+        end        
         hold on;
         errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
+        plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);
         hold off;
+        set(gca,'linewidth',1.2,'YTick',[-8 -4 0 4 8],'fontsize',fs,'YTickLabel',{'-8' '' '0' '' '8'});
         if n ~= 1;
             set(gca,'xticklabel','');
         end
-        ylim([-10 10])
+        if n == 2 | n == 4
+            set(gca,'yticklabel',[]);
+        end
+        ylim([-8 8])
         if n < 3
-            h = text(0,1,'CS+');set(h,'HorizontalAlignment','center');
-            h = text(180,1,'CS-');set(h,'HorizontalAlignment','center');
-            h = text(90,1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
-            h = text(-90,1,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
+            h = text(0,1.5,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(180,1.5,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(90,1.5,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(-90,1.5,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
         else
-            h = text(0,-1,'CS+');set(h,'HorizontalAlignment','center');
-            h = text(180,-1,'CS-');set(h,'HorizontalAlignment','center');
-            h = text(90,-1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
-            h = text(-90,-1,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',7);
+            h = text(0,-1.5,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(180,-1.5,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(90,-1.5,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(-90,-1.5,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
         end
         set(gca,'XAxisLocation','origin')
         set(gca,'XGrid','on','YGrid','off')
     end
-    subplotChangeSize(H,.025,.025);
+    subplotChangeSize(H,.025,.025);    
     %%
-    %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);
-    filename = sprintf( '/home/onat/Dropbox/selim/Office/RSAofFDM/FigureCache/plot_counts_%d_%d_subject_%d.png', runs(1) , runs(end), current_subject_pool );
-    %     SaveFigure(filename);
-    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/CountTuning_SubjectPool_%s.png',current_subject_pool));
-elseif strcmp(varargin{1},'figure_05')
-    
-    %%
+    %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);    
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%s.png',current_subject_pool));
+elseif strcmp(varargin{1},'figure_03C')    
+    %% observed similarity matrices
     clf
     sim     = varargin{2};
     %%
@@ -1793,8 +1823,8 @@ elseif strcmp(varargin{1},'figure_05')
     %FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure05_final_part1.png','-transparent');
     
-elseif strcmp(varargin{1},'figure_05D')
-    
+elseif strcmp(varargin{1},'figure_03D')
+    %% mds result
     FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
     
     
