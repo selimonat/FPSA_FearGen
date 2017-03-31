@@ -1325,7 +1325,7 @@ elseif strcmp(varargin{1},'SVM')
     axis square
     ylabel('difference (Test - Base)')
       set(gca,'YTick',[0 .05 .1])
-elseif strcmp(varargin{1},'figure_01');
+elseif strcmp(varargin{1},'figure_01B');
     %% this is the figure of faces, FDMs and dissimilarity matrices
     % get V1 dissimilarity
     p = Project;
@@ -1492,7 +1492,7 @@ elseif strcmp(varargin{1},'figure_01');
         
         %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')
     end
-    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01.png'));
+    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'));
     
 elseif strcmp(varargin{1},'figure_03')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
