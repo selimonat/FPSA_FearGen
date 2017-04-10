@@ -224,7 +224,8 @@ elseif  strcmp(varargin{1},'get_fixmap')
             v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
         end
         fixmat.getmaps(v{:});%real work done by the fixmat object.
-        maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
+%         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
+    maps = cat(2,maps,(fixmat.vectorize_maps));%within phase mean subtraction
     end
     varargout{1} = maps;
 elseif  strcmp(varargin{1},'get_fixmap_oddeven')
@@ -254,7 +255,7 @@ elseif strcmp(varargin{1},'plot_fdm');
     maps          = varargin{2};
     tsubject      = size(maps,3)/8;    
     contour_lines = 0;%FACIAL ROIs Plot or not.
-    fs            = 15;%fontsize;
+    fs            = 18;%fontsize;
     if nargin == 3
         contour_lines = varargin{3};
     end    
@@ -284,10 +285,11 @@ elseif strcmp(varargin{1},'plot_fdm');
         axis image;
         axis off;
         if strcmp(t{mod(n-1,8)+1}(1),'+') | strcmp(t{mod(n-1,8)+1}(1),'-')
-            title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs);
+            h= title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs,'fontweight','normal');
         else
-            title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs);
+            h= title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs,'fontweight','normal');            
         end
+        h.Position = h.Position + [0 -50 0];
         %
         drawnow;
         pause(.5);
@@ -315,7 +317,18 @@ elseif strcmp(varargin{1},'plot_fdm');
             contour(rois(:,:,n),'k--','linewidth',1);
         end
     end
-    
+elseif strcmp(varargin{1},'plot_ROIs');        
+    rois = Fixmat([],[]).GetFaceROIs;
+    for n = 1:4
+        subplot(2,2,n)
+        imagesc(Fixmat([],[]).stimulus);
+        axis image;
+        axis off;
+        hold on;
+        contour(rois(:,:,n),'k-','linewidth',1);
+        hold off;
+    end
+    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
 elseif strcmp(varargin{1},'get_rsa')
     %% General routing to compute similarity matrices based on FIXATIONS
     %sim = FearCloud_RSA('get_rsa',1:100) would compute an RSA with all the
@@ -675,7 +688,7 @@ elseif strcmp(varargin{1},'figure_03E');
     %%
     %%
     figure;
-    set(gcf,'position',[675   514   632   580]);
+    set(gcf,'position',[2150         335         898         604]);
     X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
     Y    = [M Mc Ms Mcg Msg Mg];
     Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
@@ -685,28 +698,33 @@ elseif strcmp(varargin{1},'figure_03E');
         h       = bar(X(n),Y(n));
         legh(n) = h;
         hold on
-        errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1,'capsize',6);
+        errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5,'capsize',10);
         if ismember(n,[1 3 5 7 9 11])
-            set(h,'FaceAlpha',.1,'FaceColor','k','EdgeAlpha',1,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
         else
-            set(h,'FaceAlpha',.8,'FaceColor','k','EdgeAlpha',1,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
         end
     end
     box off;
-    L          = legend(legh(1:2),{'Before' 'After'},'box','off');
+    L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
+    L.Position = L.Position + [0.1/2 0 0 0];
     L.FontSize = 12;
-    %% xticks
+    set(gca,'linewidth',1.8);
+    % xticks
     xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
-    label = {'\itw_{\rmcirc.}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmcos}' '\itw_{\rmsin}' '\itw_{\rmGaus.}' };
+    label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
     for nt = 1:length(xtick)
-        h = text(xtick(nt),-.01,label{nt},'horizontalalignment','center','fontsize',16,'rotation',45,'fontangle','italic','fontname','times new roman');
+        h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
     end
     set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
     %
-    ylabel('\beta','fontsize',20);
-    SetTickNumber(gca,3,'y');
-    axis square
-    %% asteriks
+    text(-.5,.215,'\beta','fontsize',28,'fontweight','bold');
+    
+    
+    ylim([-.05 .2]);
+    set(gca,'ytick',-.05:.05:.2,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
+    axis normal
+    % asteriks
     hold on
     ylim([min(ylim) .16]);
     h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
@@ -723,17 +741,20 @@ elseif strcmp(varargin{1},'figure_03E');
     text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
-    %% model names
-    h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
-    set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(1:2)),-.035,sprintf('circular\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
-    h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
-    set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(3:6)),-.035,sprintf('flexible\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
-    
-    h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
-    set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(7:end)),-.035,sprintf('flexible\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','bold','fontname','times new roman','fontsize',16);
+    % model names
+    ylim([-.04 .2])
+%     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
+%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(1:2)),.18,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+%     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
+%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(3:6)),.18,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+
+%     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
+%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    %%    
+    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
 elseif strcmp(varargin{1},'model_rsa_testflexible');
     %%
@@ -1333,7 +1354,7 @@ elseif strcmp(varargin{1},'SVM')
     axis square
     ylabel('difference (Test - Base)')
       set(gca,'YTick',[0 .05 .1])
-elseif strcmp(varargin{1},'figure_01B');
+elseif strcmp(varargin{1},'figure_01A');
     %% this is the figure of faces, FDMs and dissimilarity matrices
     % get V1 dissimilarity
     p = Project;
@@ -1409,24 +1430,25 @@ elseif strcmp(varargin{1},'figure_01B');
         y = ylim;
         rectangle('position',[x(1) y(1) diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
-    
+elseif strcmp(varargin{1},'figure_01B');    
     %% this id the cartoon figure where hypotheses are presented;
     figure
-    set(gcf,'position',[2588         146        1212         659]);
+    set(gcf,'position',[1958         247        1443         740]);
     %few fun definition to write axis labels
     small_texth = @(h) evalc('h = text(4,9,''CS+'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);h = text(8,9,''CS-'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);hold on;plot([4 4],[ylim],''k--'',''color'',[0 0 0 .4]);plot([xlim],[4 4],''k--'',''color'',[0 0 0 .4])');
     small_textv = @(h) evalc('h = text(.5,4,''CS+'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);h = text(.5,8,''CS-'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);');
-    params = {{[.5 .5] 0} {[4.5 4.5] 0} {[4.5 2.5] 0} {[1 1] 2}};
-    titles = {sprintf('Circular\nOrganization') sprintf('Better\nDiscrimination') sprintf('Relevant\nDiscrimination') sprintf('CS+\nSpeciality')};
+    params = {{[.5 .5] 0} {[4.5 4.5] 0} {[4.5 2.5] 0} {[4.5 4.5] 4.5}};
+    titles = {sprintf('Bottom-up\nSaliency') sprintf('Arousal') sprintf('Tuned\nExploration') sprintf('Univariate\nGeneralization')};
     width  = 2.3;
-    d      = [-.8 -20 -20 -1];
-    u      = [ .8  20  20  1];
+    d      = [-.8 -20 -20 -20];
+    u      = [ .8  20  20  20];
     %
     spi = {[1 2 13 14] 25 26 [37 38 49 50]};
     for ncol = 1:4
         
-        [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1,width);
+        [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1,width);        
         model     = 1-corrcov(model);
+        
         % ori   = mdscale(1-model,2,'Criterion','strain','start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
         colors    = GetFearGenColors;
         colors    = [colors(1:8,:);colors(1:8,:)];
@@ -1437,16 +1459,16 @@ elseif strcmp(varargin{1},'figure_01B');
         end
         % % row 1
         subplot(6,12,spi{1}+(ncol-1)*3);
-        plot(y([1:8 1],1),y([1:8 1],2),'.-.','linewidth',2,'color',[0.6 0.6 0.6]);
-        hold on;
-        for nface = 1:8
-            plot(y(nface,1),y(nface,2),'.','color',colors(nface,:),'markersize',50,'markerface',colors(nface,:));
-        end
+%         plot(y([1:8 1],1),y([1:8 1],2),'.-.','linewidth',2,'color',[0.6 0.6 0.6]);
+%         hold on;
+%         for nface = 1:8
+%             plot(y(nface,1),y(nface,2),'.','color',colors(nface,:),'markersize',50,'markerface',colors(nface,:));
+%         end
         hold off;
         xlim([-1 1]);
         ylim([-1 1]);
         axis square;axis off
-        title(titles{ncol});
+        title(titles{ncol},'fontweight','normal','horizontalalignment','center','verticalalignment','middle','fontsize',15);
         if ncol == 1
             text(-1.7,max(ylim)/2-.4,sprintf('MDS'),'fontsize',12,'rotation',90,'horizontalalignment','center');
         end
@@ -1454,7 +1476,7 @@ elseif strcmp(varargin{1},'figure_01B');
         % row 2
         if ncol < 4
             subplot(6,12,spi{2}+(ncol-1)*3);
-            imagesc(w(1,:)'*w(1,:),[d(ncol) u(ncol)]);
+            imagesc(-w(1,:)'*w(1,:),[d(ncol) u(ncol)]);
             axis off;axis square;
             small_texth();small_textv();
             if ncol == 1
@@ -1462,26 +1484,37 @@ elseif strcmp(varargin{1},'figure_01B');
             end
             
             subplot(6,12,spi{3}+(ncol-1)*3);
-            imagesc(w(2,:)'*w(2,:),[d(ncol) u(ncol)]);
+            imagesc(-w(2,:)'*w(2,:),[d(ncol) u(ncol)]);
             axis off;axis square;
             small_texth();
         else
             subplot(6,12,spi{2}+(ncol-1)*3);
-            imagesc(w(1:2,:)'*w(1:2,:),[d(ncol) u(ncol)]);
+            imagesc(-w(1:2,:)'*w(1:2,:),[d(ncol) u(ncol)]);
             axis off;axis square;
             small_texth();small_textv();
             
             subplot(6,12,spi{3}+(ncol-1)*3);
-            imagesc(w(3,:)'*w(3,:),[d(ncol)-2 u(ncol)+2]);
+            imagesc(-w(3,:)'*w(3,:),[d(ncol) u(ncol)]);
             axis off;axis square;
             small_texth();
         end
         
-        
-        % row 3
+    %last row
         subplot(6,12,spi{4}+(ncol-1)*3);
+        %
+        % row 3
+        
         axis square
-        imagesc(1-model);
+        imagesc(model,[.1 2]);
+        if ncol == 1
+            pos = get(gca,'position');
+            hc  = colorbar('eastoutside');
+            set(gca,'position',pos);
+            hc.Position(3:4) = hc.Position(3:4)./2;
+            set(hc,'Ticks',[0.1 2],'TickLabels',[0 2],'box','off');
+        end
+        %         
+%         imagesc(model);colorbar
         axis off;
         axis square;
         h = text(.5,4,'CS+');set(h,'HorizontalAlignment','right','fontsize',10);
@@ -1500,7 +1533,8 @@ elseif strcmp(varargin{1},'figure_01B');
         
         %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')
     end
-    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'));
+            
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'),'-r300');
     
 elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
@@ -1617,8 +1651,7 @@ elseif strcmp(varargin{1},'figure_02B')
     mean(differ)
     std(differ)
 elseif strcmp(varargin{1},'figure_03A')
-    %% selected subjects are 44 and 47, 31.
-    fs                      = 15;
+    %% selected subjects are 44 and 47, 31.    
     roi_contours            = 0;
     fixmat                  = FearCloud_RSA('get_fixmat');
     fixmat.kernel_fwhm      = 30;
@@ -1640,7 +1673,7 @@ elseif strcmp(varargin{1},'figure_03A')
     end
     
     FearCloud_RSA('plot_fdm',maps,roi_contours);
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours));
+    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours),'-r300');
     
 elseif strcmp(varargin{1},'figure_03Group');
     %% will plot 8 evoked fixation maps for Group average (we dont have this anymore)
@@ -1675,8 +1708,8 @@ elseif strcmp(varargin{1},'figure_03B')
     fs       = 12;
     counts   = FearCloud_RSA('count_tuning');
     counts   = diff(counts,1,4);
-    counts   = counts*100;
-    m_counts = mean(counts,3);
+    counts   = counts*100;    
+    m_counts = nanmean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));
     %% fit
     X_fit = [];
@@ -1689,7 +1722,7 @@ elseif strcmp(varargin{1},'figure_03B')
         t        = Tuning(data);
         t.GroupFit(5);
         X_fit = [X_fit ;t.groupfit.x_HD];
-        
+        10^(-t.groupfit.pval)
         if t.groupfit.pval > -log10(.05)
             Y_fit = [Y_fit ;t.groupfit.fit_HD];
         else
@@ -1698,15 +1731,15 @@ elseif strcmp(varargin{1},'figure_03B')
     end
     
     %%
-    figure;set(gcf,'position',[2191         449         711         559]);
+    figure;set(gcf,'position',[2176         705        1099         294]);
     t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
     for n = 1:4
-        H(n) = subplot(2,2,n)
+        H(n) = subplot(1,4,n);
         Project.plot_bar(-135:45:180,m_counts(:,n,1,1));
         set(gca,'XTickLabel','');
         hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
-        if n == 1 | n == 3
-            ylabel(sprintf('\\Delta %%\n(after-before)'));
+        if n == 1
+            ylabel(sprintf('\\Delta%%\n(after-before)'));
         end        
         hold on;
         errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
@@ -1716,68 +1749,67 @@ elseif strcmp(varargin{1},'figure_03B')
         if n ~= 1;
             set(gca,'xticklabel','');
         end
-        if n == 2 | n == 4
+        if n == 2 | n == 4 | n == 3
             set(gca,'yticklabel',[]);
         end
         ylim([-8 8])
         if n < 3
-            h = text(0,1.5,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(180,1.5,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(90,1.5,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-            h = text(-90,1.5,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(0,1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(180,1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(90,1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(-90,1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
         else
-            h = text(0,-1.5,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(180,-1.5,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(90,-1.5,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-            h = text(-90,-1.5,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(0,-1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(180,-1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
+            h = text(90,-1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
+            h = text(-90,-1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
         end
         set(gca,'XAxisLocation','origin')
         set(gca,'XGrid','on','YGrid','off')
     end
-    subplotChangeSize(H,.025,.025);    
+    subplotChangeSize(H,.025,.025);            
     %%
     %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);    
-    SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%s.png',current_subject_pool));
+%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%d.png',current_subject_pool));
 elseif strcmp(varargin{1},'figure_03C')    
     %% observed similarity matrices
     clf
     sim     = varargin{2};
     %%
-    cormatz = 1-squareform(nanmean(sim.correlation));
+    cormatz = squareform(nanmean(sim.correlation));
     %     cormatz = CancelDiagonals(cormatz,NaN);
     [d u]   = GetColorMapLimits(cormatz,2.5);
     labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
     labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
-    d       =  .15;
-    u       = .45;
+    d       = .62;
+    u       = .85;
     fs      = 12;
     %
-    set(gcf,'position',[2132          23         600        1048]);
-    subplot(9,6,[1 2 3 7 8 9 13 14 15]);
-    h = imagesc(cormatz(1:8,1:8),[d u]);
+    set(gcf,'position',[1956         541         995         426]);
+    %subplot(9,6,[1 2 3 7 8 9 13 14 15]);
+    H(1) = subplot(1,3,1);
+    h = imagesc(cormatz(1:8,1:8),[d u]);    
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(.5,4,'CS+');set(h,'HorizontalAlignment','right','fontsize',12,'rotation',45);
-    h = text(.5,8,'CS-');set(h,'HorizontalAlignment','right','fontsize',12,'rotation',45);
-    h = text(.5,2,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',8,'rotation',45);
-    h = text(.5,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','right','fontsize',8,'rotation',45);
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
+    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
+    h = text(0,1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
+    h = text(0,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Before');
-    
-    subplot(9,6,[4 5 6 10 11 12 16 17 18]);
+    title('Baseline','fontweight','normal','fontsize',15);    
+%     subplot(9,6,[4 5 6 10 11 12 16 17 18]);
+    H(2) = subplot(1,3,2);
     h=imagesc(cormatz(9:16,9:16),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
-    axis square;axis off;
-    h2 = colorbar;set(h2,'location','east');h2.Position = [.91 .65 0.02 .1];h2.AxisLocation='out'
+    axis square;axis off;        
     h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('After');
-    
+    title('Generalization','fontweight','normal','fontsize',15);    
     %
     [indices] = FearCloud_RSA('CompareB2T_RSA');
     [Y X]     = ind2sub([8 8],indices(:,1));
@@ -1788,45 +1820,76 @@ elseif strcmp(varargin{1},'figure_03C')
     for N = 1:length(X);
         if X(N) > Y(N)
             if indices(N,2) < .05 & indices(N,2) > .01;
-                text(X(N),Y(N),'*','fontsize',fs);
+                if Y(N) == 3.75;
+                    text(X(N),Y(N),'*','fontsize',fs,'color','k');
+                else
+                    text(X(N),Y(N),'*','fontsize',fs,'color','w');
+                end
             elseif indices(N,2) < .01 & indices(N,2) > .005;
-                text(X(N),Y(N),'**','fontsize',fs);
+                text(X(N),Y(N),'**','fontsize',fs,'color','w');
             elseif indices(N,2) < .005 & indices(N,2) > .001;
-                text(X(N),Y(N),'***','fontsize',fs);
+                text(X(N),Y(N),'***','fontsize',fs,'color','w');
             end
         end
     end
+    pos = get(gca,'position');
+    %% colorbar
+    h2              = colorbar;
+    set(h2,'location','east');
+    h2.AxisLocation ='out';
+    h2.Box          = 'off';
+    h2.TickLength   = 0;
+    h2.Ticks        = [.62 .85];    
+    h2.TickLabels   = {'.6' '.8'};
+%     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
+    pos = get(gca,'position')
+    set(h2,'Position',[pos(1)+pos(3)+.004 .268 .01 .25])
+% 	set(h2,'Position',pos)    
+
     % plot the similarity to cs+
-    subplot(9,6,[25:27 19:21])
+%     subplot(9,6,[25:27 19:21])
+    H(3) = subplot(1,3,3);
     Y         = FearCloud_RSA('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
     colors    = GetFearGenColors;
     colors    = [colors(1:8,:);colors(1:8,:)];
     %
-    plot(y([1:8 1],1),y([1:8 1],2),'-.','linewidth',2,'color',[0 0 0 .5]);
+    plot(y([1:8 1],1),y([1:8 1],2),'--','linewidth',3,'color',[0 0 0 .5]);
     hold on;
     for nface = 1:8
-        scatter(y(nface,1),y(nface,2),400,'markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:),'markerfacealpha',.0,'markeredgealpha',.5,'linewidth',2);
+        scatter(y(nface,1),y(nface,2),500,'markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:),'markerfacealpha',.0,'markeredgealpha',.75,'linewidth',2);
+        plot(y(nface,1),y(nface,2),'o','markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:),'linewidth',2);
     end
     box off;axis square;axis tight;axis off
     %
-    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'-','linewidth',2,'color',[0 0 0 .75]);
+    plot(y([1:8 1]+8,1),y([1:8 1]+8,2),'-','linewidth',3,'color',[0 0 0 1]);
     hold on;
     for nface = 1:8
-        scatter(y(nface+8,1),y(nface+8,2),400,'markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:),'markerfacealpha',1,'markeredgealpha',1);
+        scatter(y(nface+8,1),y(nface+8,2),500,'markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:),'markerfacealpha',1,'markeredgealpha',1);
     end
-    text(y(8+4,1)-.02,y(8+4,2)+.065,'CS+','FontWeight','bold');
-    text(y(8+8,1)-.08,y(8+8,2)+.07,['CS-'],'FontWeight','bold');
-    box off;axis square;axis tight;axis off
+%     text(y(8+4,1)-.02,y(8+4,2)+.065,'CS+','FontWeight','normal','fontsize',12);
+%     text(y(8+8,1)-.08,y(8+8,2)+.07,['CS-'],'FontWeight','normal','fontsize',12);
+    xlim([-.4 .4]);
+    ylim([-.4 .4]);
+    box off;axis square;axis off
+    subplotChangeSize(H(3),.025,.025);
+    subplotChangeSize(H(3),.025,.025);
+    subplotChangeSize(H(3),.025,.025);
+    %
+    % legend
+    plot(-.4+.06,.4,'ko','markersize',12)
+    text(-.37+.06,.4,'Baseline','fontsize',12);
+    hold on;
+    plot(-.4+.06,.34,'ko','markersize',12,'markerfacecolor','k');
+    text(-.37+.06,.34,'Generaliz.','fontsize',12)
+    hold off;
     %%
+%     subplotChangeSize(H,.025,.025);    
     %subplot(9,6,[22 23 24 28 29 30])
     %FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure05_final_part1.png','-transparent');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03C.png','-transparent');
     
-elseif strcmp(varargin{1},'figure_03D')
-    %% mds result
-    FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
-    
+
     
 elseif strcmp(varargin{1},'selected_subjects')
     %%?
@@ -1870,26 +1933,31 @@ elseif strcmp(varargin{1},'count_tuning')
         end
     end
     varargout{1} = count;
-    groups.g1 = repmat([1:8]',[1 5 65 2]);
-    groups.g2 = repmat(1:5,[8 1 65 2]);
-    groups.g3 = repmat(reshape(1:65,[1 1 65]),[8 5 1 2]);
-    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 65 1]);
+    groups.g1 = repmat([1:8]',[1 5 61 2]);
+    groups.g2 = repmat(1:5,[8 1 61 2]);
+    groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
+    groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 61 1]);
     
     varargout{2} = groups;
+elseif strcmp(varargin{1},'fit_count_tuning');
     
-    % % %
-    % % %     fi              = demean(abs(groups.g1(:)-4));
-    % % % bla             = [dummyvar([ groups.g2(:) groups.g3(:)])];
-    % % % bla             = [fi fi.*bla(:,1) fi.*bla(:,2) fi.*bla(:,3) fi.*bla(:,4) bla(:,1:end)];
-    % % % bla(:,[10 75])  = [];
-    % % % bla(2601:end,:) = [];
-    % % % imagesc(bla);
-    % % % Y = Vectorize(a(:,:,:,1)-a(:,:,:,2));
-    % % % t = table(Y(:),abs(groups.g1(1:2600)-4)',categorical( groups.g2(1:2600)'),'variablenames',{'count' 'faces' 'roi'});
-    % % % a = fitglm(t,'count ~ faces + roi + faces:roi');
-    %%
-    % % out = fitglm(bla,aa(:))
-    %
+    [count groups] = FearCloud_RSA('count_tuning');
+    count(:,5,:,:) = [];
+    groups.g1(:,5,:,:) = [];
+    groups.g2(:,5,:,:) = [];
+    groups.g3(:,5,:,:) = [];
+    groups.g4(:,5,:,:) = [];
+    
+%     fi              = demean(abs(groups.g1(:)-4));
+%     bla             = [dummyvar([ groups.g2(:) groups.g3(:)])];%[roi subject]
+%     bla             = [fi fi.*bla(:,1) fi.*bla(:,2) fi.*bla(:,3) fi.*bla(:,4) bla(:,1:end)];
+%     bla(2441:end,:) = [];
+%     imagesc(bla);
+    
+    Y = Vectorize(count(:,:,:,1)-count(:,:,:,2));
+    t = table(Y(:),abs(groups.g1(1:1952)-4)',categorical( groups.g2(1:1952)'),'variablenames',{'count' 'faces' 'roi'});
+    a = fitglm(t,'count ~ faces + roi + faces:roi')
+    
     
 elseif strcmp(varargin{1},'behavior_correlation');
     %% Computes correlation with behavior
