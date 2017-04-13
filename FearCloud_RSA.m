@@ -98,11 +98,12 @@ elseif strcmp(varargin{1},'get_subjects');
             p=[];sub=[];pval=[];;
             for n = Project.subjects_bdnf(Project.subjects_ET);
                 s    = Subject(n);
+                s.fit_method = 8;%mobile vonMises function;
                 p    = [p    ; s.get_fit('rating',4).params];
                 pval = [pval ; s.get_fit('rating',4).pval];
                 sub  = [sub  ; n];
-            end
-            valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);%selection criteria
+            end            
+            valid    = pval > -log10(.05);%selection criteria
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
             save(filename,'subjects');
@@ -804,9 +805,7 @@ elseif strcmp(varargin{1},'figure_03E');
     text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %%    
     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
-    %
-
-    
+    %    
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model
@@ -866,11 +865,11 @@ elseif strcmp(varargin{1},'NvsO')
     block = varargin{3};
     r     = FearCloud_RSA('get_block',sim,block,block);
     for ns = 1:size(r,3)
-        c.N(:,ns) = diag(1-r(:,:,ns),1);
-        c.O(:,ns) = diag(1-r(:,:,ns),4);
+        c.N(:,ns) = diag(r(:,:,ns),1);
+        c.O(:,ns) = diag(r(:,:,ns),4);
     end
     varargout{1} = c;
-    [h p stats bla] = ttest(fisherz(mean(c.N))-fisherz(mean(c.O)))
+    [h p stats bla] = ttest(fisherz(1-mean(c.N))-fisherz(1-mean(c.O)))
     
     
 elseif strcmp(varargin{1},'CompareB2T_RSA')
@@ -1750,7 +1749,7 @@ elseif strcmp(varargin{1},'figure_03B')
         data.ids = [1:size(counts,3)]';
         t        = [];
         t        = Tuning(data);
-        t.GroupFit(5);
+        t.GroupFit(8);
         X_fit = [X_fit ;t.groupfit.x_HD];
         10^(-t.groupfit.pval)
         if t.groupfit.pval > -log10(.05)
@@ -1968,27 +1967,42 @@ elseif strcmp(varargin{1},'count_tuning')
     groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
     groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 61 1]);
     
-    varargout{2} = groups;
+    varargout{2} = groups;    
+    %% Compute fixation density and their change.
+    P = mean(mean(mean(count(:,:,:,1:2),4),3));
+    fprintf('Fixation density in percentage in Baseline + Generalization:\n')
+    fprintf('%25s %3.5g\n','Left Eye:', P(1))
+    fprintf('%25s %3.5g\n','Right Eye:',P(2))
+    fprintf('%25s %3.5g\n','Nose:',P(3))
+    fprintf('%25s %3.5g\n','Eyes+Nose:',sum(P(1:3)))
+    fprintf('%25s %3.5g\n','Mouth:',P(4))
+    fprintf('%25s %3.5g\n','Other:',P(5))
+    %
+    P = mean(mean(count(:,:,:,2),3))-mean(mean(count(:,:,:,1),3));
+    fprintf('Change in Fixation Density in percentage (Generalization - Baseline):\n');
+    fprintf('%25s %3.5g\n','Delta Left Eye:', P(1))
+    fprintf('%25s %3.5g\n','Delta Right Eye:',P(2))
+    fprintf('%25s %3.5g\n','Delta Nose:',P(3))
+    fprintf('%25s %3.5g\n','Delta Eyes+Nose:',sum(P(1:3)))
+    fprintf('%25s %3.5g\n','Delta Mouth:',P(4))
+    fprintf('%25s %3.5g\n','Delta Other:',P(5))
 elseif strcmp(varargin{1},'fit_count_tuning');
-    
+    %% will fit a model to the density changes.
     [count groups] = FearCloud_RSA('count_tuning');
+    %remove the last ROI
     count(:,5,:,:) = [];
     groups.g1(:,5,:,:) = [];
     groups.g2(:,5,:,:) = [];
     groups.g3(:,5,:,:) = [];
     groups.g4(:,5,:,:) = [];
     
-%     fi              = demean(abs(groups.g1(:)-4));
-%     bla             = [dummyvar([ groups.g2(:) groups.g3(:)])];%[roi subject]
-%     bla             = [fi fi.*bla(:,1) fi.*bla(:,2) fi.*bla(:,3) fi.*bla(:,4) bla(:,1:end)];
-%     bla(2441:end,:) = [];
-%     imagesc(bla);
     
     Y = Vectorize(count(:,:,:,1)-count(:,:,:,2));
-    t = table(Y(:),abs(groups.g1(1:1952)-4)',categorical( groups.g2(1:1952)'),'variablenames',{'count' 'faces' 'roi'});
-    a = fitlme(t,'count ~ faces + roi + faces*roi')
-    
-    
+
+    t = table(Y(:),abs(groups.g1(1:1952)-4)',categorical( groups.g2(1:1952)'),categorical( groups.g3(1:1952)'),'variablenames',{'count' 'faces' 'roi' 'subjects'});
+    a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
+
+       
 elseif strcmp(varargin{1},'behavior_correlation');
     %% Computes correlation with behavior
     
