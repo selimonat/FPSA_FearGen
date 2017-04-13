@@ -565,8 +565,23 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
     %     axis square
     %     varargout{1} = y;
     
-elseif strcmp(varargin{1},'get_model_rsa_table')
-    %% returns the table object for the RSA modelling with fitlm, fitglm, etc.
+elseif strcmp(varargin{1},'FSA_get_table')
+    %% returns a table object for the FSA modelling with fitlm, fitglm, etc.
+    %
+    % the table object contains the following variable names:
+    % FSA_B      : similarity matrices from baseline.
+    % FSA_G      : similarity matrices from test.
+    % circle     : circular predictor consisting of a sum of specific and
+    % unspecific components.
+    % specific   : specific component based on quadrature decomposition
+    % (the cosine factor).
+    % unspecific : unspecific component based on quadrature decomposition
+    % (the sine factor).
+    % Gaussian : generalization of the univariate Gaussian component to
+    % the similarity space.
+    % subject    : indicator variable for subjects
+    % phase      : indicator variable for baseline and generalizaation
+    % phases.
     fixations = varargin{2};
     runs      = 1:3;
     filename  = sprintf('%s/midlevel/rsa_modelling_table_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
@@ -605,55 +620,89 @@ elseif strcmp(varargin{1},'get_model_rsa_table')
         [cmat]     = getcorrmat(0,1,1,1,0.86);%see model_rsa_testgaussian_optimizer
         model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
         %% add all this to a TABLE object.
-        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'B' 'T' 'cossin' 'cos' 'sin' 'gau' 'subject' 'phase'});
+        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FSA_B' 'FSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
         save(filename,'t');
     else
         load(filename);
     end
     varargout{1} = t;
-elseif strcmp(varargin{1},'model_rsa_testcircular');
+elseif strcmp(varargin{1},'FSA_model');
+    %%
+    
+    fixations  = varargin{2};
+    t          = FearCloud_RSA('FSA_get_table',fixations);
+    %% MIXED EFFECT MODEL
+    % null model
+    out.baseline.model_00_mixed          = fitlme(t,'FSA_B ~ 1 + (1|subject)');
+    out.generalization.model_00_mixed    = fitlme(t,'FSA_G ~ 1 + (1|subject)');    
+    % FSA_model_bottom-up model
+    out.baseline.model_01_mixed          = fitlme(t,'FSA_B ~ 1 + circle + (1 + circle|subject)');
+    out.generalization.model_01_mixed    = fitlme(t,'FSA_G ~ 1 + circle + (1 + circle|subject)');    
+    % FSA_model_adversitycateg    
+    out.baseline.model_02_mixed          = fitlme(t,'FSA_B ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
+    out.generalization.model_02_mixed    = fitlme(t,'FSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
+    % FSA_model_adversitytuning
+    out.baseline.model_03_mixed          = fitlme(t,'FSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    out.generalization.model_03_mixed    = fitlme(t,'FSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    
+    %% FIXED EFFECT MODEL    
+    % FSA null model
+    out.baseline.model_00_fixed          = fitlm(t,'FSA_B ~ 1');
+    out.generalization.model_00_fixed    = fitlm(t,'FSA_G ~ 1');    
+    % FSA_model_bottom-up model  
+    out.baseline.model_01_fixed          = fitlm(t,'FSA_B ~ 1 + circle');
+    out.generalization.model_01_fixed    = fitlm(t,'FSA_G ~ 1 + circle');    
+    % FSA_model_adversitycateg    
+    out.baseline.model_02_fixed          = fitlm(t,'FSA_B ~ 1 + specific + unspecific');
+    out.generalization.model_02_fixed    = fitlm(t,'FSA_G ~ 1 + specific + unspecific');
+    % FSA_model_adversitytuning
+    out.baseline.model_03_fixed          = fitlm(t,'FSA_B ~ 1 + specific + unspecific + Gaussian');
+    out.generalization.model_03_fixed    = fitlm(t,'FSA_G ~ 1 + specific + unspecific + Gaussian');
+    varargout{1}   = out;            
+    
+elseif strcmp(varargin{1},'model2text')
+    %handy function to dump model output to a text file that let you easily
+    %paste it to the manuscript
+    
+    model = varargin{2};    
+    a     = evalc('disp(model)');
+    fid   = fopen(sprintf('%s/midlevel/%s.txt',path_project,model.Formula),'w');
+    fwrite(fid,a);
+    fclose(fid);
+    
+    
+elseif strcmp(varargin{1},'FSA_model_singlesubject');
     %%
     fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations);
-    %% test the model for B, T
-    a          = fitlm(t,'B ~ 1 + cossin');
-    b          = fitlm(t,'T ~ 1 + cossin');
-    c          = fitlm(t,'T ~ 1 + cossin*phase');
-    [a.ModelCriterion.BIC b.ModelCriterion.BIC c.ModelCriterion.BIC]
-    varargout{1} = b;
-    
-    
-elseif strcmp(varargin{1},'model_rsa_singlesubject');
-    %%
-    fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations);
+    t          = FearCloud_RSA('FSA_get_table',fixations);
     %% test the model for B, T
     
-    Model.circular.w1 = [];
-    Model.flexible.w1 = [];
-    Model.flexible.w2 = [];
-    Model.gaussian.w1 = [];
-    Model.gaussian.w2 = [];
-    Model.gaussian.w3 = [];
+    Model.model_01.w1 = [];
+    Model.model_02.w1 = [];
+    Model.model_02.w2 = [];
+    Model.model_03.w1 = [];
+    Model.model_03.w2 = [];
+    Model.model_03.w3 = [];
     for ns = unique(t.subject)'
         fprintf('Fitting an circular and flexibile LM to subject %03d...\n',ns);
         t2                = t(ismember(t.subject,categorical(ns)),:);
-        B                 = fitlm(t2,'B ~ 1 + cossin');
-        T                 = fitlm(t2,'T ~ 1 + cossin');
-        Model.circular.w1 = [Model.circular.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+        B                 = fitlm(t2,'FSA_B ~ 1 + circle');
+        T                 = fitlm(t2,'FSA_G ~ 1 + circle');
+        Model.model_01.w1 = [Model.model_01.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
         %
-        B                 = fitlm(t2,'B ~ 1 + cos + sin');
-        T                 = fitlm(t2,'T ~ 1 + cos + sin');
-        Model.flexible.w1 = [Model.flexible.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-        Model.flexible.w2 = [Model.flexible.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
+        B                 = fitlm(t2,'FSA_B ~ 1 + specific + unspecific');
+        T                 = fitlm(t2,'FSA_G ~ 1 + specific + unspecific');
+        Model.model_02.w1 = [Model.model_02.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+        Model.model_02.w2 = [Model.model_02.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
         %
-        B                 = fitlm(t2,'B ~ 1 + cos + sin + gau');
-        T                 = fitlm(t2,'T ~ 1 + cos + sin + gau');
-        Model.gaussian.w1 = [Model.gaussian.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-        Model.gaussian.w2 = [Model.gaussian.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
-        Model.gaussian.w3 = [Model.gaussian.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
+        B                 = fitlm(t2,'FSA_B ~ 1 + specific + unspecific + Gaussian');
+        T                 = fitlm(t2,'FSA_G ~ 1 + specific + unspecific + Gaussian');
+        Model.model_03.w1 = [Model.model_03.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+        Model.model_03.w2 = [Model.model_03.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
+        Model.model_03.w3 = [Model.model_03.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
     end
     varargout{1} = Model;
+    
 elseif strcmp(varargin{1},'figure_03E');
     %% plots the main model comparison figure;
     fixations = varargin{2};
@@ -756,26 +805,7 @@ elseif strcmp(varargin{1},'figure_03E');
     %%    
     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
-elseif strcmp(varargin{1},'model_rsa_testflexible');
-    %%
-    fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations);
-    a          = fitlm(t,'T ~ 1 + cossin');
-    b          = fitlm(t,'T ~ 1 + cos + sin');
-    [a.ModelCriterion.BIC b.ModelCriterion.BIC]
-    varargout{1} =b;
-    
-    
-    
-    
-elseif strcmp(varargin{1},'model_rsa_testgaussian');
-    
-    fixations  = varargin{2};
-    t          = FearCloud_RSA('get_model_rsa_table',fixations); sdf
-    a          = fitlm(t,'T ~ 1 + cos + sin');
-    b          = fitlm(t,'T ~ 1 + cos + sin + gau');
-    [a.ModelCriterion.BIC b.ModelCriterion.BIC]
-    varargout{1} =b;
+
     
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');
@@ -1956,7 +1986,7 @@ elseif strcmp(varargin{1},'fit_count_tuning');
     
     Y = Vectorize(count(:,:,:,1)-count(:,:,:,2));
     t = table(Y(:),abs(groups.g1(1:1952)-4)',categorical( groups.g2(1:1952)'),'variablenames',{'count' 'faces' 'roi'});
-    a = fitglm(t,'count ~ faces + roi + faces:roi')
+    a = fitlme(t,'count ~ faces + roi + faces*roi')
     
     
 elseif strcmp(varargin{1},'behavior_correlation');
