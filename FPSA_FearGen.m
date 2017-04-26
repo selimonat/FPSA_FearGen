@@ -1,5 +1,5 @@
-function [varargout]=FearCloud_RSA(varargin);
-% [varargout]=FearCloud_RSA(varargin);
+function [varargout]=FPSA_FearGen(varargin);
+% [varargout]=FPSA_FearGen(varargin);
 %
 % Complete analysis and figure generation pipeline for the RSA of FDM
 % manuscript. Using this script one can generate all the results and figure
@@ -12,7 +12,7 @@ function [varargout]=FearCloud_RSA(varargin);
 % pairs in addition to action.
 %
 % INITIAL SETUP:
-% Use FearCloud_RSA('download_project') to give it a start with it.
+% Use FPSA_FearGen('download_project') to give it a start with it.
 % Remember you will need the basic unix tools for that such tar, git,
 % unzip. This will download the data and the necessary scripts to your local
 % machine and will enable to conduct the same analysis. Before doing this
@@ -117,7 +117,7 @@ elseif strcmp(varargin{1},'get_trialcount')
     % goes subject by subject and counts the number of trials in phase
     % VARARGIN{2}.
     phase  = varargin{2};
-    fixmat = FearCloud_RSA('get_fixmat');
+    fixmat = FPSA_FearGen('get_fixmat');
     s      = 0;
     for ns = unique(fixmat.subject)
         s = s+1;
@@ -141,7 +141,7 @@ elseif strcmp(varargin{1},'get_fixmat');
     filename = sprintf('%s/midlevel/fixmat_subjectpool_%03d_runs_%03d_%03d.mat',path_project,current_subject_pool,runs(1),runs(end));
     fix      = [];
     if exist(filename) == 0 | force
-        subjects = FearCloud_RSA('get_subjects',current_subject_pool);
+        subjects = FPSA_FearGen('get_subjects',current_subject_pool);
         fix      = Fixmat(subjects,[2 4]);%all SUBJECTS, PHASES and RUNS
         %further split according to runs if wanted.
         valid    = zeros(1,length(fix.x));
@@ -180,7 +180,7 @@ elseif strcmp(varargin{1},'get_behavior')
     % These include their SCR and Rating tuning parameters.
     filename = sprintf('%s/midlevel/get_behavior_subjectpool_%02d.mat',path_project,current_subject_pool);
     if exist(filename) == 0 | force
-        fixmat      = FearCloud_RSA('get_fixmat');%will return fixmat depending on the current_subject_pool
+        fixmat      = FPSA_FearGen('get_fixmat');%will return fixmat depending on the current_subject_pool
         subjects    = unique(fixmat.subject)';
         p           = [];
         p2          = [];
@@ -332,7 +332,7 @@ elseif strcmp(varargin{1},'plot_ROIs');
     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
 elseif strcmp(varargin{1},'get_rsa')
     %% General routing to compute similarity matrices based on FIXATIONS
-    %sim = FearCloud_RSA('get_rsa',1:100) would compute an RSA with all the
+    %sim = FPSA_FearGen('get_rsa',1:100) would compute an RSA with all the
     %available fixations (given 1.5 presentation duration). To do it with
     %only the first fixation use 1 instead of 1:100.
     fixations = varargin{2};
@@ -340,11 +340,11 @@ elseif strcmp(varargin{1},'get_rsa')
     filename  = sprintf('%s/midlevel/rsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     %
     if exist(filename) ==0 | force;
-        fixmat   = FearCloud_RSA('get_fixmat');%returns by defaults all the 3 runs;
+        fixmat   = FPSA_FearGen('get_fixmat');%returns by defaults all the 3 runs;
         subc     = 0;
         for subject = unique(fixmat.subject);
             subc                    = subc + 1;
-            maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
+            maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
             fprintf('Subject: %03d, Method: %s\n',subject,method);
             sim.(method)(subc,:)    = pdist(maps',method);%
         end
@@ -371,13 +371,13 @@ elseif strcmp(varargin{1},'get_rsa2')
         tc = 0;
         for t = 1:size(time,1)-1
             tc = tc+1
-            fixmat   = FearCloud_RSA('get_fixmat');
+            fixmat   = FPSA_FearGen('get_fixmat');
             fixmat.UpdateSelection('start',time(t,:),'stop',time(t+1,:));
             fixmat.ApplySelection;
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
-                maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
+                maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,1:100);
                 fprintf('Subject: %03d, Method: %s\n',subject,method);
                 sim.(method)(subc,:,tc)    = pdist(maps',method);%
             end
@@ -401,7 +401,7 @@ elseif strcmp(varargin{1},'get_rsa_fair')
     % RSA.
     %
     % Example usage:
-    % sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);
+    % sim = FPSA_FearGen('get_rsa_fair',1:100,1:3);
     
     fixations = varargin{2};%which fixations
     runs      = varargin{3};%whichs runs would you like to have
@@ -409,11 +409,11 @@ elseif strcmp(varargin{1},'get_rsa_fair')
     for run = runs
         filename     = sprintf('%s/midlevel/rsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_run_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,run(1));
         if exist(filename) ==0 | force;
-            fixmat   = FearCloud_RSA('get_fixmat','runs',run);
+            fixmat   = FPSA_FearGen('get_fixmat','runs',run);
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
-                maps                    = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
+                maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
                 fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
                 sim.(method)(subc,:,run)= pdist(maps',method);%
             end
@@ -435,11 +435,11 @@ elseif strcmp(varargin{1},'get_rsa_oddeven')
     force     = 0;
     %
     if exist(filename) ==0 | force
-        fixmat   = FearCloud_RSA('get_fixmat');
+        fixmat   = FPSA_FearGen('get_fixmat');
         subc     = 0;
         for subject = setdiff(unique(fixmat.subject),58);
             subc                    = subc + 1;
-            maps                    = FearCloud_RSA('get_fixmap_oddeven',fixmat,subject,fixations);
+            maps                    = FPSA_FearGen('get_fixmap_oddeven',fixmat,subject,fixations);
             if size(maps,2) == 32;
                 fprintf('Subject: %03d, Method: %s\n',subject,method);
                 sim.(method)(subc,:)    = pdist(maps',method);%
@@ -494,7 +494,7 @@ elseif strcmp(varargin{1},'get_mdscale')
     Y                           = dummy(:);
     varargout{1}                = Y;
     if viz
-        FearCloud_RSA('plot_mdscale',Y);
+        FPSA_FearGen('plot_mdscale',Y);
     end
 elseif strcmp(varargin{1},'plot_mdscale')
     %% Routine to plot the results of the get_mdscale
@@ -534,7 +534,7 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
         fprintf('Bootstrap: %03d of %03d...\n',nbs,tbs);
         sub          = randsample(subjects,tsubject,1);
         simmat       = squareform(mean(sim(sub,:)));
-        y(:,nbs+1)   = FearCloud_RSA('get_mdscale',simmat,dimen);
+        y(:,nbs+1)   = FPSA_FearGen('get_mdscale',simmat,dimen);
         nbs          = nbs +1;
     end
     y = zscore(y);
@@ -552,7 +552,7 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
         end
     end
     %%
-    FearCloud_RSA('plot_mdscale',Vectorize(mean(ya,3)'));
+    FPSA_FearGen('plot_mdscale',Vectorize(mean(ya,3)'));
     %
     %     yam = mean(ya,3);
     %     plot(yam([1:8 1],1),yam([1:8 1],2),'o-','linewidth',3);
@@ -566,12 +566,12 @@ elseif strcmp(varargin{1},'get_mdscale_bootstrap')
     %     axis square
     %     varargout{1} = y;
     
-elseif strcmp(varargin{1},'FSA_get_table')
-    %% returns a table object for the FSA modelling with fitlm, fitglm, etc.
+elseif strcmp(varargin{1},'FPSA_get_table')
+    %% returns a table object for the FPSA modelling with fitlm, fitglm, etc.
     %
     % the table object contains the following variable names:
-    % FSA_B      : similarity matrices from baseline.
-    % FSA_G      : similarity matrices from test.
+    % FPSA_B      : similarity matrices from baseline.
+    % FPSA_G      : similarity matrices from test.
     % circle     : circular predictor consisting of a sum of specific and
     % unspecific components.
     % specific   : specific component based on quadrature decomposition
@@ -588,10 +588,10 @@ elseif strcmp(varargin{1},'FSA_get_table')
     filename  = sprintf('%s/midlevel/rsa_modelling_table_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     if ~exist(filename) | force
         %the full B and T similarity matrix which are jointly computed;
-        sim       = FearCloud_RSA('get_rsa_fair',fixations,runs);%
+        sim       = FPSA_FearGen('get_rsa_fair',fixations,runs);%
         %%we only want the B and T parts
-        B         = FearCloud_RSA('get_block',sim,1,1);
-        T         = FearCloud_RSA('get_block',sim,2,2);
+        B         = FPSA_FearGen('get_block',sim,1,1);
+        T         = FPSA_FearGen('get_block',sim,2,2);
         %once we have these, we go back to the compact form and concat the
         %stuff, now each column is a non-redundant RSA per subject
         for n = 1:size(sim.correlation,1)
@@ -621,44 +621,44 @@ elseif strcmp(varargin{1},'FSA_get_table')
         [cmat]     = getcorrmat(0,1,1,1,0.86);%see model_rsa_testgaussian_optimizer
         model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
         %% add all this to a TABLE object.
-        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FSA_B' 'FSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
+        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
         save(filename,'t');
     else
         load(filename);
     end
     varargout{1} = t;
-elseif strcmp(varargin{1},'FSA_model');
+elseif strcmp(varargin{1},'FPSA_model');
     %%
     
     fixations  = varargin{2};
-    t          = FearCloud_RSA('FSA_get_table',fixations);
+    t          = FPSA_FearGen('FPSA_get_table',fixations);
     %% MIXED EFFECT MODEL
     % null model
-    out.baseline.model_00_mixed          = fitlme(t,'FSA_B ~ 1 + (1|subject)');
-    out.generalization.model_00_mixed    = fitlme(t,'FSA_G ~ 1 + (1|subject)');    
-    % FSA_model_bottom-up model
-    out.baseline.model_01_mixed          = fitlme(t,'FSA_B ~ 1 + circle + (1 + circle|subject)');
-    out.generalization.model_01_mixed    = fitlme(t,'FSA_G ~ 1 + circle + (1 + circle|subject)');    
-    % FSA_model_adversitycateg    
-    out.baseline.model_02_mixed          = fitlme(t,'FSA_B ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
-    out.generalization.model_02_mixed    = fitlme(t,'FSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
-    % FSA_model_adversitytuning
-    out.baseline.model_03_mixed          = fitlme(t,'FSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
-    out.generalization.model_03_mixed    = fitlme(t,'FSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    out.baseline.model_00_mixed          = fitlme(t,'FPSA_B ~ 1 + (1|subject)');
+    out.generalization.model_00_mixed    = fitlme(t,'FPSA_G ~ 1 + (1|subject)');    
+    % FPSA_model_bottom-up model
+    out.baseline.model_01_mixed          = fitlme(t,'FPSA_B ~ 1 + circle + (1 + circle|subject)');
+    out.generalization.model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');    
+    % FPSA_model_adversitycateg    
+    out.baseline.model_02_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
+    out.generalization.model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
+    % FPSA_model_adversitytuning
+    out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    out.generalization.model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
     
     %% FIXED EFFECT MODEL    
-    % FSA null model
-    out.baseline.model_00_fixed          = fitlm(t,'FSA_B ~ 1');
-    out.generalization.model_00_fixed    = fitlm(t,'FSA_G ~ 1');    
-    % FSA_model_bottom-up model  
-    out.baseline.model_01_fixed          = fitlm(t,'FSA_B ~ 1 + circle');
-    out.generalization.model_01_fixed    = fitlm(t,'FSA_G ~ 1 + circle');    
-    % FSA_model_adversitycateg    
-    out.baseline.model_02_fixed          = fitlm(t,'FSA_B ~ 1 + specific + unspecific');
-    out.generalization.model_02_fixed    = fitlm(t,'FSA_G ~ 1 + specific + unspecific');
-    % FSA_model_adversitytuning
-    out.baseline.model_03_fixed          = fitlm(t,'FSA_B ~ 1 + specific + unspecific + Gaussian');
-    out.generalization.model_03_fixed    = fitlm(t,'FSA_G ~ 1 + specific + unspecific + Gaussian');
+    % FPSA null model
+    out.baseline.model_00_fixed          = fitlm(t,'FPSA_B ~ 1');
+    out.generalization.model_00_fixed    = fitlm(t,'FPSA_G ~ 1');    
+    % FPSA_model_bottom-up model  
+    out.baseline.model_01_fixed          = fitlm(t,'FPSA_B ~ 1 + circle');
+    out.generalization.model_01_fixed    = fitlm(t,'FPSA_G ~ 1 + circle');    
+    % FPSA_model_adversitycateg    
+    out.baseline.model_02_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific');
+    out.generalization.model_02_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific');
+    % FPSA_model_adversitytuning
+    out.baseline.model_03_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
+    out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;            
     
 elseif strcmp(varargin{1},'model2text')
@@ -672,10 +672,10 @@ elseif strcmp(varargin{1},'model2text')
     fclose(fid);
     
     
-elseif strcmp(varargin{1},'FSA_model_singlesubject');
+elseif strcmp(varargin{1},'FPSA_model_singlesubject');
     %%
     fixations  = varargin{2};
-    t          = FearCloud_RSA('FSA_get_table',fixations);
+    t          = FPSA_FearGen('FPSA_get_table',fixations);
     %% test the model for B, T
     
     Model.model_01.w1 = [];
@@ -687,17 +687,17 @@ elseif strcmp(varargin{1},'FSA_model_singlesubject');
     for ns = unique(t.subject)'
         fprintf('Fitting an circular and flexibile LM to subject %03d...\n',ns);
         t2                = t(ismember(t.subject,categorical(ns)),:);
-        B                 = fitlm(t2,'FSA_B ~ 1 + circle');
-        T                 = fitlm(t2,'FSA_G ~ 1 + circle');
+        B                 = fitlm(t2,'FPSA_B ~ 1 + circle');
+        T                 = fitlm(t2,'FPSA_G ~ 1 + circle');
         Model.model_01.w1 = [Model.model_01.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
         %
-        B                 = fitlm(t2,'FSA_B ~ 1 + specific + unspecific');
-        T                 = fitlm(t2,'FSA_G ~ 1 + specific + unspecific');
+        B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
+        T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
         Model.model_02.w1 = [Model.model_02.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
         Model.model_02.w2 = [Model.model_02.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
         %
-        B                 = fitlm(t2,'FSA_B ~ 1 + specific + unspecific + Gaussian');
-        T                 = fitlm(t2,'FSA_G ~ 1 + specific + unspecific + Gaussian');
+        B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
+        T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
         Model.model_03.w1 = [Model.model_03.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
         Model.model_03.w2 = [Model.model_03.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
         Model.model_03.w3 = [Model.model_03.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
@@ -707,33 +707,33 @@ elseif strcmp(varargin{1},'FSA_model_singlesubject');
 elseif strcmp(varargin{1},'figure_03E');
     %% plots the main model comparison figure;
     fixations = varargin{2};
-    C         = FearCloud_RSA('model_rsa_singlesubject',fixations);
+    C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
     %%
     % circular model
-    M         = mean(C.circular.w1);
-    SEM       = std(C.circular.w1)./sqrt(61);
+    M         = mean(C.model_01.w1);
+    SEM       = std(C.model_01.w1)./sqrt(61);
     %flexible model
-    Mc        = mean(C.flexible.w1);
-    SEMc      = std(C.flexible.w1)./sqrt(61);
-    Ms        = mean(C.flexible.w2);
-    SEMs      = std(C.flexible.w2)./sqrt(61);
+    Mc        = mean(C.model_02.w1);
+    SEMc      = std(C.model_02.w1)./sqrt(61);
+    Ms        = mean(C.model_02.w2);
+    SEMs      = std(C.model_02.w2)./sqrt(61);
     %gaussian model
-    Mcg       = mean(C.gaussian.w1);
-    SEMcg     = std(C.gaussian.w1)./sqrt(61);
-    Msg       = mean(C.gaussian.w2);
-    SEMsg     = std(C.gaussian.w2)./sqrt(61);
-    Mg        = mean(C.gaussian.w3);
-    SEMg      = std(C.gaussian.w3)./sqrt(61);
+    Mcg       = mean(C.model_03.w1);
+    SEMcg     = std(C.model_03.w1)./sqrt(61);
+    Msg       = mean(C.model_03.w2);
+    SEMsg     = std(C.model_03.w2)./sqrt(61);
+    Mg        = mean(C.model_03.w3);
+    SEMg      = std(C.model_03.w3)./sqrt(61);
     %% get the p-values
-    [H   P]     = ttest(C.circular.w1(:,1)-C.circular.w1(:,2));%compares baseline vs test the circular model parameters
+    [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
-    [Hc Pc]     = ttest(C.flexible.w1(:,1)-C.flexible.w1(:,2));%compares cosine before to after
-    [Hs Ps]     = ttest(C.flexible.w2(:,1)-C.flexible.w2(:,2));%compares sine before to after
-    [Hcs Pcs]   = ttest(C.flexible.w1(:,2)-C.flexible.w2(:,2));%compares cosine after to sine after
+    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares cosine before to after
+    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares sine before to after
+    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares cosine after to sine after
     % same as before
-    [Hgc Pgc]   = ttest(C.gaussian.w1(:,1)-C.gaussian.w1(:,2));%compares cosine before to after
-    [Hgcs Pgcs] = ttest(C.gaussian.w1(:,2)-C.gaussian.w2(:,2));%compares cosine after to sine after
-    [Hgg Pgg]   = ttest(C.gaussian.w3(:,1)-C.gaussian.w3(:,2));%compares sine before to after
+    [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
+    [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
+    [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
     
     %%
     %%
@@ -804,12 +804,12 @@ elseif strcmp(varargin{1},'figure_03E');
 %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %%    
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %    
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model
-    t           = FearCloud_RSA('get_model_rsa_table',1:100);
+    t           = FPSA_FearGen('get_model_rsa_table',1:100);
     tsubject    = length(unique(t.subject));
     res         = 50;
     amps        = linspace(0.25,2,res);
@@ -849,7 +849,7 @@ elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');
     
 elseif strcmp(varargin{1},'model_rsa_parameter_timecourse')
     for nfix = 1:5;
-        a{nfix} = FearCloud_RSA('model_rsa_testflexible',nfix);
+        a{nfix} = FPSA_FearGen('model_rsa_testflexible',nfix);
     end;
     e=[];
     for nfix = 1:5;
@@ -863,7 +863,7 @@ elseif strcmp(varargin{1},'NvsO')
     % BLOCK = 1 | 2 for baseline | test, respectively
     sim   = varargin{2};
     block = varargin{3};
-    r     = FearCloud_RSA('get_block',sim,block,block);
+    r     = FPSA_FearGen('get_block',sim,block,block);
     for ns = 1:size(r,3)
         c.N(:,ns) = diag(r(:,:,ns),1);
         c.O(:,ns) = diag(r(:,:,ns),4);
@@ -875,10 +875,10 @@ elseif strcmp(varargin{1},'NvsO')
 elseif strcmp(varargin{1},'CompareB2T_RSA')
     %% returns the coordinates and pvalue of the similarity entries.
     %the full B and T similarity matrix;
-    sim = FearCloud_RSA('get_rsa_fair',1:100,1:3);%
+    sim = FPSA_FearGen('get_rsa_fair',1:100,1:3);%
     %%we only want the B and T parts
-    [~,B] = FearCloud_RSA('get_block',sim,1,1);
-    [~,T] = FearCloud_RSA('get_block',sim,2,2);
+    [~,B] = FPSA_FearGen('get_block',sim,1,1);
+    [~,T] = FPSA_FearGen('get_block',sim,2,2);
     %fisher transform and make a ttest
     [h p ] = ttest(fisherz(B)-fisherz(T));
     h      = squareform_force(h);
@@ -904,10 +904,10 @@ elseif strcmp(varargin{1},'get_betas')
     tblock = length(squareform(sim.correlation(1,:)))/8;
     fprintf('Found %02d blocks\n',tblock);
     betas  = [];
-    X      = FearCloud_RSA('get_design_matrix');
+    X      = FPSA_FearGen('get_design_matrix');
     for nblock = 1:tblock
         n      = 0;
-        data   = FearCloud_RSA('get_block',sim,nblock,nblock);
+        data   = FPSA_FearGen('get_block',sim,nblock,nblock);
         while n < tbootstrap
             n                  = n +1;
             i                  = randsample(1:tsub,tsub,1);
@@ -922,8 +922,8 @@ elseif strcmp(varargin{1},'get_betas')
     %
 elseif strcmp(varargin{1},'test_betas')
     %%
-    sim     = FearCloud_RSA('get_rsa',1:100);
-    [a b c] = FearCloud_RSA('get_betas_singlesubject',sim);
+    sim     = FPSA_FearGen('get_rsa',1:100);
+    [a b c] = FPSA_FearGen('get_betas_singlesubject',sim);
     [h p]   = ttest(c(:,2,1)-c(:,2,2));
     fprintf('t-test for physical similarity H: %d, p-value:%3.5g\n',h,p);
     [h p]   = ttest(c(:,3,1)-c(:,3,2));
@@ -935,9 +935,9 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
     tblock = length(squareform(sim.correlation(1,:)))/8;
     fprintf('Found %02d blocks\n',tblock);
     betas  = [];
-    X      = FearCloud_RSA('get_design_matrix');
+    X      = FPSA_FearGen('get_design_matrix');
     for nblock = 1:tblock
-        data   = FearCloud_RSA('get_block',sim,nblock,nblock);
+        data   = FPSA_FearGen('get_block',sim,nblock,nblock);
         for n = 1:tsub
             Y                  = ( 1-squareform(mean(data(:,:,n),3)) );
             betas(n,:,nblock)  = X\Y';
@@ -953,8 +953,8 @@ elseif strcmp(varargin{1},'plot_betas')
     %%
     if nargin == 2
         fix        = varargin{2};
-        sim        = FearCloud_RSA('get_rsa',fix);
-        [betas ci] = FearCloud_RSA('get_betas',sim);
+        sim        = FPSA_FearGen('get_rsa',fix);
+        [betas ci] = FPSA_FearGen('get_betas',sim);
     elseif nargin==3
         betas = varargin{2};
         ci    = varargin{3};
@@ -990,14 +990,14 @@ elseif strcmp(varargin{1},'searchlight')
     fixations         = 1:100;
     runs_per_phase{2} = 1;
     runs_per_phase{4} = runs;
-    fun               = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
+    fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
     
     runc             = 0;%1 run from B + 3 runs from T.
     for phase = [2 4];
         conds = condition_borders{phase};%default parameter
         for run = runs_per_phase{phase}
             runc             = runc + 1;
-            fixmat           = FearCloud_RSA('get_fixmat','runs',run);%get the fixmat for this run
+            fixmat           = FPSA_FearGen('get_fixmat','runs',run);%get the fixmat for this run
             filename         = DataHash({fixmat.kernel_fwhm,b1,b2,phase,run,fixations});
             subc = 0;
             for subject = unique(fixmat.subject);
@@ -1008,7 +1008,7 @@ elseif strcmp(varargin{1},'searchlight')
                 %analysis proper
                 if exist(path_write) == 0 | force
                     % create the query cell
-                    maps             = FearCloud_RSA('get_fixmap',fixmat,subject,fixations);
+                    maps             = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
                     maps             = reshape(maps(:,conds),[500 500 length(conds)]);
                     out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true,'DisplayWaitbar',false);
                     save(path_write,'out');
@@ -1025,7 +1025,7 @@ elseif strcmp(varargin{1},'plot_searchlight')
     %will spatially plot the ellipses area using the sqrt(cosine^2 +
     %sine^2) weight combination term.
     
-    Mori            = FearCloud_RSA('searchlight',1,15);
+    Mori            = FPSA_FearGen('searchlight',1,15);
     %%
     M               = nanmean(Mori,4);%average across subjects.
     M(:,:,1,:,:)    = sqrt(M(:,:,2,:,:).^2+M(:,:,3,:,:).^2);%average across sine and cosine
@@ -1068,7 +1068,7 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
     noise_level = varargin{4};
     filename    = 'stimulus_searchlight';
     path_write  = sprintf('%smidlevel/%s_noiselevel_%02d.mat',path_project,filename,noise_level);
-    fun         = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
+    fun         = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
     maps        = [];
     for n = 1:8
         maps(:,:,n) = imread(sprintf('%sstimuli/%02d.bmp',path_project,n));
@@ -1107,14 +1107,14 @@ elseif strcmp(varargin{1},'searchlight_bs')
     b2       = varargin{4};%15
     %
     tsub     = length(unique(fixmat.subject));
-    fun      = @(block_data) FearCloud_RSA('fun_handle',block_data.data);%what we will do in every block
+    fun      = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
     bs       = 0;
     while bs < 1000
         bs                = bs+1;
         fprintf('Processing bs %03d\n',bs);
         % craete the query cell
         subject          = randsample(1:tsub,tsub,1);
-        maps             = FearCloud_RSA('get_fixmap',fixmat,subject,1:100);
+        maps             = FPSA_FearGen('get_fixmap',fixmat,subject,1:100);
         maps             = reshape(maps,[500 500 16]);
         B1(:,:,:,bs,1)   = blockproc(maps(:,:,1:8),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
         B1(:,:,:,bs,2) = blockproc(maps(:,:,9:16),[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true);
@@ -1135,7 +1135,7 @@ elseif strcmp(varargin{1},'fun_handle')
     maps = reshape(maps,[size(maps,1)*size(maps,2) size(maps,3)]);
     if all(sum(abs(maps)))
         Y            = 1-pdist(maps','correlation');
-        X            = FearCloud_RSA('get_design_matrix');%returns the design matrix for the flexible ellipsoid model
+        X            = FPSA_FearGen('get_design_matrix');%returns the design matrix for the flexible ellipsoid model
         betas(1,1,:) = X\Y';
     else
         betas(1,1,:)= [NaN NaN NaN];
@@ -1144,10 +1144,10 @@ elseif strcmp(varargin{1},'fun_handle')
     
 elseif strcmp(varargin{1},'beta_counts')
     %%
-    fixmat      = FearCloud_RSA('get_fixmat');
+    fixmat      = FPSA_FearGen('get_fixmat');
     b1          = 1;
     b2          = 15;
-    out         = FearCloud_RSA('searchlight',fixmat,b1,b2);
+    out         = FPSA_FearGen('searchlight',fixmat,b1,b2);
     for np = 1:2
         for ns = 1:size(out,4);
             for beta = 2%1:size(out,3)
@@ -1162,8 +1162,8 @@ elseif strcmp(varargin{1},'beta_counts')
     
 elseif strcmp(varargin{1},'anova')
     %%
-    fixmat   = FearCloud_RSA('get_fixmat');
-    cr       = FearCloud_RSA('beta_counts',fixmat,1,15);
+    fixmat   = FPSA_FearGen('get_fixmat');
+    cr       = FPSA_FearGen('beta_counts',fixmat,1,15);
     tsubject = length(unique(fixmat.subject))
     
     Y        = [cr(:,1,1) cr(:,2,1) cr(:,1,2) cr(:,2,2)];
@@ -1200,7 +1200,7 @@ elseif strcmp(varargin{1},'SVM')
     trialselect      = {1:120 1:120 121:240 241:360};
     
     
-    subjects = FearCloud_RSA('get_subjects');
+    subjects = FPSA_FearGen('get_subjects');
     o = 0;
     for opt = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
         o = o+1;
@@ -1414,8 +1414,8 @@ elseif strcmp(varargin{1},'figure_01A');
     
     %chose exemplary subject
 %     figure;
-%     subs = FearCloud_RSA('get_subjects');
-%     sim = FearCloud_RSA('get_rsa',1:100);
+%     subs = FPSA_FearGen('get_subjects');
+%     sim = FPSA_FearGen('get_rsa',1:100);
 %     for n = 1:61;
 %         subplot(8,8,n);
 %         dissmatz = squareform(sim.correlation(n,:));
@@ -1431,8 +1431,8 @@ elseif strcmp(varargin{1},'figure_01A');
     
     
     subplot(2,1,2);
-    subs = FearCloud_RSA('get_subjects');
-    mat = FearCloud_RSA('get_rsa',1:100);
+    subs = FPSA_FearGen('get_subjects');
+    mat = FPSA_FearGen('get_rsa',1:100);
     dissmat = squareform(mat.correlation(subs==exemplsub,:)); %get_rsa uses pdist, which is 1-r already, so no 1-squareform necessary.
     dissmat = dissmat(9:end,9:end);
     dissmat = CancelDiagonals(dissmat,NaN);
@@ -1682,7 +1682,7 @@ elseif strcmp(varargin{1},'figure_02B')
 elseif strcmp(varargin{1},'figure_03A')
     %% selected subjects are 44 and 47, 31.    
     roi_contours            = 0;
-    fixmat                  = FearCloud_RSA('get_fixmat');
+    fixmat                  = FPSA_FearGen('get_fixmat');
     fixmat.kernel_fwhm      = 30;
     c                       = 0;
     nphase = 4;%we plot the generalization phase only.
@@ -1701,14 +1701,14 @@ elseif strcmp(varargin{1},'figure_03A')
         maps  = cat(3,maps,dummy);
     end
     
-    FearCloud_RSA('plot_fdm',maps,roi_contours);
+    FPSA_FearGen('plot_fdm',maps,roi_contours);
     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours),'-r300');
     
 elseif strcmp(varargin{1},'figure_03Group');
     %% will plot 8 evoked fixation maps for Group average (we dont have this anymore)
     
-    subjects                = FearCloud_RSA('get_subjects');
-    fixmat                  = FearCloud_RSA('get_fixmat');
+    subjects                = FPSA_FearGen('get_subjects');
+    fixmat                  = FPSA_FearGen('get_fixmat');
     correction              = 1;
     %
     for nphase = [4]
@@ -1730,12 +1730,12 @@ elseif strcmp(varargin{1},'figure_03Group');
     end
     
     fixmat.maps = mean(M,4);
-    FearCloud_RSA('plot_fdm',fixmat,1);
+    FPSA_FearGen('plot_fdm',fixmat,1);
     %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/GroupAverage_SubjectPool_%02d_Correction_%02d.png',current_subject_pool,correction));
 elseif strcmp(varargin{1},'figure_03B')
     %% count based approach
     fs       = 12;
-    counts   = FearCloud_RSA('count_tuning');
+    counts   = FPSA_FearGen('count_tuning');
     counts   = diff(counts,1,4);
     counts   = counts*100;    
     m_counts = nanmean(counts,3);
@@ -1840,7 +1840,7 @@ elseif strcmp(varargin{1},'figure_03C')
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     title('Generalization','fontweight','normal','fontsize',15);    
     %
-    [indices] = FearCloud_RSA('CompareB2T_RSA');
+    [indices] = FPSA_FearGen('CompareB2T_RSA');
     [Y X]     = ind2sub([8 8],indices(:,1));
     Y         = Y - .25;
     X         = X - .45;
@@ -1878,7 +1878,7 @@ elseif strcmp(varargin{1},'figure_03C')
     % plot the similarity to cs+
 %     subplot(9,6,[25:27 19:21])
     H(3) = subplot(1,3,3);
-    Y         = FearCloud_RSA('get_mdscale',squareform(mean(sim.correlation)),2);
+    Y         = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
     colors    = GetFearGenColors;
     colors    = [colors(1:8,:);colors(1:8,:)];
@@ -1915,7 +1915,7 @@ elseif strcmp(varargin{1},'figure_03C')
     %%
 %     subplotChangeSize(H,.025,.025);    
     %subplot(9,6,[22 23 24 28 29 30])
-    %FearCloud_RSA('model_rsa_singlesubject_plot',1:100);
+    %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
 %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03C.png','-transparent');
     
 
@@ -1927,7 +1927,7 @@ elseif strcmp(varargin{1},'selected_subjects')
 elseif strcmp(varargin{1},'count_tuning')
     %% Computes how fixation counts changes with conditions on 4 different ROIs before and after learning.
     filename       = sprintf('counttuning_runs_%02d_%02d.mat',runs(1),runs(end));
-    fixmat         = FearCloud_RSA('get_fixmat');
+    fixmat         = FPSA_FearGen('get_fixmat');
     fixmat.unitize = 0;
     subjects       = unique(fixmat.subject);
     force          = 0;
@@ -1988,7 +1988,7 @@ elseif strcmp(varargin{1},'count_tuning')
     fprintf('%25s %3.5g\n','Delta Other:',P(5))
 elseif strcmp(varargin{1},'fit_count_tuning');
     %% will fit a model to the density changes.
-    [count groups] = FearCloud_RSA('count_tuning');
+    [count groups] = FPSA_FearGen('count_tuning');
     %remove the last ROI
     count(:,5,:,:) = [];
     groups.g1(:,5,:,:) = [];
@@ -2006,11 +2006,11 @@ elseif strcmp(varargin{1},'fit_count_tuning');
 elseif strcmp(varargin{1},'behavior_correlation');
     %% Computes correlation with behavior
     
-    b      = FearCloud_RSA('get_behavior');%amplitude of the scr response
-    fixmat = FearCloud_RSA('get_fixmat');
+    b      = FPSA_FearGen('get_behavior');%amplitude of the scr response
+    fixmat = FPSA_FearGen('get_fixmat');
     %
-    a2 = FearCloud_RSA('fix_counts',fixmat,1,15);
-    a  = FearCloud_RSA('beta_counts',fixmat,1,15);
+    a2 = FPSA_FearGen('fix_counts',fixmat,1,15);
+    a  = FPSA_FearGen('beta_counts',fixmat,1,15);
     %%
     try
         b.rating_03_center  = abs(b.rating_03_center);
