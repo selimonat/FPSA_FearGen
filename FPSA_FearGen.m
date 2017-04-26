@@ -30,7 +30,7 @@ current_subject_pool = 1;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-url                  = 'https://www.dropbox.com/s/xjfh7pnooqygopv/project_FPSA_FearGen.tar.gz?dl=1';
+url                  = 'https://www.dropbox.com/s/5wtoow1hke8v0cn/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
 for nf = 1:length(varargin)
