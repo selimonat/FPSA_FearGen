@@ -21,7 +21,7 @@ function [varargout]=FPSA_FearGen(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/project_bdnf/data/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/project_FPSA_FearGen/data/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -103,7 +103,7 @@ elseif strcmp(varargin{1},'get_subjects');
                 pval = [pval ; s.get_fit('rating',4).pval];
                 sub  = [sub  ; n];
             end            
-            valid    = pval > -log10(.05);%selection criteria
+            valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);%selection criteria
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
             save(filename,'subjects');
@@ -225,8 +225,8 @@ elseif  strcmp(varargin{1},'get_fixmap')
             v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
         end
         fixmat.getmaps(v{:});%real work done by the fixmat object.
-%         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
-    maps = cat(2,maps,(fixmat.vectorize_maps));%within phase mean subtraction
+        maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
+%     maps = cat(2,maps,(fixmat.vectorize_maps));%within phase mean subtraction
     end
     varargout{1} = maps;
 elseif  strcmp(varargin{1},'get_fixmap_oddeven')
@@ -618,7 +618,7 @@ elseif strcmp(varargin{1},'FPSA_get_table')
         model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
         %
         %getcorrmat(amp_circ, amp_gau, amp_const, amp_diag, varargin)
-        [cmat]     = getcorrmat(0,1,1,1,0.86);%see model_rsa_testgaussian_optimizer
+        [cmat]     = getcorrmat(0,3,1,1);%see model_rsa_testgaussian_optimizer
         model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
         %% add all this to a TABLE object.
         t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
@@ -808,7 +808,7 @@ elseif strcmp(varargin{1},'figure_03E');
     %    
     
 elseif strcmp(varargin{1},'model_rsa_testgaussian_optimizer');
-    %% create Gaussian models with different parameters to find the best one to compare against the flexible model
+    %% create Gaussian models with different parameters to find the best one to compare against the flexible model 
     t           = FPSA_FearGen('get_model_rsa_table',1:100);
     tsubject    = length(unique(t.subject));
     res         = 50;
