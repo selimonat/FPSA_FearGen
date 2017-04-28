@@ -1110,8 +1110,8 @@ elseif strcmp(varargin{1},'SVM')
     %number of trials from the testphase before training.
     %the option random = 1 randomizes labels to determine the chance classification
     %performance level.
-    random = 1;
-    exclmouth = 0;
+    random = 0;
+    exclmouth = 1;
     tbootstrap       = 1000; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
     holdout_ratio    = .5; %holdout_ratio for training vs. test set
@@ -1163,6 +1163,7 @@ elseif strcmp(varargin{1},'SVM')
                     c                   = global_counter;
                     v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
                     fix.getmaps(v);
+                    keyboard
                     if exclmouth == 1
                         fix.maps(roi(:,:,4)) = 0;
                     end
@@ -1249,6 +1250,45 @@ elseif strcmp(varargin{1},'SVM')
            mkdir(savepath);
            save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
         end
+    end
+    %% check mouth exclusion
+    savepath = sprintf('%s/data/midlevel/SVM/',path_project);
+    files = cellstr(ls(savepath));
+%     neigs = [63 69 74 75 14 19 17 19];
+    mouthex = [0 0 0 0  1 1 1 1];
+    run = [1:4 1:4];
+    for c = 1:8
+        expr = sprintf('r0_run%d_critvar_exclmouth_%d.mat',run(c),mouthex(c));
+        findfile = regexp(files,expr,'match');
+        ind = find(~cellfun(@isempty,findfile));
+        load([savepath files{ind}],'result');
+        fprintf('Loading file %s\n',[savepath files{ind}])
+        results(:,:,c) = squeeze(mean(result,2));
+    end
+    M = squeeze(mean(results,2));
+    SE = squeeze(std(results,[],2)./sqrt(size(results,2)));
+    
+    % average the three test runs
+    M = cat(2,M(:,1:4),mean(M(:,2:4),2),M(:,5:8),mean(M(:,6:8),2));
+    SE = cat(2,SE(:,1:4),mean(SE(:,2:4),2),SE(:,5:8),mean(SE(:,6:8),2));
+    
+    ind = [1 5 6 10];
+    ylab = {'Mouth INCL' '' 'Mouth EXCL' ''};
+    for n = 1:4
+        subplot(2,2,n)
+        xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'Color','k','LineStyle',':');
+    end
+    for n = 1:4
+        subplot(2,2,n)
+        Project.plot_bar(-135:45:180,M(:,ind(n)),SE(:,ind(n)));
+        hold on;
+        ylim([.3 .7])
+        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
+        box off
+        axis square
+        ylabel(ylab{n})
+        set(gca,'YTick',[.3 .5 .7])
+        xlim([-170 215])
     end
 elseif strcmp(varargin{1},'SVM_fig')
     %% plot
