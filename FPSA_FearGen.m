@@ -21,7 +21,7 @@ function [varargout]=FPSA_FearGen(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/project_FPSA_FearGen_test2/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -54,17 +54,19 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 
 %%
 if strcmp(varargin{1},'download_project');
+    
     %downloads the data and stimuli, download the code from github, and add
     %them to matlab path.    
     %download data
-    fprintf('Downloading the source data...\n');
-    download_folder      = [fileparts(fileparts(path_project)) '/'];
-    tarfile              = [download_folder 'dummy.tar.gz'];
+    fprintf('Downloading the source data...\n');    
+    tarfile              = ['/tmp/dummy.tar.gz'];        
+    s                    = urlwrite(url,tarfile);%download the data 
+    fprintf('Untarring the data...\n');    
+    untar(tarfile,'/tmp/');%untar it to the same location
+    fprintf('Moving data to PATH_PROJECT...\n');    
+    movefile('/tmp/project_FPSA_FearGen/*',regexprep(path_project,'/$',''));%copy the contents of the file to PATH_PROJECT    
+    O = system(sprintf('find %s -name "._*" -delete',path_project));%remove some useless file created by tar
     
-    if exist(path_project) == 0
-        s                 = urlwrite(url,tarfile);%dump the data to tmp
-        untar(tarfile,download_folder);%this should create the folder as in path_project
-    end
     
     %download dependencies
     fprintf('Downloading the analysis code and adding it to path...\n');
@@ -2009,6 +2011,8 @@ elseif strcmp(varargin{1},'behavior_correlation');
     elsel
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
     %
+elseif strcmp(varargin{1},'get_path_project');
+    varargout{1} = path_project;
 else
     fprintf('No action with this name %s is present...\n',varargin{1});
     varargout ={};
