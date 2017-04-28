@@ -21,7 +21,7 @@ function [varargout]=FPSA_FearGen(varargin);
 %
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/project_FPSA_FearGen_test2/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -1113,13 +1113,13 @@ elseif strcmp(varargin{1},'SVM')
     %the option random = 1 randomizes labels to determine the chance classification
     %performance level.
     random = 0;
-    
+    exclmouth = 1;
     tbootstrap       = 1000; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
     holdout_ratio    = .5; %holdout_ratio for training vs. test set
     teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
-    crit             = 'max';%choose 'max' classification or 'var' 90% variance explained.
-    cutoffcrit       = .90;
+    crit             = 'var';%choose 'ellbow' classification or 'var' 90% variance explained.
+    cutoffcrit       = .9;
     R                = [];%result storage for classification performance
     HP               = [];%result storage for single subject hyperplanes.
     AVEHP            = [];%result storate for average hyperplane
@@ -1130,9 +1130,12 @@ elseif strcmp(varargin{1},'SVM')
     
     subjects = FPSA_FearGen('get_subjects');
     o = 0;
-    for opt = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+    for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
         o = o+1;
-        fix             = Fixmat(subjects,phase(opt));%get the data
+        fix             = Fixmat(subjects,phase(run));%get the data
+        if exclmouth == 1
+            roi = fix.GetFaceROIs;
+        end
         fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
         %% get number of trials per condition and subject: Sanity check...
         M               = [];%this will contain number of trials per subject and per condition. some few people have 10 trials (not 11) but that is ok. This is how I formed the subject_exlusion variable.
@@ -1142,7 +1145,7 @@ elseif strcmp(varargin{1},'SVM')
             nc = 0;
             for cond = unique(fix.deltacsp)
                 nc          = nc +1;
-                i           = ismember(fix.phase,phase(opt)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
+                i           = ismember(fix.phase,phase(run)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
                 i           = logical(i);
                 M(sub_c,nc,o) = length(unique(fix.trialid(i)));
             end
@@ -1153,7 +1156,7 @@ elseif strcmp(varargin{1},'SVM')
         clear labels;%and associated labels.
         for ns = subjects(:)'
             for deltacsp = -135:45:180;
-                i              = ismember(fix.trialid,trialselect{opt}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
+                i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
                 trials         = unique(fix.trialid(i == 1));
                 trial_counter  = 0;
                 for trialid = trials
@@ -1162,9 +1165,13 @@ elseif strcmp(varargin{1},'SVM')
                     c                   = global_counter;
                     v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
                     fix.getmaps(v);
+                    keyboard
+                    if exclmouth == 1
+                        fix.maps(roi(:,:,4)) = 0;
+                    end
                     D(:,c)              = Vectorize(imresize(fix.maps,.1));
                     labels.sub(c)       = ns;
-                    labels.phase(c)     = phase(opt);
+                    labels.phase(c)     = phase(run);
                     labels.trial(c)     = trial_counter;%some people have less trials check it out with plot(labels.trial)
                     labels.cond(c)      = deltacsp;
                 end
@@ -1178,139 +1185,178 @@ elseif strcmp(varargin{1},'SVM')
         [e dv]    = eig(covmat);
         fprintf('done\n')
         dv        = sort(diag(dv),'descend');
-        eigval(:,opt) = dv;
+        eigval(:,run) = dv;
         %     figure(100);
         %     plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
         eigen     = fliplr(e);
         %collect loadings of every trial
         trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
         %% LIBSVM business
-        neigs = [7 12 8 10];
-        cev = 0;
-        for neig    = neigs(opt);%1:teig%test different numbers of eigenvectors
-            cev = cev+1;
-            sub_counter = 0;
-            result      = [];
-            w           = [];
-            for sub = unique(labels.sub)%go subject by subject
-                fprintf('Opt:%d-Eig:%d-Sub:%d\n',opt,neig,sub);
-                if random == 1
-                    warning('Randomizing labels as wanted. \n')
+        neigs = [7 12 8 10]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+        if strcmp(crit,'ellbow')
+            neig = neigs(run);
+        elseif strcmp(crit,'var')
+            neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+        end
+        sub_counter = 0;
+        result      = [];
+        w           = [];
+        for sub = unique(labels.sub)%go subject by subject
+            fprintf('run:%d-Eig:%d-Sub:%d\n',run,neig,sub);
+            if random == 1
+                warning('Randomizing labels as wanted. \n')
+            end
+            sub_counter = sub_counter + 1;
+            ind_all     = ismember(labels.sub,sub);%this subject, this phase.
+            %
+            for n = 1:tbootstrap%
+                Ycond   = double(labels.cond(ind_all))';%labels of the fixation maps for this subject in this phase.
+                X       = trialload(ind_all,1:neig);%fixation maps of this subject in this phase.
+                % now normal Holdout for every phase (which should all have the
+                % same number of trials now)
+                P       = cvpartition(Ycond,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
+                i       = logical(P.training.*ismember(Ycond,[0 180]));%train using only the CS+ and CS? conditions.
+                if random ==1
+                    model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                else
+                    model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
                 end
-                sub_counter = sub_counter + 1;
-                ind_all     = ismember(labels.sub,sub);%this subject, this phase.
-                %
-                for n = 1:tbootstrap%
-                    Ycond   = double(labels.cond(ind_all))';%labels of the fixation maps for this subject in this phase.
-                    X       = trialload(ind_all,1:neig);%fixation maps of this subject in this phase.
-                    % now normal Holdout for every phase (which should all have the
-                    % same number of trials now)
-                    P       = cvpartition(Ycond,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
-                    i       = logical(P.training.*ismember(Ycond,[0 180]));%train using only the CS+ and CS? conditions.
-                    if random ==1
-                        model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
-                    else
-                        model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
-                    end
-                    % get the hyperplane
-                    try
-                        w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
-                    catch
-                        keyboard%sanity check: stop if something is wrong
-                    end
-                    %%
-                    cc=0;
-                    for cond = unique(Ycond)'
-                        cc                          = cc+1;
-                        i                           = logical(P.test.*ismember(Ycond,cond));%find all indices that were not used for training belonging to COND.
-                        [~, dummy]                  = evalc('svmpredict(Ycond(i), X(i,:), model);');%doing it like this supresses outputs.
-                        dummy                       = dummy == 0;%binarize: 1=CS+, 0=Not CS+
-                        result(cc,n,sub_counter)    = sum(dummy)/length(dummy);%get the percentage of CS+ responses for each CONDITION,BOOTSTR,SUBJECT
-                    end
+                % get the hyperplane
+                try
+                    w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
+                catch
+                    keyboard%sanity check: stop if something is wrong
+                end
+                %%
+                cc=0;
+                for cond = unique(Ycond)'
+                    cc                          = cc+1;
+                    i                           = logical(P.test.*ismember(Ycond,cond));%find all indices that were not used for training belonging to COND.
+                    [~, dummy]                  = evalc('svmpredict(Ycond(i), X(i,:), model);');%doing it like this supresses outputs.
+                    dummy                       = dummy == 0;%binarize: 1=CS+, 0=Not CS+
+                    result(cc,n,sub_counter)    = sum(dummy)/length(dummy);%get the percentage of CS+ responses for each CONDITION,BOOTSTR,SUBJECT
                 end
             end
-            %once the data is there compute relevant output metrics:
-            R(:,cev,opt)      = mean(mean(result,2),3);%average across bootstaps the classification results
-            AVEHP(:,:,cev,opt) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
-            HP(:,:,:,cev,opt) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
         end
-        %     figure(1000);imagesc(R(:,:,opt));
-        %     figure(1001);plot(R(4,:,opt)-R(end,:,opt),'o-');
-        %     drawnow
+        %once the data is there compute relevant output metrics:
+        R(:,run)      = mean(mean(result,2),3);%average across bootstaps the classification results
+        AVEHP(:,:,run) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
+        HP(:,:,:,run) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
+        
+        savepath = sprintf('%s/data/midlevel/SVM/',path_project);
+        filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d.mat',neig,random,run,crit,exclmouth);
+        if exist(savepath)
+           save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+        else
+           fprintf('Creating SVM results folder...\n')
+           mkdir(savepath);
+           save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+        end
     end
-    %% plot
-    
-    clf
-    perf = squeeze(R(4,:,:)-R(end,:,:));
-    [~,neig] =max(perf);
-    %the numbers we extracted:
-    neigs =  [7 12 8 10];
-    
-    for opt = 1:4
-        load([pwd filesep sprintf('SVM_NEV%d_FWHM30_r0_opt%d.mat',neigs(opt),opt)])
-        results(:,:,opt) = mean(result,2);
+    %% check mouth exclusion
+    savepath = sprintf('%s/data/midlevel/SVM/',path_project);
+    files = cellstr(ls(savepath));
+%     neigs = [63 69 74 75 14 19 17 19];
+    mouthex = [0 0 0 0  1 1 1 1];
+    run = [1:4 1:4];
+    for c = 1:8
+        expr = sprintf('r0_run%d_critvar_exclmouth_%d.mat',run(c),mouthex(c));
+        findfile = regexp(files,expr,'match');
+        ind = find(~cellfun(@isempty,findfile));
+        load([savepath files{ind}],'result');
+        fprintf('Loading file %s\n',[savepath files{ind}])
+        results(:,:,c) = squeeze(mean(result,2));
     end
     M = squeeze(mean(results,2));
     SE = squeeze(std(results,[],2)./sqrt(size(results,2)));
     
+    % average the three test runs
+    M = cat(2,M(:,1:4),mean(M(:,2:4),2),M(:,5:8),mean(M(:,6:8),2));
+    SE = cat(2,SE(:,1:4),mean(SE(:,2:4),2),SE(:,5:8),mean(SE(:,6:8),2));
+    
+    ind = [1 5 6 10];
+    ylab = {'Mouth INCL' '' 'Mouth EXCL' ''};
+    for n = 1:4
+        subplot(2,2,n)
+        xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'Color','k','LineStyle',':');
+    end
+    for n = 1:4
+        subplot(2,2,n)
+        Project.plot_bar(-135:45:180,M(:,ind(n)),SE(:,ind(n)));
+        hold on;
+        ylim([.3 .7])
+        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
+        box off
+        axis square
+        ylabel(ylab{n})
+        set(gca,'YTick',[.3 .5 .7])
+        xlim([-170 215])
+    end
+elseif strcmp(varargin{1},'SVM_fig')
+    %% plot
+    savepath = sprintf('%s/data/midlevel/SVM/',path_project);
+    files = cellstr(ls(savepath));
+%     neigs = [63 69 74 75 14 19 17 19];
+    crit = {'ellbow','ellbow','ellbow','ellbow','var','var','var','var'};
+    run = [1:4 1:4];
+    for c = 1:8
+        expr = sprintf('r0_run%d_crit%s_exclmouth_0.mat',run(c),crit{c});
+        findfile = regexp(files,expr,'match');
+        ind = find(~cellfun(@isempty,findfile));
+        load([savepath files{ind}],'result');
+        results(:,:,c) = squeeze(mean(result,2));
+    end
+    
+    M = squeeze(mean(results,2));
+    SE = squeeze(std(results,[],2)./sqrt(size(results,2)));
+    
+    % average the three test runs
+    M = cat(2,M(:,1:4),mean(M(:,2:4),2),M(:,5:8),mean(M(:,6:8),2));
+    SE = cat(2,SE(:,1:4),mean(SE(:,2:4),2),SE(:,5:8),mean(SE(:,6:8),2));
+    
+    
     figure(1001)
     clf
-    for n = 1:6;subplot(2,4,n);xlim([-170 215]);l=line(xlim,[.5 .5]);    hold on;l.LineStyle = ':';l.Color = 'k';end
+    for n = 1:10;subplot(2,5,n);xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'Color','k','LineStyle',':');end
     hold on
-    labels = {'Base' 'Test1' 'Test2' 'Test3'};
-    for n = 1:4
-        subplot(2,4,n);
+    labels = {'Baseline' 'Test_1' 'Test_2' 'Test_3' 'Test_M' };
+    for n = 1:10
+        subplot(2,5,n);
         Project.plot_bar(-135:45:180,M(:,n),SE(:,n));
         hold on;
         ylim([.3 .7])
-        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'});
+        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
         box off
         axis square
         ylabel('Classified as CS+')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
-        title(labels{n})
+        if n<6
+            title(labels{n})
+        end
     end
-    
-    %%average test runs
-    BTresult = mean(results(:,:,2:4),3);
-    BTresult = cat(3,results(:,:,1),BTresult);
-    M = squeeze(mean(BTresult,2));
-    SE = squeeze(std(BTresult,[],2)./sqrt(size(BTresult,2)));
-    
-    labels = {'Base' 'Test'};
-    for n = 1:2
-        data(n).y = BTresult(:,:,n);
-        data(n).x = repmat(-135:45:180',[size(data(n).y,2) 1])';
-        data(n).ids = 1:size(data(n).y,2);
-        t(n) = Tuning(data(n));
-        t(n).GroupFit(8)
-        figure(1001)
-        subplot(2,4,4+n);
+    %% partial figure for figure_04
+    figure(1002)
+    clf
+    for n = 1:2;subplot(1,2,n);xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'Color','k','LineStyle',':');end % so the lines are behind bars
+    hold on
+    labels = {'Baseline' 'Test' };
+    spc = 0;
+    for n = [1 5]
+        spc = spc + 1;
+        subplot(1,2,spc);
         Project.plot_bar(-135:45:180,M(:,n),SE(:,n));
         hold on;
         ylim([.3 .7])
-        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'});
-        params(:,n) = t(n).groupfit.Est;
-        params(3,n) = deg2rad(params(3,n));
-        pval(n)     = 10.^-t(n).groupfit.pval;
-        xhd    = linspace(-135,180,1000);
-        plot(xhd,Tuning.VonMises(xhd,params(1,n),params(2,n),params(3,n), params(4,n)),'k','LineWidth',2)
+        set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
         box off
         axis square
         ylabel('Classified as CS+')
         set(gca,'YTick',[.3 .5 .7])
-        xlim([-170 215])
-        title(labels{n})
+        xlim([-170 215])        
+        title(labels{spc})
     end
-    delta =(data(2).y - data(1).y);
-    subplot(2,4,7);
-    Project.plot_bar(-135:45:180,mean(delta,2),std(delta,[],2)./sqrt(size(delta,2)));
-    set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'});
-    box off
-    axis square
-    ylabel('difference (Test - Base)')
-      set(gca,'YTick',[0 .05 .1])
+    
 elseif strcmp(varargin{1},'figure_01A');
     %% this is the figure of faces, FDMs and dissimilarity matrices
     % get V1 dissimilarity
