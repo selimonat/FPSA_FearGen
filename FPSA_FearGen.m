@@ -668,6 +668,29 @@ elseif strcmp(varargin{1},'figure_04C');
     SEMsg     = std(C.model_03.w2)./sqrt(61);
     Mg        = mean(C.model_03.w3);
     SEMg      = std(C.model_03.w3)./sqrt(61);
+    
+    %%
+    subgr{1} = ones(61,1);
+    subgr{2} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==1;
+    subgr{3} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==2;
+    
+    for n = 1:3
+        M(n,:)         = mean(C.model_01.w1);
+        SEM(n,:)       = std(C.model_01.w1)./sqrt(61);
+        %flexible model
+        Mc(n,:)        = mean(C.model_02.w1);
+        SEMc(n,:)      = std(C.model_02.w1)./sqrt(61);
+        Ms(n,:)        = mean(C.model_02.w2);
+        SEMs(n,:)      = std(C.model_02.w2)./sqrt(61);
+        %gaussian model
+        Mcg(n,:)       = mean(C.model_03.w1);
+        SEMcg(n,:)     = std(C.model_03.w1)./sqrt(61);
+        Msg(n,:)       = mean(C.model_03.w2);
+        SEMsg(n,:)     = std(C.model_03.w2)./sqrt(61);
+        Mg(n,:)        = mean(C.model_03.w3);
+        SEMg(n,:)      = std(C.model_03.w3)./sqrt(61);
+        
+    end
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
@@ -768,6 +791,139 @@ elseif strcmp(varargin{1},'figure_04C');
     %%    
 %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %    
+    
+elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
+    %% plots the main model comparison figure; 
+    fixations = varargin{2};
+    C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
+    %%
+    subgr{1} = ones(61,1);
+    subgr{2} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==1;
+    subgr{3} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==2;
+    
+    for n = 1:3
+        inds = logical(subgr{n});
+        M(n,:)         = mean(C.model_01.w1(inds,:));
+        SEM(n,:)       = std(C.model_01.w1(inds,:))./sqrt(sum(subgr{n}));
+        %flexible model
+        Mc(n,:)        = mean(C.model_02.w1(inds,:));
+        SEMc(n,:)      = std(C.model_02.w1(inds,:))./sqrt(sum(subgr{n}));
+        Ms(n,:)        = mean(C.model_02.w2(inds,:));
+        SEMs(n,:)      = std(C.model_02.w2(inds,:))./sqrt(sum(subgr{n}));
+        %gaussian model
+        Mcg(n,:)       = mean(C.model_03.w1(inds,:));
+        SEMcg(n,:)     = std(C.model_03.w1(inds,:))./sqrt(sum(subgr{n}));
+        Msg(n,:)       = mean(C.model_03.w2(inds,:));
+        SEMsg(n,:)     = std(C.model_03.w2(inds,:))./sqrt(sum(subgr{n}));
+        Mg(n,:)        = mean(C.model_03.w3(inds,:));
+        SEMg(n,:)      = std(C.model_03.w3(inds,:))./sqrt(sum(subgr{n}));
+    
+    %% get the p-values
+    [H(n)   P(n)]     = ttest(C.model_01.w1(inds,1)-C.model_01.w1(inds,2));%compares baseline vs test the circular model parameters
+    
+    [Hc(n) Pc(n)]     = ttest(C.model_02.w1(inds,1)-C.model_02.w1(inds,2));%compares cosine before to after
+    [Hs(n) Ps(n)]     = ttest(C.model_02.w2(inds,1)-C.model_02.w2(inds,2));%compares sine before to after
+    [Hcs(n) Pcs(n)]   = ttest(C.model_02.w1(inds,2)-C.model_02.w2(inds,2));%compares cosine after to sine after
+    % same as before
+    [Hgc(n) Pgc(n)]   = ttest(C.model_03.w1(inds,1)-C.model_03.w1(inds,2));%compares cosine before to after
+    [Hgcs(n) Pgcs(n)] = ttest(C.model_03.w1(inds,2)-C.model_03.w2(inds,2));%compares cosine after to sine after
+    [Hgg(n) Pgg(n)]   = ttest(C.model_03.w3(inds,1)-C.model_03.w3(inds,2));%compares sine before to after
+    end
+    %%
+    %%
+    figure;
+    set(gcf,'position',[0        0        898         604]);
+    X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
+    Y    = [M Mc Ms Mcg Msg Mg];
+    Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
+    bw   = .5;
+    hold off;
+    groupcolors = {[.4 .4 .4],[0 0 1],[1 0 0]};
+    for subpl = 1:3
+        subplot(3,1,subpl);
+        for n = 1:size(Y,2)
+            h       = bar(X(n),Y(subpl,n));
+            legh(n) = h;
+            hold on
+            try %capsize is 2016b compatible.
+                errorbar(X(n),Y(subpl,n),Y2(subpl,n),'k.','marker','none','linewidth',1.5,'capsize',10);
+            catch
+                errorbar(X(n),Y(subpl,n),Y2(subpl,n),'k.','marker','none','linewidth',1.5);
+            end
+            if ismember(n,[1 3 5 7 9 11])
+                try %2016b compatibility.
+                    set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+                catch
+                    set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+                end
+            else
+                try
+                    set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',groupcolors{subpl},'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+                catch
+                    set(h,'FaceColor',[0 0 0],'EdgeColor',groupcolors{subpl},'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+                end
+            end
+        end
+        box off;
+        L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
+        try
+            L.Position = L.Position + [0.1/2 0 0 0];
+            L.FontSize = 12;
+        end
+        set(gca,'linewidth',1.8);
+        % xticks
+        xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
+        label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
+        for nt = 1:length(xtick)
+            h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
+        end
+        try
+            set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
+        catch
+            set(gca,'xtick',[3 8]./1.5,'color','none','XGrid','on','fontsize',16);
+        end
+        %
+        text(-.5,.215,'\beta','fontsize',28,'fontweight','bold');
+        
+        
+        ylim([-.05 .2]);
+        set(gca,'ytick',-.05:.05:.2,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
+        axis normal
+        % asteriks
+        hold on
+        ylim([min(ylim) .16]);
+        h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+        h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+        h= line([X(4)-bw/2 X(6)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+        
+        h= line([X(7)-bw/2 X(8)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+        h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+        h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
+        %
+        text(mean(X(1:2))  ,max(ylim)-.0075, pval2asterix(P(subpl)),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X(3:4))  ,max(ylim)-.0075, pval2asterix(Pc(subpl)),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([4 6])),max(ylim)      , pval2asterix(Pcs(subpl)),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc(subpl)),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs(subpl)),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg(subpl)),'HorizontalAlignment','center','fontsize',12);
+        % model names
+        ylim([-.04 .2])
+        %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
+        %     set(h(1),'color','k','linewidth',1,'clipping','off');
+        text(mean(X(1:2)),.18,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+        %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
+        %     set(h(1),'color','k','linewidth',1,'clipping','off');
+        text(mean(X(3:6)),.18,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+        
+        %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
+        %     set(h(1),'color','k','linewidth',1,'clipping','off');
+        text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+        %%
+        %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
+        %
+    end
+    
+    
     
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model 
@@ -1351,14 +1507,16 @@ elseif strcmp(varargin{1},'SVM_fig')
     %% partial figure for figure_04
     figure(1002)
     clf
-    for n = 1:2;subplot(1,2,n);xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'Color','k','LineStyle',':');end % so the lines are behind bars
+    for n = 1:3;subplot(1,3,n);xlim([-170 215]);l=line(xlim,[.5 .5]); hold on;set(l,'linewidth',1.5,'Color','k','LineStyle',':');end % so the lines are behind bars
     hold on
-    labels = {'Baseline' 'Test' };
+    labels = {'Baseline' 'Test' 'Test'};
     spc = 0;
     for n = [1 5]
         spc = spc + 1;
-        subplot(1,2,spc);
-        Project.plot_bar(-135:45:180,M(:,n),SE(:,n));
+        subplot(1,3,spc);
+        Project.plot_bar(-135:45:180,M(:,n));
+        e = errorbar(-135:45:180,M(:,n),SE(:,n),'k.');
+        set(e,'LineWidth',2,'Color','k')
         hold on;
         ylim([.3 .7])
         set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
@@ -1368,6 +1526,42 @@ elseif strcmp(varargin{1},'SVM_fig')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])        
         title(labels{spc})
+    end
+    subplot(1,3,3)
+    clear results
+    savepath = sprintf('%s/data/midlevel/SVM/',path_project);
+    files = cellstr(ls(savepath));
+%     neigs = [63 69 74 75 14 19 17 19];
+    crit = {'var','var','var','var'};
+    for c = 1:4
+        expr = sprintf('r0_run%d_crit%s_exclmouth_1.mat',c,crit{c});
+        findfile = regexp(files,expr,'match');
+        ind = find(~cellfun(@isempty,findfile));
+        load([savepath files{ind}],'result');
+        results(:,:,c) = squeeze(mean(result,2));
+    end
+    
+    M = squeeze(mean(results,2));
+    SE = squeeze(std(results,[],2)./sqrt(size(results,2)));
+    M = mean(M(:,2:4),2);
+    SE = mean(SE(:,2:4),2);
+    Project.plot_bar(-135:45:180,M);
+    hold on
+    e = errorbar(-135:45:180,M,SE,'k.');
+    set(e,'LineWidth',2,'Color','k')
+    ylim([.3 .7])
+    set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
+    box off
+    axis square
+    ylabel('Classified as CS+')
+    set(gca,'YTick',[.3 .5 .7])
+    xlim([-170 215])        
+    title(labels{spc})
+    
+    for n = 1:3
+        subplot(1,3,n);
+        set(gca,'LineWidth',1.5,'FontSize',16)
+        
     end
     
 elseif strcmp(varargin{1},'figure_01A');
@@ -1576,11 +1770,16 @@ elseif strcmp(varargin{1},'figure_02B')
     g.tunings.rate{4}.GroupFit(8);
     %%
     f = figure(1022);
-    set(f,'position',[2452         450         794         481])
+    set(f,'position',[0        0        794         481])
     clf
     for n = 2:4
         sn = n-1;
         subpl(n) =  subplot(2,3,sn+3);
+        if n > 2
+             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
+             set(l,'LineStyle',':')
+        end
+        hold on
         Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
         %         Project.plot_bar(mean(ratings(:,:,sn)));
         hold on;
@@ -1599,19 +1798,20 @@ elseif strcmp(varargin{1},'figure_02B')
     %add Groupfit line
     params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
     params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
-    x = -150:0.1:195;
+    x = linspace(-150,195,10000);
     
     subplot(2,3,1+3);
     line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
+    
     subplot(2,3,2+3);
     plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
+%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
+%     text(30,8.5,'***','FontSize',20)
     
     subplot(2,3,3+3);
     plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
+%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
+%     text(30,8.5,'***','FontSize',20)
     
     %% SCR
     g        = Group(p.subjects_all(logical(p.subjects_ET.*p.subjects_scr)));
@@ -1625,7 +1825,7 @@ elseif strcmp(varargin{1},'figure_02B')
     base     = Tuning(data);
     base.GroupFit(8);
     %same for test (cond not possible)
-    data.y   = out.y(:,17:24);
+    data.y   = out.y(:,19:26);
     data.x   = repmat(-135:45:180,[length(g.ids) 1]);
     data.ids = NaN;
     test     = Tuning(data);
@@ -1633,31 +1833,50 @@ elseif strcmp(varargin{1},'figure_02B')
     params   = test.groupfit.Est;
     params(3)= deg2rad(params(3));
     
+    nulltrials = out.y(:,[9 18 27]);
+    
+    CI = 1.96*std(nulltrials)./sqrt(length(nulltrials)); %2times because in two directions (MEAN plusminus)
+    
     %% plot SCR
     figure(1022);
     subplot(2,3,4-3);
+    pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
+    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    line([-180 225],repmat(mean(nulltrials(:,1)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
+    hold on;
     Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
-    ylim([-.6 .6]);
+    ylim([-1 1]);
     ylabel('SCR (z-score)')
     
     
     subplot(2,3,5-3);
-    Project.plot_bar(-135:45:180,av(9:16));axis square;box off;hold on;
-    errorbar(-135:45:180,av(9:16),sem(9:16),'k.','LineWidth',1.5);
-    ylim([0 2])
+    pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
+    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    line([-180 225],repmat(mean(nulltrials(:,2)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
+    hold on;
+    Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
+    errorbar(-135:45:180,av(10:17),sem(10:17),'k.','LineWidth',1.5);
+    set(gca,'YTick',0:2)
+    ylim([-.6 2.3])
     line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
     text(40,max(ylim)+.05,'***','FontSize',20);
+
     
     subplot(2,3,6-3);
-    Project.plot_bar(-135:45:180,av(17:24));axis square;box off;hold on;
-    errorbar(-135:45:180,av(17:24),sem(17:24),'k.','LineWidth',1.5);
+    pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
+    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    line([-180 225],repmat(mean(nulltrials(:,3)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
+    hold on;
+    Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
+    errorbar(-135:45:180,av(19:26),sem(19:26),'k.','LineWidth',1.5);
     x = -150:0.1:195;
     plot(x,VonMises(deg2rad(x),params(1),params(2),params(3),params(4)),'k-','LineWidth',2)
-    ylim([-.6 .6])
+    ylim([-1 1])
     line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
     text(40,max(ylim)+.05,'***','FontSize',20);
+    set(gca,'YTick',[0 1])
     
     
     for n = 4:6
@@ -1666,9 +1885,9 @@ elseif strcmp(varargin{1},'figure_02B')
         xlim([-180 225])
     end
     
-    subplot(2,3,1+3);title('Baseline','FontSize',14);
-    subplot(2,3,2+3);title('Conditioning','FontSize',14);
-    subplot(2,3,3+3);title('Generalization','FontSize',14);
+    subplot(2,3,1);title('Baseline','FontSize',14);
+    subplot(2,3,2);title('Conditioning','FontSize',14);
+    subplot(2,3,3);title('Generalization','FontSize',14);
     
     
     %
