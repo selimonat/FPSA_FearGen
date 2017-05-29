@@ -1,11 +1,14 @@
 function [varargout]=FPSA_FearGen(varargin);
 % [varargout]=FPSA_FearGen(varargin);
 %
-% Complete analysis and figure generation pipeline for the RSA of FDM
-% manuscript. Using this script one can generate all the results and figure
+% Complete analysis and figure generation pipeline for the FPSA manuscript
+%
+%   Fixation Pattern Similarity Analysis.
+%
+% Using this code one can generate all results and figures
 % presented in the manuscript. Relies on fancycarp toolbox (1), for dealing
-% with fixation data. Further dependencies include the globalfunctions
-% repository (2).
+% with fixation data. All dependencies can be installed by calling this
+% function with 'download_project' argument (requires *nix systems).
 %
 % VARARGIN sets an action related to an analysis, figure preparation or
 % simple data getters. Default parameters can be changed with argument
@@ -13,12 +16,12 @@ function [varargout]=FPSA_FearGen(varargin);
 %
 % INITIAL SETUP:
 % Use FPSA_FearGen('download_project') to give it a start with it.
-% Remember you will need the basic unix tools for that such tar, git,
+% Remember you will need basic unix tools for that such tar, git,
 % unzip. This will download the data and the necessary scripts to your local
-% machine and will enable to conduct the same analysis. !!!! Before doing this
-% change the PATH_PROJECT for your purposes !!!!
+% machine and will add paths. Before starting you need to set the
+% PATH_PROJECT variable below for your own liking.
 %
-%
+% 
 
 %% Set the default parameters
 path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
@@ -96,12 +99,12 @@ elseif strcmp(varargin{1},'get_subjects');
     filename = sprintf('%s/data/midlevel/subjectpool_%03d.mat',path_project,current_subject_pool);
     if exist(filename) == 0 | force
         if current_subject_pool == 0;
-            subjects = Project.subjects_bdnf(Project.subjects_ET);
+            subjects = Project.subjects_all(Project.subjects_ET);
         elseif current_subject_pool == 1%find tuned people;
             
             fprintf('finding tuned subjects first...\n');
             p=[];sub=[];pval=[];;
-            for n = Project.subjects_bdnf(Project.subjects_ET);
+            for n = Project.subjects_all(Project.subjects_ET);
                 s    = Subject(n);
                 s.fit_method = 8;%mobile vonMises function;
                 p    = [p    ; s.get_fit('rating',4).params];
@@ -375,9 +378,9 @@ elseif strcmp(varargin{1},'get_fpsa2')
     
 elseif strcmp(varargin{1},'get_fpsa_fair')
     %% gets an FPSA matrix per run to be fair to the baseline condition (main routine to get similarity matrices).
-    % the rsa for the 3 test-phase runs are individually computed and averaged.
+    % the FPSA for the 3 test-phase runs are individually computed and averaged.
     % Doing it the other way (i.e. average FDMs from the 3 phases and compute
-    % RSA as in get_fpsa) would have led to comparably less noisy FDMs for the test
+    % FPSA as in get_fpsa) would have led to comparably less noisy FDMs for the test
     % phase and thus differences btw B and T simply because the number of
     % trials are different. See (4) for more information on how noise
     % affects similarity values
@@ -409,7 +412,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair')
     varargout{1} = sim;
     
 elseif strcmp(varargin{1},'get_fpsa_oddeven')
-    %% Computes RSA with cross-validation based on odd and even trials.
+    %% Computes FPSA with cross-validation based on odd and even trials.
     %  See also: get_fixmap_oddeven
     
     fixations = varargin{2};
@@ -450,6 +453,8 @@ elseif strcmp(varargin{1},'plot_fpsa');
 elseif strcmp(varargin{1},'get_block')
     %% will get the Yth, Xth block from similarity matrix SIM.
     % SQFM is the square_form of SIM.
+    %
+    % Example: fpsa = FPSA_FearGen('get_block',FPSA_FearGen('get_fpsa',1:100),2,2)
     sim  = varargin{2};
     y    = varargin{3};
     x    = varargin{4};
@@ -457,7 +462,7 @@ elseif strcmp(varargin{1},'get_block')
     sqfm = [];
     for ns = 1:size(sim.correlation,1)
         dummy = squareform(sim.correlation(ns,:));
-        B     = block_extract(dummy,y,x,1);
+        B     = block_extract(dummy,y,x,1);%funhandle defined at the top.
         r     = cat(3,r,B);
         sqfm  = [sqfm;squareform(B)];
     end
@@ -481,7 +486,7 @@ elseif strcmp(varargin{1},'plot_mdscale')
     %% Routine to plot the results of the get_mdscale
     Y      = varargin{2};
     ndimen = length(Y)./16;
-    y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;
+    y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;    
     colors = GetFearGenColors;
     colors = [colors(1:8,:);colors(1:8,:)];
     if ndimen == 2
@@ -532,7 +537,7 @@ elseif strcmp(varargin{1},'FPSA_get_table')
         B         = FPSA_FearGen('get_block',sim,1,1);
         T         = FPSA_FearGen('get_block',sim,2,2);
         %once we have these, we go back to the compact form and concat the
-        %stuff, now each column is a non-redundant RSA per subject
+        %stuff, now each column is a non-redundant FPSA per subject
         for n = 1:size(sim.correlation,1)
             BB(n,:) = squareform(B(:,:,n));
             TT(n,:) = squareform(T(:,:,n));
@@ -548,7 +553,7 @@ elseif strcmp(varargin{1},'FPSA_get_table')
         %MODEL1: perfectly circular similarity model;
         %MODEL2: flexible circular similarity model;
         %MODEL3: Model2 + a Gaussian.
-        % a circular RSA matrix for B and T replicated by the number of subjects
+        % a circular FPSA matrix for B and T replicated by the number of subjects
         x          = [pi/4:pi/4:2*pi];
         w          = [cos(x);sin(x)];
         model1     = repmat(repmat(squareform_force(w'*w),1,1),1,size(subject,2));%we use squareform_force as the w'*w is not perfectly positive definite matrix due to rounding errors.
@@ -759,7 +764,7 @@ elseif strcmp(varargin{1},'figure_04C');
 
 %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
 %     set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    text(mean(X(7:end)),.18,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %%    
 %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %    
@@ -900,7 +905,8 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
 
 elseif strcmp(varargin{1},'searchlight')
     %% conducts a searchlight analysis on the FDMs using a moving window of about 1 degrees
-    % Default window parameters B1 and B2 are 1, and 15;
+    % Default window parameters B1 and B2 are 1, and 15; (1 degree running
+    % average windows with full overlap).
     % At each searchlight position the flexible model is fit.
     b1                = varargin{2};
     b2                = varargin{3};
@@ -938,6 +944,34 @@ elseif strcmp(varargin{1},'searchlight')
         end
     end
     varargout{1} = B1;
+    
+elseif strcmp(varargin{1},'fun_handle')
+    %% This is the function kernel executed for each seachlight position.
+    
+    maps = varargin{2};
+    maps = reshape(maps,[size(maps,1)*size(maps,2) size(maps,3)]);
+    if all(sum(abs(maps)))
+        Y            = 1-pdist(maps','correlation');
+        X            = FPSA_FearGen('get_design_matrix');%returns the design matrix for the flexible ellipsoid model
+        betas(1,1,:) = X\Y';
+    else
+        betas(1,1,:)= [NaN NaN NaN];
+    end
+    varargout{1} = betas;
+
+elseif strcmp(varargin{1},'get_design_matrix');    
+    %% Design matrix for the ellipsoide model.
+    
+    x          = [pi/4:pi/4:2*pi];
+    w          = [cos(x);sin(x)];
+    %
+    model2_c   = squareform_force(cos(x)'*cos(x));
+    model2_s   = squareform_force(sin(x)'*sin(x));
+    X          = [ones(length(model2_c(:)),1) model2_c model2_s];
+    
+    varargout{1}  = X;    
+    
+    
 elseif strcmp(varargin{1},'plot_searchlight')
     %% will spatially plot the ellipses area using the sqrt(cosine^2 +
     %sine^2) weight combination term.
@@ -977,29 +1011,8 @@ elseif strcmp(varargin{1},'plot_searchlight')
     M(:,:,4) = conv2(M(:,:,4),G,'same');
     M(:,:,1) = conv2(M(:,:,1),G,'same');
 
-elseif strcmp(varargin{1},'fun_handle')
-    %% This is the function kernel executed for each seachlight position.
-    maps = varargin{2};
-    maps = reshape(maps,[size(maps,1)*size(maps,2) size(maps,3)]);
-    if all(sum(abs(maps)))
-        Y            = 1-pdist(maps','correlation');
-        X            = FPSA_FearGen('get_design_matrix');%returns the design matrix for the flexible ellipsoid model
-        betas(1,1,:) = X\Y';
-    else
-        betas(1,1,:)= [NaN NaN NaN];
-    end
-    varargout{1} = betas;
-    
-elseif strcmp(varargin{1},'get_design_matrix');
-    %% Design matrix for the flexible model
-    x          = [pi/4:pi/4:2*pi];
-    w          = [cos(x);sin(x)];
-    %
-    model2_c   = squareform_force(cos(x)'*cos(x));
-    model2_s   = squareform_force(sin(x)'*sin(x));
-    X          = [ones(length(model2_c(:)),1) model2_c model2_s];
-    
-    varargout{1}  = X;
+
+
     
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %% applies the search light analysis to the V1 representations.
@@ -1552,7 +1565,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
     p                 = Project;
     figure(1);
-    g                 = Group(p.subjects_bdnf(p.subjects_ET));
+    g                 = Group(p.subjects_all(p.subjects_ET));
     ratings           = g.getRatings(2:4);
     g.tunings.rate{2} = Tuning(g.Ratings(2));
     g.tunings.rate{3} = Tuning(g.Ratings(3));
@@ -1601,7 +1614,7 @@ elseif strcmp(varargin{1},'figure_02B')
     text(30,8.5,'***','FontSize',20)
     
     %% SCR
-    g        = Group(p.subjects_bdnf(logical(p.subjects_ET.*p.subjects_scr)));
+    g        = Group(p.subjects_all(logical(p.subjects_ET.*p.subjects_scr)));
     out      = g.getSCR(2.5:5.5);
     av       = mean(out.y);
     sem      = std(out.y)./sqrt(length(g.ids));
@@ -1844,6 +1857,9 @@ elseif strcmp(varargin{1},'figure_04A')
     H(3) = subplot(1,3,3);
     Y         = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
+    a =      0;
+    rm     = [cos(deg2rad(a)) -sin(deg2rad(a)) ;sin(deg2rad(a)) cos(deg2rad(a)) ];
+    y      = (rm*y')';
     colors    = GetFearGenColors;
     colors    = [colors(1:8,:);colors(1:8,:)];
     %
