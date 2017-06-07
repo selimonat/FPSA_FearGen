@@ -12,7 +12,9 @@ function [varargout]=FPSA_FearGen(varargin);
 % Requirements:
 % A *nix system (tar, git, unzip, find), in case you want to download data
 % with matlab using FPSA_FearGen('download_project') command.
-% Matlab 2016
+% Matlab 2016.
+% In case this option doesn't work for you, you can also download the project as a bundle
+% from this link: https://osf.io/zud6h/
 % 
 %
 % Usage:
