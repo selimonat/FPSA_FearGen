@@ -1448,7 +1448,7 @@ elseif strcmp(varargin{1},'SVM')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
     end
-elseif strcmp(varargin{1},'SVM_fig')
+elseif strcmp(varargin{1},'SFig_03')
     %% plot
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
     files = cellstr(ls(savepath));
@@ -1478,13 +1478,16 @@ elseif strcmp(varargin{1},'SVM_fig')
     labels = {'Baseline' 'Test_1' 'Test_2' 'Test_3' 'Test_M' };
     for n = 1:10
         subplot(2,5,n);
-        Project.plot_bar(-135:45:180,M(:,n),SE(:,n));
+        Project.plot_bar(-135:45:180,M(:,n));
         hold on;
+        errorbar(-135:45:180,M(:,n),SE(:,n),'k.','LineWidth',2)
         ylim([.3 .7])
         set(gca,'YTick',.3:.1:.7,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',14);
         box off
         axis square
-        ylabel('Classified as CS+')
+        if ismember(n,[1 6])
+            ylabel('Classified as CS+')
+        end
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
         if n<6
@@ -1498,7 +1501,7 @@ elseif strcmp(varargin{1},'SVM_fig')
     hold on
     labels = {'Baseline' 'Test' 'Test'};
     spc = 0;
-    for n = [1 5]
+    for n = [6 10]
         spc = spc + 1;
         subplot(1,3,spc);
         Project.plot_bar(-135:45:180,M(:,n));
@@ -1746,7 +1749,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
     p                 = Project;
     figure(1);
-    g                 = Group(p.subjects_bdnf(p.subjects_ET));
+    g                 = Group(FPSA_FearGen('get_subjects'));
     ratings           = g.getRatings(2:4);
     g.tunings.rate{2} = Tuning(g.Ratings(2));
     g.tunings.rate{3} = Tuning(g.Ratings(3));
@@ -1792,16 +1795,20 @@ elseif strcmp(varargin{1},'figure_02B')
     
     subplot(2,3,2+3);
     plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
-%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
-%     text(30,8.5,'***','FontSize',20)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
     
     subplot(2,3,3+3);
     plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
-%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
-%     text(30,8.5,'***','FontSize',20)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
     
     %% SCR
-    g        = Group(p.subjects_bdnf(logical(p.subjects_ET.*p.subjects_scr)));
+    subs     = FPSA_FearGen('get_subjects');
+    scrsubs = subs(ismember(subs,p.subjects_bdnf(p.subjects_scr)));
+    
+    g        = Group(scrsubs);
+    
     out      = g.getSCR(2.5:5.5);
     av       = mean(out.y);
     sem      = std(out.y)./sqrt(length(g.ids));
@@ -1825,10 +1832,11 @@ elseif strcmp(varargin{1},'figure_02B')
     CI = 1.96*std(nulltrials)./sqrt(length(nulltrials)); %2times because in two directions (MEAN plusminus)
     
     %% plot SCR
+    grayshade = [.8 .8 .8];
     figure(1022);
     subplot(2,3,4-3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
-    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,1)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
@@ -1840,7 +1848,7 @@ elseif strcmp(varargin{1},'figure_02B')
     
     subplot(2,3,5-3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
-    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,2)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
@@ -1853,7 +1861,7 @@ elseif strcmp(varargin{1},'figure_02B')
     
     subplot(2,3,6-3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
-    set(pa,'FaceAlpha',.9,'FaceColor',[.85 .85 .85],'EdgeColor','none')
+    set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,3)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
@@ -1863,7 +1871,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylim([-1 1])
     line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
     text(40,max(ylim)+.05,'***','FontSize',20);
-    set(gca,'YTick',[0 1])
+%     set(gca,'YTick',[0 1])
     
     
     for n = 4:6
@@ -1872,13 +1880,17 @@ elseif strcmp(varargin{1},'figure_02B')
         xlim([-180 225])
     end
     
-    subplot(2,3,1);title('Baseline','FontSize',14);
-    subplot(2,3,2);title('Conditioning','FontSize',14);
-    subplot(2,3,3);title('Generalization','FontSize',14);
-    
-    
+    for n = 1:6
+        subplot(2,3,n)
+        set(gca,'FontSize',14)
+    end
+%     subplot(2,3,1);title('Baseline','FontSize',14);
+%     subplot(2,3,2);title('Conditioning','FontSize',14);
+%     subplot(2,3,3);title('Generalization','FontSize',14);
+%     
+%     
     %
-    differ = (out.y(:,12)-out.y(:,16))./out.y(:,16);
+    differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
     std(differ)
 elseif strcmp(varargin{1},'figure_03A')
