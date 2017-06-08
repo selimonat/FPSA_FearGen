@@ -99,7 +99,11 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 
 %%
 if strcmp(varargin{1},'download_project');
-    
+     if ~exist(path_project)
+        mkdir(path_project);
+        mkdir([path_project 'tmp/'])
+    end
+    cd(path_project)
     %downloads the data and stimuli, download the code from github, and add
     %them to matlab path.    
     %download data
@@ -354,7 +358,7 @@ elseif strcmp(varargin{1},'plot_ROIs');
         contour(rois(:,:,n),'k-','linewidth',1);
         hold off;
     end
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
 elseif strcmp(varargin{1},'get_fpsa')
     %% Routine to compute similarity matrices based on FDMs that are computed with FIXATIONS.
     % sim = FPSA_FearGen('get_fpsa',1:100) would compute a similarity matrix with all the
@@ -1073,7 +1077,7 @@ elseif strcmp(varargin{1},'get_betas')
     %
 elseif strcmp(varargin{1},'test_betas')
     %%
-    sim     = FPSA_FearGen('get_rsa',1:100);
+    sim     = FPSA_FearGen('get_fpsa',1:100);
     [a b c] = FPSA_FearGen('get_betas_singlesubject',sim);
     [h p]   = ttest(c(:,2,1)-c(:,2,2));
     fprintf('t-test for physical similarity H: %d, p-value:%3.5g\n',h,p);
@@ -1658,7 +1662,7 @@ elseif strcmp(varargin{1},'figure_01A');
     
     subplot(2,1,2);
     subs = FPSA_FearGen('get_subjects');
-    mat = FPSA_FearGen('get_rsa',1:100);
+    mat = FPSA_FearGen('get_fpsa',1:100);
     dissmat = squareform(mat.correlation(subs==exemplsub,:)); %get_rsa uses pdist, which is 1-r already, so no 1-squareform necessary.
     dissmat = dissmat(9:end,9:end);
     dissmat = CancelDiagonals(dissmat,NaN);
