@@ -66,7 +66,7 @@ function [varargout]=FPSA_FearGen(varargin);
 % Contact: sonat@uke.de
 
 %% Set the default parameters
-path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen_test/');% location of the project folder (MUST END WITH A FILESEP);
+path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
 condition_borders    = {'' 1:8 '' 9:16};                                    % baseline and test condition labels.
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
@@ -75,7 +75,7 @@ current_subject_pool = 1;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-url                  = 'https://www.dropbox.com/s/5wtoow1hke8v0cn/project_FPSA_FearGen.tar.gz?dl=1';
+url                  = 'https://www.dropbox.com/s/0wix64zy2dlwh8g/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
 for nf = 1:length(varargin)
@@ -1864,7 +1864,7 @@ elseif strcmp(varargin{1},'figure_02B')
     
     %% SCR
     subs     = FPSA_FearGen('get_subjects');
-    scrsubs = subs(ismember(subs,p.subjects_bdnf(p.subjects_scr)));
+    scrsubs = subs(ismember(subs,p.subjects(p.subjects_scr)));
     
     g        = Group(scrsubs);
     out      = g.getSCR(2.5:5.5);
