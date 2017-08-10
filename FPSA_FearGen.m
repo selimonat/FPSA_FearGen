@@ -146,7 +146,7 @@ elseif strcmp(varargin{1},'get_subjects');
         elseif current_subject_pool == 1%find tuned people;
             
             fprintf('finding tuned subjects first...\n');
-            p=[];sub=[];pval=[];;
+            p=[];sub=[];pval=[];
             for n = Project.subjects(Project.subjects_ET);
                 s    = Subject(n);
                 s.fit_method = 8;%mobile vonMises function;
@@ -157,12 +157,14 @@ elseif strcmp(varargin{1},'get_subjects');
             valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);%selection criteria
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
-            save(filename,'subjects');
+%             save(filename,'subjects');
         end
     else
         load(filename);
     end
     varargout{1} = subjects;
+    allsubs      = Project.subjects(Project.subjects_ET);
+    varargout{2} = allsubs(~ismember(allsubs,subjects));
 elseif strcmp(varargin{1},'get_trialcount')
     %% Sanity check for number of trials per subject.
     % goes through subjects and counts the number of trials in a PHASE. The
@@ -1316,6 +1318,253 @@ elseif strcmp(varargin{1},'anova')
     side     = [ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1);ones(tsubject,1)*2];
     phase    = [ones(tsubject,1);ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1)*2];
     anovan(y,{side(:) phase(:)},'model','full')
+    
+elseif strcmp(varargin{1},'eyebehave_params')
+    
+    savepath = sprintf('%s/data/midlevel/',path_project);
+    filename = 'eyebehave_params.mat';
+    subs = FPSA_FearGen('get_subjects');
+    
+    visualization = 1; %if you want all plots to be created
+    
+    if nargin > 1
+        force = varargin{2};
+    end
+    
+    if ~exist([savepath filename]) || force == 1
+        
+        fix = Fixmat(subs,[2 3 4]);
+        
+        %mean number of fixations for this combination
+        [d.fixN.data, d.fixN.info] = fix.histogram;
+        dummy = [];
+        dummy2 = [];
+        
+        sc = 0;
+        for sub = unique(fix.subject)
+            fprintf('\nWorking on sub %02d, ',sub)
+            sc= sc+1;
+            pc = 0;
+            for ph = 2:4
+                fprintf('phase %d. ',ph)
+                pc = pc+1;
+                cc=0;
+                for cond = unique(fix.deltacsp)
+                    cc=cc+1;
+                    ind = logical((fix.subject==sub).*(fix.phase == ph).* (fix.deltacsp == cond));
+                    %mean duration of fixations for this phase/sub/cond
+                    d.fixdur.m(sc,pc,cc) = mean(fix.stop(ind)-fix.start(ind));
+                    %% for entropy, we need single trials, otherwise the trial number contributing to mean FDM (for this cond-phase-sub) biases the entropy computation
+                    %mean entropy for this combination
+                    fix.unitize = 0;
+                    tc = 0;
+                    for tr = unique(fix.trialid(ind)) %loop through trials of this cond-phase-sub
+                        tc = tc+1;
+                        fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
+                        dummy(tc) = FDMentropy(fix.vectorize_maps);
+                        dummy2(tc) = entropy(fix.vectorize_maps);
+                    end
+                    d.FDMentropy.m(sc,pc,cc) = mean(dummy);
+                    d.entropy.m(sc,pc,cc) = mean(dummy2);
+                    fix.unitize = 1;
+                    dummy = [];
+                    dummy2 = [];
+                end
+            end
+        end
+        save([savepath filename],'d','subs');
+    else
+        load([savepath filename]);
+    end
+    
+    varargout{1} = d;
+    
+    if visualization ==1
+        subtitles = {'base','cond','test'};
+        %% Number of fixations per condition and phase
+        figure;
+        for n=1:3;
+            subplot(2,3,n);
+            boxplot(squeeze(d.fixN.data(:,:,n)));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+            title(subtitles{n})
+            box off
+            ylabel('N fixations')
+            axis square
+            subplot(2,3,n+3)
+            Project.plot_bar([-135:45:315],nanmean(squeeze(d.fixN.data(:,:,n))),nanstd(squeeze(d.fixN.data(:,:,n)))./sqrt(length(unique(fix.subject))));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+            
+            box off
+            ylabel('N fixations')
+            axis square
+        end
+        for n = 4:6
+            subplot(2,3,n)
+            ylim([1 4])
+            %             ylim([nanmean(d.fixN.data(:))-nanstd(d.fixN.data(:)) nanmean(d.fixN.data(:))+nanstd(d.fixN.data(:))])
+        end
+        %% Fixation durations per condition
+        figure;
+        for n=1:3;
+            subplot(2,3,n);
+            boxplot(squeeze(d.fixdur.m(:,n,:)));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+            title(subtitles{n})
+            box off
+            ylabel('fix duration [ms]')
+            axis square
+            subplot(2,3,n+3)
+            Project.plot_bar(-135:45:315,nanmean(squeeze(d.fixdur.m(:,n,:))),nanstd(squeeze(d.fixdur.m(:,n,:)))./sqrt(length(unique(fix.subject))));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+            box off
+            ylabel('fix duration [ms]')
+            axis square
+        end
+        for n = 4:6
+            subplot(2,3,n)
+            ylim([nanmean(d.fixdur.m(:))-nanstd(d.fixdur.m(:)) nanmean(d.fixdur.m(:))+nanstd(d.fixdur.m(:))])
+        end
+        % difference of fixation durations between test and baseline
+        figure;
+        diffTB = squeeze(d.fixdur.m(:,3,:)-d.fixdur.m(:,1,:));
+        subplot(1,2,1)
+        boxplot(diffTB);
+        set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+        hold on;
+        line(xlim,[0 0])
+        box off
+        ylabel('duration diff Test-Base [ms]')
+        axis square
+        subplot(1,2,2)
+        Project.plot_bar(-135:45:315,nanmean(diffTB),nanstd(diffTB)./sqrt(length(unique(fix.subject))));
+        set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
+        hold on;
+        line(xlim,[0 0])
+        box off
+        ylabel('duration diff Test-Base [ms]')
+        axis square
+        for n = 4:6
+            subplot(2,3,n)
+            ylim([nanmean(diffTB(:))-nanstd(diffTB(:)) nanmean(diffTB(:))+nanstd(diffTB(:))])
+        end
+        %% Entropy of fixmaps per condition, sub and phase (matlab entropy)
+        figure;
+        for n=1:3;
+            subplot(2,3,n);
+            boxplot(squeeze(d.entropy.m(:,n,:)));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',45,'fontsize',14);
+            title(subtitles{n})
+            box off
+            ylabel('FDM entropy [a.u.]')
+            axis square
+            subplot(2,3,n+3);
+            Project.plot_bar(-135:45:315,nanmean(squeeze(d.entropy.m(:,n,:))),nanstd(squeeze(d.entropy.m(:,n,:)))./sqrt(length(unique(fix.subject))));
+            set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',45,'fontsize',14);
+            box off
+            ylabel('FDM entropy [a.u.]')
+            axis square
+        end
+        for n = 4:6
+            subplot(2,3,n)
+            ylim([nanmean(d.entropy.m(:))-nanstd(d.entropy.m(:)) nanmean(d.entropy.m(:))+nanstd(d.entropy.m(:))])
+        end
+        % %        %% Entropy of fixmaps per condition, sub and phase (own entropy)
+        % %        function E = FDMentropy(fdm)
+        % %        % computes entropy of a fixation density map.
+        % %        % Map should be normalized anyway. If not, this function does it.
+        % %
+        % %        % remove zero entries in p
+        % %        fdm(fdm==0) = [];
+        % %
+        % %        if sum(fdm) ~=0
+        % %            % normalize p so that sum(p) is one.
+        % %            fdm = fdm ./ numel(fdm);
+        % %        end
+        % %
+        % %        E = -sum(fdm.*log2(fdm));
+        % %        end
+        %
+        %     figure;
+        %     for n=1:3;
+        %         subplot(2,3,n);
+        %         boxplot(squeeze(d.FDMentropy.m(:,n,:)));
+        %         set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',45,'fontsize',14);
+        %         title(subtitles{n})
+        %         box off
+        %         ylabel('FDM entropy [a.u.]')
+        %         axis square
+        %         subplot(2,3,n+3);
+        %         Project.plot_bar(-135:45:315,nanmean(squeeze(d.FDMentropy.m(:,n,:))),nanstd(squeeze(d.FDMentropy.m(:,n,:)))./sqrt(length(unique(fix.subject))));
+        %         set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',45,'fontsize',14);
+        %         box off
+        %         ylabel('FDM entropy [a.u.]')
+        %         axis square
+        %     end
+        %     for n = 4:6
+        %         subplot(2,3,n)
+        %         ylim([nanmean(d.FDMentropy.m(:))-nanstd(d.FDMentropy.m(:)) nanmean(d.FDMentropy.m(:))+nanstd(d.FDMentropy.m(:))])
+        %     end
+        
+        %% 
+        figure;
+        colors = GetFearGenColors;
+        colors = [colors; .8 .8 .8];
+        set(0,'DefaultAxesColorOrder',colors);
+        subplot(1,3,1)
+        title('Num Fixations','fontsize',14);hold on
+        errorbar([repmat(1:3,11,1)'+rand(3,11)*.2],squeeze(mean(d.fixN.data))',squeeze(nanstd(d.fixN.data))'./sqrt(length(d.fixN.data)),'LineWidth',1.5,'LineStyle',':')
+        box off;
+        axis square;
+        ylabel('Num Fixations M/SEM')
+        subplot(1,3,2)
+        title('Fixation duration','fontsize',14);hold on
+        errorbar([repmat(1:3,11,1)+rand(11,3)*.2]',squeeze(mean(d.fixdur.m)),squeeze(nanstd(d.fixdur.m))./sqrt(length(d.fixdur.m)),'LineWidth',1.5,'LineStyle',':')
+        box off;
+        axis square;
+        ylabel('Fixation duration[ms] M/SEM')
+        subplot(1,3,3)
+        title('Entropy','fontsize',14);hold on
+        errorbar([repmat(1:3,11,1)+rand(11,3)*.2]',squeeze(mean(d.entropy.m)),squeeze(nanstd(d.entropy.m))./sqrt(length(d.entropy.m)),'LineWidth',1.5,'LineStyle',':')
+        box off;
+        axis square;
+        ylabel('FDM entropy [a.u.] M/SEM')
+        legend({'-135','-90','-45','CS+','45','90','135','CS-','UCS','Odd','Null'},'fontsize',14,'location','best')
+    end
+elseif strcmp(varargin{1},'inter-subject-variance')
+    
+    subs = FPSA_FearGen('get_subjects');
+
+    pc = 0;
+    for ph = 2:4
+        pc = pc+1;
+        sc = 0;
+        for sub = unique(subs)
+            sc = sc+1;
+            fix = Fixmat(sub,ph);
+            cc = 0;
+            for cond = fix.realcond
+                cc = cc+1;
+                ind = fix.deltacsp == cond;
+                tc = 0;
+                for tr = unique(fix.trialid(ind)) %loop through trials of this cond-phase-sub
+                    tc = tc+1;
+                    fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
+                    dummy(tc) = FDMentropy(fix.vectorize_maps);
+                    dummy2(tc) = entropy(fix.vectorize_maps);
+                end
+            end
+        end
+        fix.getsubmaps;
+        submaps  = fix.maps;
+        groupave = mean(submaps,3);
+        fix.maps = [submaps - repmat(groupave,1,1,length(subs))];
+        fix.maps = imresize(fix.maps,.1,'method','bilinear');
+        
+        ISV(pc,:) = var(fix.vectorize_maps);
+        
+    end
+    
 elseif strcmp(varargin{1},'SVM')
     %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
     %It collects the data and computes the eigenvalues on the
@@ -1380,7 +1629,6 @@ elseif strcmp(varargin{1},'SVM')
                     c                   = global_counter;
                     v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
                     fix.getmaps(v);
-                    keyboard
                     if exclmouth == 1
                         fix.maps(roi(:,:,4)) = 0;
                     end
@@ -1507,6 +1755,294 @@ elseif strcmp(varargin{1},'SVM')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
     end
+elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
+    % here we classify subjects to show their idiosyncratic patterns.
+    % we classify them within each phase seperately to account for diff.
+    % number of trials, i.e. baseline, test1,test2,test3
+    r             = 0; % for label randomization check
+    name_analysis = 'subjects_inphase'; %classify subjects, respect phases
+    savepath      = fullfile(path_project,['data\midlevel\SVM_idiosyncrasy\']);
+    filename      = 'trialdata.mat';
+    savedfile     = [savepath filename];
+    %   savepath      = fullfile(path_project,['data\midlevel\SVM_idiosyncrasy_' name_analysis '_rand' num2str(r) '.mat']);
+    if nargin >1
+        force = varargin{2};
+    end
+    
+    if ~exist(savepath)
+        mkdir(savepath)
+    end
+    
+    if ~exist(savedfile) || force==1
+        if ~exist(savedfile)
+            fprintf('Trial data not yet found at %s, \ncollecting it now. \n',savepath)
+            WaitSecs(2); %make it readable.
+        elseif force == 1
+            fprintf('Forced to compute this file anew: \n %s',savepath)
+            WaitSecs(2); %make it readable.
+        end
+        
+        scale         = .1;
+        run2ph        = [2 4 4 4];
+        run2trial     = {1:120 1:120 121:240 241:360};
+        subs          = FPSA_FearGen('get_subjects');
+        nsubs         = length(subs);
+        
+        cutoffcrit     = .9; %percentage of variance that should be explained.
+        
+        fprintf('Started analysis (%s): %s\n',datestr(now,'hh:mm:ss'),name_analysis);
+        
+        ttrial           = nsubs*length(cell2mat(run2trial));
+        D                = NaN(2500,ttrial);
+        labels.sub       = NaN(1,ttrial);
+        labels.run       = NaN(1,ttrial);
+        labels.trial     = NaN(1,ttrial);
+        labels.cond      = NaN(1,ttrial);
+        v = [];
+        c = 0;
+        for sub = subs(:)'
+            for run = 1:4
+                fix = Fixmat(sub,run2ph(run));
+                for tr = run2trial{run}
+                    v = {'subject' sub, 'trialid' tr 'deltacsp' fix.realcond};
+                    fprintf('Subject %d run %d trial %d\n',sub,run,tr);
+                    fix.getmaps(v);
+                    if ~any(isnan(fix.maps(:)))
+                        c                   = c+1;
+                        %scale it if necessary
+                        if scale ~= 1
+                            fix.maps        = imresize(fix.maps,scale,'method','bilinear');
+                        end
+                        D(:,c)              = fix.vectorize_maps;
+                        labels.sub(c)       = sub;
+                        labels.run(c)       = run;
+                        labels.trial(c)     = tr;
+                        labels.cond(c)      = unique(fix.deltacsp(fix.selection));
+                    end
+                end
+            end
+        end
+        
+        %cut the nans
+        todelete = isnan(labels.sub); %could be derived from labels.anything, means empty fixmap
+        fprintf('Will delete %g trials...\n',sum(todelete));
+        D(:,todelete)=[];
+        labels.sub(:,todelete)=[];
+        labels.run(:,todelete)=[];
+        labels.trial(:,todelete)=[];
+        labels.cond(:,todelete)=[];
+        
+        c = 0;
+        for l = unique(labels.sub)
+            c = c + 1;
+            labels.easy_sub(labels.sub == l) = c;
+        end
+        
+        %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+        fprintf('starting covariance computation\n')
+        covmat    = cov(D');
+        fprintf('done\n')
+        fprintf('starting eigenvector computation\n')
+        [e dv]    = eig(covmat);
+        fprintf('done\n')
+        dv        = sort(diag(dv),'descend');
+        eigval(:,run) = dv;
+        %     figure(100);
+        %     plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+        eigen     = fliplr(e);
+        neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+        
+        fprintf('%002d Eigenvectors explain 90% of variance. \n',neig)
+
+        %collect loadings of every trial
+        trialload = D'*eigen(:,1:neig)*diag(dv(1:neig))^-.5;%dewhitened
+
+        
+        save(savedfile)
+    else
+        load(savedfile);
+        fprintf('Was already saved, loading it from \n%s\n',savedfile)
+        Ndim = size(trialload);
+        fprintf('Found a Matrix of dim = %03d (trials) x %03d (EV loadings).\n',Ndim(1),Ndim(2))
+        fprintf('Labels show that we have %02d subjects, which are the following:\n',length(unique(labels.sub)));
+        unique(labels.sub)
+        WaitSecs(1); %make it readable.
+    end
+    varargout{1} = trialload;
+    varargout{2} = labels;
+
+elseif strcmp(varargin{1},'svm_howmanytrialspersub')
+    
+       [~,labels] = FPSA_FearGen('get_trials_for_svm_idiosync');
+       for run = 1:4
+           ind = labels.run == run;
+           ntrials(:,run)    = histc(labels.easy_sub(ind),unique(labels.easy_sub));
+       end
+       disp([unique(labels.easy_sub)' ntrials])
+       
+       fprintf('Minimum number of trials is (run 1 2 3 4):\n')
+       [minN, minisub] = min(ntrials);
+       disp(minN)
+              
+       fprintf('This should be fed into SVM classifying subjects to make it fairer.\n')
+       
+       
+      varargout{1} = minN;
+
+elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
+
+    nbootstrap = 1000;
+    randomize  = 1;
+    PHoldout    = .2;
+    
+    savepath      = fullfile(path_project,'data\midlevel\SVM_idiosyncrasy\');
+    filename      = sprintf('performance_1vs1_r%d.mat',randomize);
+    savedfile     = [savepath filename];
+    %   savepath      = fullfile(path_project,['data\midlevel\SVM_idiosyncrasy_' name_analysis '_rand' num2str(r) '.mat']);
+    if nargin > 1
+        force = varargin{2};
+    end
+    
+    if ~exist(savepath)
+        mkdir(savepath)
+    end
+    
+    if ~exist(savedfile) || force==1
+        
+        if ~exist(savedfile)
+            fprintf('Trial data not yet found at %s, \ncollecting it now. \n',savepath)
+            WaitSecs(2); %make it readable.
+        elseif force == 1
+            fprintf('Forced to compute this file anew: \n %s',savepath)
+            WaitSecs(2); %make it readable.
+        end
+        
+        [data,labels] = FPSA_FearGen('get_trials_for_svm_idiosync');
+        nsub = max(unique(labels.easy_sub));
+        ntrialspersub = FPSA_FearGen('svm_howmanytrialspersub');
+        
+        
+        for run = 1:4
+            runind = labels.run == run;
+            for s1 = 1:nsub
+                for s2 = 1:nsub
+                    if s1 < s2;
+                        fprintf('Run: %02d. Classifying sub %02d vs %02d.\n',run,s1,s2)
+                        for n = 1:nbootstrap
+                            select    = logical(ismember(labels.easy_sub,[s1 s2]).*runind);
+                            Y         = labels.easy_sub(select)';
+                            X         = data(select,:);
+                            Y1        = randsample(find(Y == s1),ntrialspersub(run));
+                            Y2        = randsample(find(Y == s2),ntrialspersub(run));
+                            Y         = Y([Y1;Y2]);
+                            X         = X([Y1;Y2],:);
+                            if randomize == 1
+                                Y = Shuffle(Y);
+                            end
+                            
+                            P         = cvpartition(Y,'Holdout',PHoldout); %prepares trainings vs testset
+                            cmq     = sprintf('-t 0 -c 1 -q');
+                            ind     = logical(P.training);
+                            model   = svmtrain(Y(ind), X(ind,:), cmq);
+                            ind     = logical(P.test);
+                            [~,predicted]               = evalc('svmpredict(Y(ind), X(ind,:), model);');%doing it like this supresses outputs.
+                            %                         confmats(:,:,n)   = confusionmat(Y(ind),predicted,'order',[s1 s2]);
+                            result(n)         = sum(Y(ind)==predicted)./length(predicted);
+                        end
+                        performance(s1,s2,:) = result;
+                        result = [];
+                    end
+                end
+            end
+        end
+        save(savedfile,'performance','nsub')
+    else
+        load(savedfile)
+        fprintf('Was already saved, loading it from \n%s\n',savedfile)
+    end
+    
+    varargout{1} = performance;
+    nsub = size(performance,2);
+    
+    av_perf = mean(performance,3);
+    av_perf = [av_perf;zeros(1,nsub)];
+    perf = av_perf(logical(triu(ones(nsub,nsub))));
+    
+    average_performance = mean(perf)
+    std_average_performance     = std(perf)
+    
+elseif strcmp(varargin{1},'svm_classify_subs_1vsrest')
+    
+    
+    nbootstrap = 1000;
+    randomize  = 0;
+    PHoldout    = .2;
+    
+    
+    savepath      = fullfile(path_project,'data\midlevel\SVM_idiosyncrasy\');
+    filename      = sprintf('performance_1vsrest_r%d.mat',randomize);
+    savedfile     = [savepath filename];
+    %   savepath      = fullfile(path_project,['data\midlevel\SVM_idiosyncrasy_' name_analysis '_rand' num2str(r) '.mat']);
+    if nargin > 1
+        force = varargin{2};
+    end
+    
+    if ~exist(savepath)
+        mkdir(savepath)
+    end
+    
+    if ~exist(savedfile) || force==1
+        
+        if ~exist(savedfile)
+            fprintf('Trial data not yet found at %s, \ncollecting it now. \n',savepath)
+            WaitSecs(2); %make it readable.
+        elseif force == 1
+            fprintf('Forced to compute this file anew: \n %s',savepath)
+            WaitSecs(2); %make it readable.
+        end
+        
+        [data,labels] = FPSA_FearGen('get_trials_for_svm_idiosync');
+        nsub = max(unique(labels.easy_sub));
+        performance = [];
+        
+        for run = 1:4
+            fprintf('Starting 1vsrest classification for run = %d.\n',run)
+            
+            fprintf('Bootstrap count: N = 0... ')
+            for n = 1:nbootstrap
+                if mod(n,200) == 0
+                    fprintf('%03d... ',n)
+                end
+                
+                select    = logical(labels.run == run);
+                Y         = labels.easy_sub(select)';
+                X         = data(select,:);
+                if randomize == 1
+                    Y = Shuffle(Y);
+                end
+                
+                P       = cvpartition(Y,'Holdout',PHoldout); %prepares trainings vs testset
+                cmq     = sprintf('-t 0 -c 1 -q');
+                ind     = logical(P.training);
+                model   = ovrtrain(Y(ind), X(ind,:), cmq);
+                ind     = logical(P.test);
+                [~,predicted]               = evalc('ovrpredict(Y(ind), X(ind,:), model);');%doing it like this supresses outputs.
+                
+                confmats(:,:,run,n)   = confusionmat(Y(ind),predicted,'order',unique(labels.easy_sub));
+                result(n)         = sum(Y(ind)==predicted)./length(predicted);
+            end
+            fprintf('\n')
+            performance(run,:) = result;
+        end
+        save(savedfile,'confmats','performance','nsub')
+    else
+        load(savedfile)
+        fprintf('Was already saved, loading it from \n%s\n',savedfile)
+    end
+    
+    varargout{1} = performance;
+    varargout{2} = confmats;
+    
 elseif strcmp(varargin{1},'SFig_03')
     %% plot
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
@@ -1807,61 +2343,6 @@ elseif strcmp(varargin{1},'figure_01B');
 elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
     p                 = Project;
-    figure(1);
-    g                 = Group(FPSA_FearGen('get_subjects'));
-    ratings           = g.getRatings(2:4);
-    g.tunings.rate{2} = Tuning(g.Ratings(2));
-    g.tunings.rate{3} = Tuning(g.Ratings(3));
-    g.tunings.rate{4} = Tuning(g.Ratings(4));
-    
-    g.tunings.rate{2}.GroupFit(8);
-    g.tunings.rate{3}.GroupFit(8);
-    g.tunings.rate{4}.GroupFit(8);
-    %%
-    f = figure(1022);
-    set(f,'position',[0        0        794         481])
-    clf
-    for n = 2:4
-        sn = n-1;
-        subpl(n) =  subplot(2,3,sn+3);
-        if n > 2
-             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
-             set(l,'LineStyle',':')
-        end
-        hold on
-        Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
-        %         Project.plot_bar(mean(ratings(:,:,sn)));
-        hold on;
-        e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'k.');
-        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
-        %         SetFearGenBarColors(b)
-        set(e,'LineWidth',2,'Color','k')
-        ylim([0 10])
-        xlim([-180 225])
-        axis square
-        box off
-    end
-    %
-    subplot(2,3,1+3);ylabel('Rating of p(shock)','FontSize',12)
-    hold on;
-    %add Groupfit line
-    params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
-    params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
-    x = linspace(-150,195,10000);
-    
-    subplot(2,3,1+3);
-    line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
-    
-    subplot(2,3,2+3);
-    plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
-    
-    subplot(2,3,3+3);
-    plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
-    
     %% SCR
     subs     = FPSA_FearGen('get_subjects');
     scrsubs = subs(ismember(subs,p.subjects(p.subjects_scr)));
@@ -1951,6 +2432,115 @@ elseif strcmp(varargin{1},'figure_02B')
     differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
     std(differ)
+elseif strcmp(varargin{1},'SFig_tuneduntuned')
+    figure(1);
+    g                 = Group(FPSA_FearGen('get_subjects'));
+    ratings           = g.getRatings(2:4);
+    g.tunings.rate{2} = Tuning(g.Ratings(2));
+    g.tunings.rate{3} = Tuning(g.Ratings(3));
+    g.tunings.rate{4} = Tuning(g.Ratings(4));
+    
+    g.tunings.rate{2}.GroupFit(8);
+    g.tunings.rate{3}.GroupFit(8);
+    g.tunings.rate{4}.GroupFit(8);
+    %%
+    f = figure(1022);
+    set(f,'position',[0        0        794         481])
+    clf
+    for n = 2:4
+        sn = n-1;
+        subpl(n) =  subplot(2,3,sn);
+        if n > 2
+             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
+             set(l,'LineStyle',':')
+        end
+        hold on
+        Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
+        %         Project.plot_bar(mean(ratings(:,:,sn)));
+        hold on;
+        e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'k.');
+        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
+        %         SetFearGenBarColors(b)
+        set(e,'LineWidth',2,'Color','k')
+        ylim([0 10])
+        xlim([-180 225])
+        axis square
+        box off
+    end
+    %
+    subplot(2,3,1);ylabel('Rating of p(shock)','FontSize',12)
+    hold on;
+    %add Groupfit line
+    params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
+    params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
+    x = linspace(-150,195,10000);
+    
+    subplot(2,3,1);
+    line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
+    
+    subplot(2,3,2);
+    plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
+    subplot(2,3,3);
+    plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
+    clear g
+    [~,exclsubs] = FPSA_FearGen('get_subjects');
+    g                 = Group(exclsubs);
+    ratings           = g.getRatings(2:4);
+    g.tunings.rate{2} = Tuning(g.Ratings(2));
+    g.tunings.rate{3} = Tuning(g.Ratings(3));
+    g.tunings.rate{4} = Tuning(g.Ratings(4));
+    
+    g.tunings.rate{2}.GroupFit(8);
+    g.tunings.rate{3}.GroupFit(8);
+    g.tunings.rate{4}.GroupFit(8);
+        
+     for n = 2:4
+        sn = n-1;
+        subpl(n) =  subplot(2,3,sn+3);
+        if n > 2
+             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
+             set(l,'LineStyle',':')
+        end
+        hold on
+        Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
+        %         Project.plot_bar(mean(ratings(:,:,sn)));
+        hold on;
+        e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'k.');
+        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
+        %         SetFearGenBarColors(b)
+        set(e,'LineWidth',2,'Color','k')
+        ylim([0 10])
+        xlim([-180 225])
+        axis square
+        box off
+    end
+    %
+    subplot(2,3,4);ylabel('Rating of p(shock)','FontSize',12)
+    hold on;
+    %add Groupfit line
+    params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
+    params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
+    x = linspace(-150,195,10000);
+    
+    subplot(2,3,4);
+    line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
+    
+    subplot(2,3,5);
+    plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
+    subplot(2,3,6);
+    plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
 elseif strcmp(varargin{1},'figure_03A')
     %% selected subjects are 44 and 47, 31.    
     roi_contours            = 0;
@@ -1980,13 +2570,89 @@ elseif strcmp(varargin{1},'figure_03B')
     %% Produces the figure with fixation counts on 8 faces at different ROIs. 
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
-    fs       = 12;
+    force    = 0;
+    path_write = sprintf('%s/data/midlevel/ROI_fixcount_singlesub_fit.mat',path_project);
+    fs       = 12; %fontsize
     counts   = FPSA_FearGen('get_fixation_counts');
     counts   = diff(counts,1,4);
     counts   = counts*100;    
     m_counts = nanmean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));
-    % fit
+    %% fit single subs
+    X_fit = [];
+    Y_fit = [];
+    pval = [];
+    params = [];
+    if ~exist(path_write) || force==1
+        for sub = 1:size(counts,3)
+            for nroi = 1:4
+                data.y   = squeeze(counts(:,nroi,sub))';
+                data.x   = repmat(-135:45:180,1);
+                data.ids = sub';
+                t        = [];
+                t        = Tuning(data);
+                t.SingleSubjectFit(8);
+                pval(nroi,sub) = 10.^-t.fit_results.pval;
+                params(nroi,sub,:) = t.fit_results.params;
+                X_fit(nroi,sub,:) = t.fit_results.x_HD;
+                if t.fit_results.pval > -log10(.05)
+                    Y_fit(nroi,sub,:) = t.fit_results.y_fitted_HD;
+                else
+                    Y_fit(nroi,sub,:) = repmat(mean(t.y(:)),[1 length(t.fit_results.y_fitted_HD)]);
+                end
+            end
+        end
+        save(path_write,'X_fit','Y_fit','params','pval')
+    else
+        load(path_write)
+    end
+    %print summary
+    fitvalid   = pval <.05;
+    nvalidsubs = sum(fitvalid,2);
+    realtuned  = (pval<.05).*(abs(params(:,:,3))<45);
+    nrealtuned = sum(realtuned,2);
+    fprintf('Significant tunings (and no peakshift) found in the following number of subjects:\n')
+    fprintf('Left eye:  %02d (%02d) of %02d subjects.\n',nvalidsubs(1),nrealtuned(1),length(pval))
+    fprintf('Right eye: %02d (%02d) of %02d subjects.\n',nvalidsubs(2),nrealtuned(2),length(pval))
+    fprintf('Nose:      %02d (%02d) of %02d subjects.\n',nvalidsubs(3),nrealtuned(3),length(pval))
+    fprintf('Mouth:     %02d (%02d) of %02d subjects.\n',nvalidsubs(4),nrealtuned(4),length(pval))
+    %% plot single fits.
+    for n = 1:61;
+        subplot(8,8,n);
+        Project.plot_bar(-135:45:180,counts(:,2,n));hold on;
+        plot(squeeze(X_fit(2,n,:)),squeeze(Y_fit(2,n,:)),'k','LineWidth',1.5);
+        set(gca,'XTick',[],'YTick',ylim);
+    end
+    %% bar plots of parameter alpha
+    figure;
+    for nroi = 1:4
+    m_all_alpha     = mean(params(nroi,:,1),2);
+    sem_all_alpha   = std(params(nroi,:,1),0,2)./sqrt(length(params));
+    m_pval_alpha   = mean(params(nroi,fitvalid(nroi,:),1),2);
+    sem_pval_alpha = std(params(nroi,fitvalid(nroi,:),1),0,2)./sqrt(nvalidsubs(nroi));
+    m_tuned_alpha   = mean(params(nroi,logical(realtuned(nroi,:)),1),2);
+    sem_tuned_alpha = std(params(nroi,logical(realtuned(nroi,:)),1),0,2)./sqrt(nrealtuned(nroi));
+    subplot(1,3,1)
+    bar(nroi,m_all_alpha,'k'); hold on;
+    errorbar(nroi,m_all_alpha,sem_all_alpha,'k.','LineWidth',1.5)
+    subplot(1,3,2)
+    bar(nroi,m_pval_alpha,'b'); hold on;
+    errorbar(nroi,m_pval_alpha,sem_pval_alpha,'k.','LineWidth',1.5)
+    subplot(1,3,3)
+    bar(nroi,m_tuned_alpha,'r'); hold on;
+    errorbar(nroi,m_tuned_alpha,sem_tuned_alpha,'k.','LineWidth',1.5)
+    
+    end
+    subplot(1,3,1);title('all subs');
+    ylabel('Alpha VonMises \Delta %(test-base)')
+    subplot(1,3,2);title('subs fit p<.05');
+    subplot(1,3,3);title('subs fit p<.05 AND shift < 45');
+    for n = 1:3
+        subplot(1,3,n);set(gca,'XTick',1:4,'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'});
+        box off
+    end
+    EqualizeSubPlotYlim(gcf);
+    %% fit group
     X_fit = [];
     Y_fit = [];
     for nroi = 1:4
@@ -2004,7 +2670,7 @@ elseif strcmp(varargin{1},'figure_03B')
         end
     end
     
-    %% plot the 4 count-profiles
+    %% plot the 4 count-profiles for whole group
     figure;set(gcf,'position',[2176         705        1099         294]);
     t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
     for n = 1:4
@@ -2065,7 +2731,7 @@ elseif strcmp(varargin{1},'figure_04A')
     u       = .85;
     fs      = 12;
     %
-    set(gcf,'position',[1956         541         995         426]);
+    set(gcf,'position',[0 0         995         426]);
     %subplot(9,6,[1 2 3 7 8 9 13 14 15]);
     H(1) = subplot(1,3,1);
     h = imagesc(cormatz(1:8,1:8),[d u]);    
