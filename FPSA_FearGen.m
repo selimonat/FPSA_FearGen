@@ -576,6 +576,7 @@ elseif strcmp(varargin{1},'FPSA_get_table')
     %
     % Example: FPSA_FearGen('FPSA_get_table',1:100)
     fixations = varargin{2};
+    force = 1;
     runs      = 1:3;
     filename  = sprintf('%s/data/midlevel/fpsa_modelling_table_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
     if ~exist(filename) | force
@@ -717,28 +718,7 @@ elseif strcmp(varargin{1},'figure_04C');
     Mg        = mean(C.model_03.w3);
     SEMg      = std(C.model_03.w3)./sqrt(61);
     
-    %%
-    subgr{1} = ones(61,1);
-    subgr{2} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==1;
-    subgr{3} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==2;
-    
-    for n = 1:3
-        M(n,:)         = mean(C.model_01.w1);
-        SEM(n,:)       = std(C.model_01.w1)./sqrt(61);
-        %flexible model
-        Mc(n,:)        = mean(C.model_02.w1);
-        SEMc(n,:)      = std(C.model_02.w1)./sqrt(61);
-        Ms(n,:)        = mean(C.model_02.w2);
-        SEMs(n,:)      = std(C.model_02.w2)./sqrt(61);
-        %gaussian model
-        Mcg(n,:)       = mean(C.model_03.w1);
-        SEMcg(n,:)     = std(C.model_03.w1)./sqrt(61);
-        Msg(n,:)       = mean(C.model_03.w2);
-        SEMsg(n,:)     = std(C.model_03.w2)./sqrt(61);
-        Mg(n,:)        = mean(C.model_03.w3);
-        SEMg(n,:)      = std(C.model_03.w3)./sqrt(61);
-        
-    end
+
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
@@ -972,7 +952,52 @@ elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
     end
     
     
-    
+elseif strcmp(varargin{1},'model2behavior')
+   C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+   subs      = FPSA_FearGen('get_subjects'); %be sure to make current_subject_pool =0
+%    
+   %normalize ellipsoid parameter by other parameter.
+   beta1 = C.model_02.w1(:,2);
+   beta2 = C.model_02.w2(:,2);
+   param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
+   
+   %if baseline corrected:
+   beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+   beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+   parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
+   
+   
+   % collect rating amplitudes
+   ns = 0;
+   for sub = subs(:)'
+       ns = ns+1;
+       s = Subject(sub);
+       amp_cond(ns) = s.get_fit('rating',3).params(1);
+       amp_test(ns) = s.get_fit('rating',4).params(1);
+   end
+   
+   % get SCR ampl CS+ > CS-
+   g   = Group(subs);
+   out = g.getSCR(2.5:5.5);
+   scr_cond = out.y(:,13)-out.y(:,17);
+   scr_test = out.y(:,22)-out.y(:,26);
+   
+   selector = ismember(subs,g.ids);
+      
+   figure(1);
+   subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+   st=supertitle('modelparam 2 behavior');set(st,'fontsize',16);
+   figure(2);
+   subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+   subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+   st=supertitle('modelparam 2 behavior, baseline corrected');set(st,'fontsize',16);
+  
+   
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model 
     t           = FPSA_FearGen('FPSA_get_table',1:100);
@@ -1892,7 +1917,7 @@ elseif strcmp(varargin{1},'svm_howmanytrialspersub')
 elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
 
     nbootstrap = 1000;
-    randomize  = 1;
+    randomize  = 0;
     PHoldout    = .2;
     
     savepath      = fullfile(path_project,'data\midlevel\SVM_idiosyncrasy\');
@@ -1949,7 +1974,7 @@ elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
                             %                         confmats(:,:,n)   = confusionmat(Y(ind),predicted,'order',[s1 s2]);
                             result(n)         = sum(Y(ind)==predicted)./length(predicted);
                         end
-                        performance(s1,s2,:) = result;
+                        performance(s1,s2,run,:) = result;
                         result = [];
                     end
                 end
@@ -1963,7 +1988,7 @@ elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
     
     varargout{1} = performance;
     nsub = size(performance,2);
-    
+    keyboard
     av_perf = mean(performance,3);
     av_perf = [av_perf;zeros(1,nsub)];
     perf = av_perf(logical(triu(ones(nsub,nsub))));
