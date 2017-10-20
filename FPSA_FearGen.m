@@ -983,20 +983,49 @@ elseif strcmp(varargin{1},'model2behavior')
    scr_test = out.y(:,22)-out.y(:,26);
    
    selector = ismember(subs,g.ids);
-      
+    %%  
    figure(1);
    subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-   st=supertitle('modelparam 2 behavior');set(st,'fontsize',16);
+   st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
    figure(2);
    subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
    subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-   st=supertitle('modelparam 2 behavior, baseline corrected');set(st,'fontsize',16);
+   st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    figure(3);
+   subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
+   subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
+   subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
+   subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
+   st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+   figure(4);
+   subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
+   subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
+   subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
+   subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
+   st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+     figure(5);
+   subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
+   subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
+   subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
+   subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
+   st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+   figure(6);
+   subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
+   subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
+   subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
+   subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
+   st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
   
+  names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
+  for a = 1:6;
+      export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
+  end
+
    
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model 
@@ -2596,7 +2625,8 @@ elseif strcmp(varargin{1},'figure_03B')
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
     force    = 0;
-    path_write = sprintf('%s/data/midlevel/ROI_fixcount_singlesub_fit.mat',path_project);
+    method   = 3;
+    path_write = sprintf('%s/data/midlevel/ROI_fixcount_singlesub_fit_%d.mat',path_project,method);
     fs       = 12; %fontsize
     counts   = FPSA_FearGen('get_fixation_counts');
     counts   = diff(counts,1,4);
@@ -2616,7 +2646,7 @@ elseif strcmp(varargin{1},'figure_03B')
                 data.ids = sub';
                 t        = [];
                 t        = Tuning(data);
-                t.SingleSubjectFit(8);
+                t.SingleSubjectFit(method);
                 pval(nroi,sub) = 10.^-t.fit_results.pval;
                 params(nroi,sub,:) = t.fit_results.params;
                 X_fit(nroi,sub,:) = t.fit_results.x_HD;
