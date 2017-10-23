@@ -71,7 +71,7 @@ condition_borders    = {'' 1:8 '' 9:16};                                    % ba
 block_extract        = @(mat,y,x,z) mat((1:8)+(8*(y-1)),(1:8)+(8*(x-1)),z); % a little routing to extract blocks from RSA maps
 tbootstrap           = 1000;                                                % number of bootstrap samples
 method               = 'correlation';                                       % methods for RSA computation
-current_subject_pool = 1;                                                   % which subject pool to use (see get_subjects)
+current_subject_pool = 0;                                                   % which subject pool to use (see get_subjects)
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
@@ -2022,8 +2022,8 @@ elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
     av_perf = [av_perf;zeros(1,nsub)];
     perf = av_perf(logical(triu(ones(nsub,nsub))));
     
-    average_performance = mean(perf)
-    std_average_performance     = std(perf)
+    average_performance = mean(perf);
+    std_average_performance     = std(perf);
     
 elseif strcmp(varargin{1},'svm_classify_subs_1vsrest')
     
@@ -2427,7 +2427,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %% plot SCR
     grayshade = [.8 .8 .8];
     figure(1022);
-    subplot(2,3,4-3);
+    subplot(2,3,1);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,1)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
@@ -2439,7 +2439,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylabel('SCR (z-score)')
     
     
-    subplot(2,3,5-3);
+    subplot(2,3,2);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,2)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
@@ -2452,7 +2452,7 @@ elseif strcmp(varargin{1},'figure_02B')
     text(40,max(ylim)+.05,'***','FontSize',20);
 
     
-    subplot(2,3,6-3);
+    subplot(2,3,3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,3)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
@@ -2486,6 +2486,60 @@ elseif strcmp(varargin{1},'figure_02B')
     differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
     std(differ)
+    
+    
+    %% plot ratings
+    g                 = Group(FPSA_FearGen('get_subjects'));
+    ratings           = g.getRatings(2:4);
+    g.tunings.rate{2} = Tuning(g.Ratings(2));
+    g.tunings.rate{3} = Tuning(g.Ratings(3));
+    g.tunings.rate{4} = Tuning(g.Ratings(4));
+    
+    g.tunings.rate{2}.GroupFit(8);
+    g.tunings.rate{3}.GroupFit(8);
+    g.tunings.rate{4}.GroupFit(8);
+    %%
+    for n = 1:3
+        sp = n+3;
+        subplot(2,3,sp)
+        if n > 2
+             l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color','k','LineWidth',2);
+             set(l,'LineStyle',':')
+        end
+        hold on
+        Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
+        %         Project.plot_bar(mean(ratings(:,:,sn)));
+        hold on;
+        e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
+        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
+        %         SetFearGenBarColors(b)
+        set(e,'LineWidth',2,'Color','k')
+        ylim([0 10])
+        xlim([-180 225])
+        axis square
+        box off
+    end
+    %
+    subplot(2,3,4);ylabel('Rating of p(shock)','FontSize',12)
+    hold on;
+    %add Groupfit line
+    params = [g.tunings.rate{3}.groupfit.Est; g.tunings.rate{4}.groupfit.Est];
+    params = [params(:,1) params(:,2) deg2rad(params(:,3)) params(:,4)];
+    x = linspace(-150,195,10000);
+    
+    subplot(2,3,4);
+    line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2)
+    
+    subplot(2,3,5);
+    plot(x,VonMises(deg2rad(x),params(1,1),params(1,2),params(1,3),params(1,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
+    subplot(2,3,6);
+    plot(x,VonMises(deg2rad(x),params(2,1),params(2,2),params(2,3),params(2,4)),'k-','LineWidth',2)
+    line([0 180],[8 8],'Color','k','LineWidth',1.5)
+    text(30,8.5,'***','FontSize',20)
+    
 elseif strcmp(varargin{1},'SFig_tuneduntuned')
     figure(1);
     g                 = Group(FPSA_FearGen('get_subjects'));
