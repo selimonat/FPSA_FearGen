@@ -15,21 +15,21 @@ function [varargout]=FPSA_FearGen(varargin);
 % Matlab 2016.
 % In case this option doesn't work for you, you can also download the project as a bundle
 % from this link: https://osf.io/zud6h/
-% 
+%
 %
 % Usage:
 % VARARGIN sets an action related to an analysis, figure preparation or
 % simple house keeping routines, such as data getters. For example,
 % FPSA_FearGen('get_subjects') would return the subjects used for this
 % manuscript. By analyzing that piece of code you can see how the selection
-% procedure detailed in the manuscript is actually implemented. 
+% procedure detailed in the manuscript is actually implemented.
 % Some actions require inputs, these can be provided with 2nd, 3rd, so
 % forth VARARGIN. For example, 'get_fpsa_fair' action requires two
 % additional input arguments i/ fixations and ii/ runs. FIXATIONS
 % determines which fixations to use to compute a dissimilarity matrix and
 % RUNS determine pre- or post-learning phases. By convention baseline phase
 % is denoted with 2, whereas Generalization phase by 4.
-% 
+%
 % Examples:
 % FPSA_FearGen('get_subjects') retuns the indices to participants, included
 %   in the analysis. These correspond to subXXX folder numbers.
@@ -50,7 +50,7 @@ function [varargout]=FPSA_FearGen(varargin);
 % FPSA_FearGen('get_fpsa',1:100) would return the dissimilarity matrix
 %   computed with exploration patterns containing all the fixations
 %   (1:100). This is not a recommended method for computing dissimilarity
-%   matrices, rather use: 
+%   matrices, rather use:
 % FPSA_FearGen('get_fpsa_fair',1:100,1:3) which would compute a fair
 %   dissimilarity matrix for each run separately. 3 runs in generalization
 %   are averaged later.
@@ -99,21 +99,21 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 
 %%
 if strcmp(varargin{1},'download_project');
-     if ~exist(path_project)
+    if ~exist(path_project)
         mkdir(path_project);
         mkdir([path_project 'tmp/'])
     end
     cd(path_project)
     %downloads the data and stimuli, download the code from github, and add
-    %them to matlab path.    
+    %them to matlab path.
     %download data
-    fprintf('Downloading data (this will take a while)...\n');    
-    tarfile              = ['/tmp/dummy.tar.gz'];        
-    s                    = urlwrite(url,tarfile);%download the data 
-    fprintf('Untarring the data...\n');    
+    fprintf('Downloading data (this will take a while)...\n');
+    tarfile              = ['/tmp/dummy.tar.gz'];
+    s                    = urlwrite(url,tarfile);%download the data
+    fprintf('Untarring the data...\n');
     untar(tarfile,'/tmp/');%untar it to the same location
-    fprintf('Moving data to PATH_PROJECT...\n');    
-    movefile('/tmp/project_FPSA_FearGen/*',regexprep(path_project,'/$',''));%copy the contents of the file to PATH_PROJECT    
+    fprintf('Moving data to PATH_PROJECT...\n');
+    movefile('/tmp/project_FPSA_FearGen/*',regexprep(path_project,'/$',''));%copy the contents of the file to PATH_PROJECT
     
     
     %download 3 other repositories, which we depend on here.
@@ -129,8 +129,8 @@ if strcmp(varargin{1},'download_project');
     system(['git clone https://github.com/selimonat/globalfunctions.git']);
     cd('./globalfunctions');
     addpath(pwd)
-    cd ..        
-   
+    cd ..
+    
 elseif strcmp(varargin{1},'get_subjects');
     %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
     % For the paper we use current_pool = 1, which discards all subjects:
@@ -153,11 +153,11 @@ elseif strcmp(varargin{1},'get_subjects');
                 p    = [p    ; s.get_fit('rating',4).params];
                 pval = [pval ; s.get_fit('rating',4).pval];
                 sub  = [sub  ; n];
-            end            
+            end
             valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);%selection criteria
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
-%             save(filename,'subjects');
+            %             save(filename,'subjects');
         end
     else
         load(filename);
@@ -217,7 +217,7 @@ elseif strcmp(varargin{1},'get_fixmat');
     end
     varargout{1} = fix;
 elseif strcmp(varargin{1},'fix_counts')
-    %% Sanity check: counts fixations in 5 different ROI 
+    %% Sanity check: counts fixations in 5 different ROI
     %during baseline and generalization, returns [subjects, roi, phase].
     fixmat         = varargin{2};
     fixmat.unitize = 0;
@@ -235,7 +235,7 @@ elseif strcmp(varargin{1},'fix_counts')
         end
     end
     varargout{1} = count;
-
+    
 elseif  strcmp(varargin{1},'get_fixmap')
     %% General routine to compute a fixation map for a SUBJECT recorded at both phases for fixations FIX (vector) based on a FIXMAT.
     % maps are mean corrected for each phase separately.
@@ -279,25 +279,25 @@ elseif  strcmp(varargin{1},'get_fixmap_oddeven')
     varargout{1} = maps;
 elseif strcmp(varargin{1},'plot_fdm');
     %% plot routine for FDMs used in the paper in a similar way to Figure 3A. Use the second VARARGIN to plot ROIs on top.
-    % VARARGIN{1} contains fixation maps in the form of [x,y,condition]. 
+    % VARARGIN{1} contains fixation maps in the form of [x,y,condition].
     % The output of FPSA_FearGen('get_fixmap',...) has to be accordingly
     % reshaped. size(VARARGIN{1},3) must be a multiple of 8.
     maps          = varargin{2};
-    tsubject      = size(maps,3)/8;    
+    tsubject      = size(maps,3)/8;
     contour_lines = 0;%FACIAL ROIs Plot or not.
     fs            = 18;%fontsize;
     if nargin == 3
         contour_lines = varargin{3};
-    end    
-%     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];           
-%     [d u]         = GetColorMapLimits(maps(:),2.5);
-%     grids         = [linspace(d,u,5)];
+    end
+    %     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
+    %     [d u]         = GetColorMapLimits(maps(:),2.5);
+    %     grids         = [linspace(d,u,5)];
     t             = repmat(circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]),1,tsubject);
     colors        = GetFearGenColors;
-    colors        = repmat(circshift(colors(1:8,:),0),tsubject,1);    
+    colors        = repmat(circshift(colors(1:8,:),0),tsubject,1);
     colormap jet;
     %%
-    for n = 1:size(maps,3)  
+    for n = 1:size(maps,3)
         if mod(n-1,8)+1 == 1;
             figure;set(gcf,'position',[1952 361 1743 714]);
         end
@@ -317,7 +317,7 @@ elseif strcmp(varargin{1},'plot_fdm');
         if strcmp(t{mod(n-1,8)+1}(1),'+') | strcmp(t{mod(n-1,8)+1}(1),'-')
             h= title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs,'fontweight','normal');
         else
-            h= title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs,'fontweight','normal');            
+            h= title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs,'fontweight','normal');
         end
         try
             h.Position = h.Position + [0 -50 0];
@@ -327,11 +327,11 @@ elseif strcmp(varargin{1},'plot_fdm');
         pause(.5);
         %
         try
-            %%            
-%             I      = find(ismember(a(1,:),h2.LevelList));
-%             [~,i]  = max(a(2,I));
-%             alphas = [repmat(.5,1,length(I))];      
-%             alphas(i) = 0;
+            %%
+            %             I      = find(ismember(a(1,:),h2.LevelList));
+            %             [~,i]  = max(a(2,I));
+            %             alphas = [repmat(.5,1,length(I))];
+            %             alphas(i) = 0;
             contourf_transparency(h2,.75);
         end
         %%
@@ -349,7 +349,7 @@ elseif strcmp(varargin{1},'plot_fdm');
             contour(rois(:,:,n),'k--','linewidth',1);
         end
     end
-elseif strcmp(varargin{1},'plot_ROIs');        
+elseif strcmp(varargin{1},'plot_ROIs');
     rois = Fixmat([],[]).GetFaceROIs;
     for n = 1:4
         subplot(2,2,n)
@@ -360,7 +360,7 @@ elseif strcmp(varargin{1},'plot_ROIs');
         contour(rois(:,:,n),'k-','linewidth',1);
         hold off;
     end
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
 elseif strcmp(varargin{1},'get_fpsa')
     %% Routine to compute similarity matrices based on FDMs that are computed with FIXATIONS.
     % sim = FPSA_FearGen('get_fpsa',1:100) would compute a similarity matrix with all the
@@ -386,7 +386,7 @@ elseif strcmp(varargin{1},'get_fpsa')
         load(filename);
     end
     varargout{1} = sim;
-elseif strcmp(varargin{1},'get_fpsa2')    
+elseif strcmp(varargin{1},'get_fpsa2')
     %% same as get_fpsa but computes as many similarity matrices as time-windows (not used in this manuscript)
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
     
@@ -534,7 +534,7 @@ elseif strcmp(varargin{1},'plot_mdscale')
     %% Routine to plot the results of the get_mdscale
     Y      = varargin{2};
     ndimen = length(Y)./16;
-    y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;    
+    y      = reshape(Y,length(Y)/16,16)';%to make it easy plotting put coordinates to different columns;
     colors = GetFearGenColors;
     colors = [colors(1:8,:);colors(1:8,:)];
     if ndimen == 2
@@ -554,7 +554,7 @@ elseif strcmp(varargin{1},'plot_mdscale')
         hold off;
         for n = 1:16;text(y(n,1),y(n,2),y(n,3),mat2str(mod(n-1,8)+1),'fontsize',25);end
     end
-
+    
     
 elseif strcmp(varargin{1},'FPSA_get_table')
     %% returns a table object for the FPSA modelling with fitlm, fitglm, etc.
@@ -628,37 +628,37 @@ elseif strcmp(varargin{1},'FPSA_model');
     %% MIXED EFFECT MODEL
     % null model
     out.baseline.model_00_mixed          = fitlme(t,'FPSA_B ~ 1 + (1|subject)');
-    out.generalization.model_00_mixed    = fitlme(t,'FPSA_G ~ 1 + (1|subject)');    
+    out.generalization.model_00_mixed    = fitlme(t,'FPSA_G ~ 1 + (1|subject)');
     % FPSA_model_bottom-up model
     out.baseline.model_01_mixed          = fitlme(t,'FPSA_B ~ 1 + circle + (1 + circle|subject)');
-    out.generalization.model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');    
-    % FPSA_model_adversitycateg    
+    out.generalization.model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');
+    % FPSA_model_adversitycateg
     out.baseline.model_02_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
     out.generalization.model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
     % FPSA_model_adversitytuning
     out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
     out.generalization.model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
     
-    %% FIXED EFFECT MODEL    
+    %% FIXED EFFECT MODEL
     % FPSA null model
     out.baseline.model_00_fixed          = fitlm(t,'FPSA_B ~ 1');
-    out.generalization.model_00_fixed    = fitlm(t,'FPSA_G ~ 1');    
-    % FPSA_model_bottom-up model  
+    out.generalization.model_00_fixed    = fitlm(t,'FPSA_G ~ 1');
+    % FPSA_model_bottom-up model
     out.baseline.model_01_fixed          = fitlm(t,'FPSA_B ~ 1 + circle');
-    out.generalization.model_01_fixed    = fitlm(t,'FPSA_G ~ 1 + circle');    
-    % FPSA_model_adversitycateg    
+    out.generalization.model_01_fixed    = fitlm(t,'FPSA_G ~ 1 + circle');
+    % FPSA_model_adversitycateg
     out.baseline.model_02_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific');
     out.generalization.model_02_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific');
     % FPSA_model_adversitytuning
     out.baseline.model_03_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
-    varargout{1}   = out;            
+    varargout{1}   = out;
     
 elseif strcmp(varargin{1},'model2text')
     %handy function to dump model output to a text file that let you easily
     %paste it to the manuscript ;-\
     
-    model = varargin{2};    
+    model = varargin{2};
     a     = evalc('disp(model)');
     fid   = fopen(sprintf('%s/data/midlevel/%s.txt',path_project,model.Formula),'w');
     fwrite(fid,a);
@@ -698,7 +698,7 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');
     varargout{1} = Model;
     
 elseif strcmp(varargin{1},'figure_04C');
-    %% plots the main model comparison figure; 
+    %% plots the main model comparison figure;
     fixations = varargin{2};
     C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
     %%
@@ -718,7 +718,7 @@ elseif strcmp(varargin{1},'figure_04C');
     Mg        = mean(C.model_03.w3);
     SEMg      = std(C.model_03.w3)./sqrt(61);
     
-
+    
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
@@ -734,7 +734,7 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     figure(fixations(1));
     set(gcf,'position',[-200+500*fixations(1)        1400        898         604]);
-%     set(gcf,'position',[2150         335         898         604]);
+    %     set(gcf,'position',[2150         335         898         604]);
     X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
     Y    = [M Mc Ms Mcg Msg Mg];
     Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
@@ -807,22 +807,22 @@ elseif strcmp(varargin{1},'figure_04C');
     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
     % model names
     ylim([-.04 .2])
-%     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
-%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(1:2)),.18,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-%     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
-%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(3:6)),.18,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-
-%     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
-%     set(h(1),'color','k','linewidth',1,'clipping','off');
+    
+    %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(7:end)),.18,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-    %%    
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
-    %    
+    %%
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
+    %
     
 elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
-    %% plots the main model comparison figure; 
+    %% plots the main model comparison figure;
     fixations = varargin{2};
     C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
     %%
@@ -846,17 +846,17 @@ elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
         SEMsg(n,:)     = std(C.model_03.w2(inds,:))./sqrt(sum(subgr{n}));
         Mg(n,:)        = mean(C.model_03.w3(inds,:));
         SEMg(n,:)      = std(C.model_03.w3(inds,:))./sqrt(sum(subgr{n}));
-    
-    %% get the p-values
-    [H(n)   P(n)]     = ttest(C.model_01.w1(inds,1)-C.model_01.w1(inds,2));%compares baseline vs test the circular model parameters
-    
-    [Hc(n) Pc(n)]     = ttest(C.model_02.w1(inds,1)-C.model_02.w1(inds,2));%compares cosine before to after
-    [Hs(n) Ps(n)]     = ttest(C.model_02.w2(inds,1)-C.model_02.w2(inds,2));%compares sine before to after
-    [Hcs(n) Pcs(n)]   = ttest(C.model_02.w1(inds,2)-C.model_02.w2(inds,2));%compares cosine after to sine after
-    % same as before
-    [Hgc(n) Pgc(n)]   = ttest(C.model_03.w1(inds,1)-C.model_03.w1(inds,2));%compares cosine before to after
-    [Hgcs(n) Pgcs(n)] = ttest(C.model_03.w1(inds,2)-C.model_03.w2(inds,2));%compares cosine after to sine after
-    [Hgg(n) Pgg(n)]   = ttest(C.model_03.w3(inds,1)-C.model_03.w3(inds,2));%compares sine before to after
+        
+        %% get the p-values
+        [H(n)   P(n)]     = ttest(C.model_01.w1(inds,1)-C.model_01.w1(inds,2));%compares baseline vs test the circular model parameters
+        
+        [Hc(n) Pc(n)]     = ttest(C.model_02.w1(inds,1)-C.model_02.w1(inds,2));%compares cosine before to after
+        [Hs(n) Ps(n)]     = ttest(C.model_02.w2(inds,1)-C.model_02.w2(inds,2));%compares sine before to after
+        [Hcs(n) Pcs(n)]   = ttest(C.model_02.w1(inds,2)-C.model_02.w2(inds,2));%compares cosine after to sine after
+        % same as before
+        [Hgc(n) Pgc(n)]   = ttest(C.model_03.w1(inds,1)-C.model_03.w1(inds,2));%compares cosine before to after
+        [Hgcs(n) Pgcs(n)] = ttest(C.model_03.w1(inds,2)-C.model_03.w2(inds,2));%compares cosine after to sine after
+        [Hgg(n) Pgg(n)]   = ttest(C.model_03.w3(inds,1)-C.model_03.w3(inds,2));%compares sine before to after
     end
     %%
     %%
@@ -954,138 +954,128 @@ elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
     
     
 elseif strcmp(varargin{1},'model2behavior')
-   C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
-   subs      = FPSA_FearGen('get_subjects'); %be sure to make current_subject_pool =0
-%    
-   %normalize ellipsoid parameter by other parameter.
-   beta1 = C.model_02.w1(:,2);
-   beta2 = C.model_02.w2(:,2);
-   param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
-   
-   %if baseline corrected:
-   beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
-   beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
-   parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
-   
-   
-   % collect rating amplitudes
-   ns = 0;
-   for sub = subs(:)'
-       ns = ns+1;
-       s = Subject(sub);
-       amp_cond(ns) = s.get_fit('rating',3).params(1);
-       amp_test(ns) = s.get_fit('rating',4).params(1);
-   end
-   
-   % get SCR ampl CS+ > CS-
-   g   = Group(subs);
-   out = g.getSCR(2.5:5.5);
-   scr_cond = out.y(:,13)-out.y(:,17);
-   scr_test = out.y(:,22)-out.y(:,26);
-   
-   selector = ismember(subs,g.ids);
-    %%  
-   figure(1);
-   subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-   st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-   figure(2);
-   subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-   subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-   st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    figure(3);
-   subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
-   subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
-   subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
-   subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
-   st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-   figure(4);
-   subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
-   subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
-   subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
-   subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
-   st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-     figure(5);
-   subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
-   subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
-   subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
-   subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
-   st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-   figure(6);
-   subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
-   subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
-   subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
-   subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
-   st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-  
-  names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
-  for a = 1:6;
-      export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
-  end
-
-elseif strcmp(varargin{1},'model2behavior_lm');
-    %% 
-    % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
-    % Steps:
-    % collect necessary data
-    % set up table 
-    % set up LM
-
-    p                 = Project;
-    subs     = FPSA_FearGen('get_subjects');
-    scrsubs  = subs(ismember(subs,p.subjects(p.subjects_scr)));
-    scrpath           = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,length(scrsubs));
-    
-    %% get model parameters
-    C          = FPSA_FearGen('FPSA_model_singlesubject',1:100);
-
-    %% SCR
-    if ~exist(scrpath)
-        g        = Group(scrsubs);
-        out      = g.getSCR(2.5:5.5);
-        save(scrpath,'out');
-        clear g
-    else
-        load(scrpath)
-    end
-    
-    scr_test = out.y(:,22)-out.y(:,26); %% diff between CSP and CSN
-    selectsubs = ismember(subs,p.subjects(p.subjects_scr));
+    C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+    subs      = FPSA_FearGen('get_subjects'); %be sure to make current_subject_pool =0
     %
-    scr_beta1 = C.model_02.w1(selectsubs,2);
-    scr_beta2 = C.model_02.w2(selectsubs,2);
-    %alternatively: normalize ellipsoid parameter by other parameter.
-    scr_param = (scr_beta1-scr_beta2)./(scr_beta1+scr_beta2); %% ellipsoidness (= param) is specific vs unspecific beta
+    %normalize ellipsoid parameter by other parameter.
+    beta1 = C.model_02.w1(:,2);
+    beta2 = C.model_02.w2(:,2);
+    param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
     
-    scr_table = table(scr_test,scr_beta1,scr_beta2,'variablenames',{'SCRtest','beta1','beta2'});
-    LM.scr.model1       = fitlm(scr_table,'SCRtest ~ 1 + beta1');
-    LM.scr.model2       = fitlm(scr_table,'SCRtest ~ 1 + beta1 + beta2');
-    LM.scr.model3       = fitlm(scr_table,'SCRtest ~ 1 + beta1*beta2');
+    %if baseline corrected:
+    beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
     
-    %% Ratings
+    
     % collect rating amplitudes
     ns = 0;
     for sub = subs(:)'
         ns = ns+1;
         s = Subject(sub);
+        amp_cond(ns) = s.get_fit('rating',3).params(1);
         amp_test(ns) = s.get_fit('rating',4).params(1);
     end
     
-    rate_beta1 = C.model_02.w1(:,2);
-    rate_beta2 = C.model_02.w2(:,2);
-        
-    amp_table = table(amp_test',rate_beta1,rate_beta2,'variablenames',{'AMPtest','beta1','beta2'});
-    LM.rate.model1       = fitlm(amp_table,'AMPtest ~ 1 + beta1');
-    LM.rate.model2       = fitlm(amp_table,'AMPtest ~ 1 + beta1 + beta2');
-    LM.rate.model3       = fitlm(amp_table,'AMPtest ~ 1 + beta1*beta2');
+    % get SCR ampl CS+ > CS-
+    g   = Group(subs);
+    out = g.getSCR(2.5:5.5);
+    scr_cond = out.y(:,13)-out.y(:,17);
+    scr_test = out.y(:,22)-out.y(:,26);
+    
+    selector = ismember(subs,g.ids);
     %%
-    vargout{1} = LM;
+    figure(1);
+    subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+    st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    figure(2);
+    subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+    subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+    st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    figure(3);
+    subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
+    subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
+    subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
+    subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
+    st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    figure(4);
+    subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
+    subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
+    subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
+    subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
+    st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    figure(5);
+    subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
+    subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
+    subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
+    subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
+    st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    figure(6);
+    subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
+    subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
+    subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
+    subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
+    st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    
+    names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
+    for a = 1:6;
+        export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
+    end
+    
+elseif strcmp(varargin{1},'get_table_model2behavior');
+    %%
+    % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
+    % Steps:
+    % collect necessary data
+    % set up table
+    force =0;
+    p        = Project;
+    subs     = FPSA_FearGen('get_subjects');
+    path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
+    
+    if ~exist(path2table)||force == 1
+        %% prepare scr data
+        scrsubs  = ismember(subs,p.subjects(p.subjects_scr));
+        scrpath           = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,sum(scrsubs));
+        %get scr data
+        if ~exist(scrpath)
+            g        = Group(scrsubs);
+            out      = g.getSCR(2.5:5.5);
+            save(scrpath,'out');
+            clear g
+        else
+            load(scrpath)
+        end
+        scr_test = nan(length(subs),1); % the table needs same number of rows, so we just fill a column of nans with scr params.
+        scr_test(scrsubs,:) = out.y(:,22)-out.y(:,26); %% diff between CSP and CSN
+        %% prepare rating data
+        % collect rating amplitudes
+        ns = 0;
+        for sub = subs(:)'
+            ns = ns+1;
+            s = Subject(sub);
+            amp_test(ns,1) = s.get_fit('rating',4).params(1);
+        end
+        %% get model parameters
+        C          = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+        beta1 = C.model_02.w1(:,2);
+        beta2 = C.model_02.w2(:,2);
+        %% concatenate everything in the table
+        t = table(amp_test,scr_test,beta1,beta2,'variablenames',{'AMPtest','SCRtest','beta1','beta2'});
+        save(path2table,'t');
+    else
+        fprintf('Found table at %s, loading it.\n',path2table)
+        load(path2table);
+    end
+    %%
+    vargout{1} = t;
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
-    %% create Gaussian models with different parameters to find the best one to compare against the flexible model 
+    %% create Gaussian models with different parameters to find the best one to compare against the flexible model
     t           = FPSA_FearGen('FPSA_get_table',1:100);
     tsubject    = length(unique(t.subject));
     res         = 50;
@@ -1164,7 +1154,7 @@ elseif strcmp(varargin{1},'CompareB2T_RSA')
     p      = p(i);
     varargout{1} = [i p];
     
-
+    
 elseif strcmp(varargin{1},'get_betas')
     %% compute loadings on these
     sim    = varargin{2};
@@ -1217,7 +1207,7 @@ elseif strcmp(varargin{1},'get_betas_singlesubject')
     varargout{2} = [nanmean(betas)-ci/2 ;nanmean(betas)+ci/2];
     varargout{3} = betas;
     %
-
+    
 elseif strcmp(varargin{1},'searchlight')
     %% conducts a searchlight analysis on the FDMs using a moving window of about 1 degrees
     % Default window parameters B1 and B2 are 1, and 15; (1 degree running
@@ -1273,8 +1263,8 @@ elseif strcmp(varargin{1},'fun_handle')
         betas(1,1,:)= [NaN NaN NaN];
     end
     varargout{1} = betas;
-
-elseif strcmp(varargin{1},'get_design_matrix');    
+    
+elseif strcmp(varargin{1},'get_design_matrix');
     %% Design matrix for the ellipsoide model.
     
     x          = [pi/4:pi/4:2*pi];
@@ -1284,7 +1274,7 @@ elseif strcmp(varargin{1},'get_design_matrix');
     model2_s   = squareform_force(sin(x)'*sin(x));
     X          = [ones(length(model2_c(:)),1) model2_c model2_s];
     
-    varargout{1}  = X;    
+    varargout{1}  = X;
     
     
 elseif strcmp(varargin{1},'plot_searchlight')
@@ -1325,9 +1315,9 @@ elseif strcmp(varargin{1},'plot_searchlight')
     k = .22;
     M(:,:,4) = conv2(M(:,:,4),G,'same');
     M(:,:,1) = conv2(M(:,:,1),G,'same');
-
-
-
+    
+    
+    
     
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %% applies the search light analysis to the V1 representations.
@@ -1507,7 +1497,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
             set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
             title(subtitles{n})
             box off
-             if meancorr ==1
+            if meancorr ==1
                 ylabel('N fixations (subj.mean corr.)')
             else
                 ylabel('N fixations')
@@ -1576,7 +1566,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
         box off
         ylabel('duration diff Test-Base [ms]')
         axis square
-
+        
         %% Entropy of fixmaps per condition, sub and phase (matlab entropy)
         figure;
         meancorr = 1;
@@ -1604,7 +1594,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
                 dada.x = repmat(-135:45:180,74,1);
                 dada.y = data(:,1:8)*1000; % Tuning obj not working for such small numbers.
                 dada.ids = 1:74;
-                t = Tuning(dada);t.GroupFit(3);                
+                t = Tuning(dada);t.GroupFit(3);
                 plot(t.groupfit.x_HD,[t.groupfit.fit_HD+mean(t.y(:))]./1000,'k','LineWidth',2)
             end
             
@@ -1652,7 +1642,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
         %         ylim([nanmean(d.FDMentropy.m(:))-nanstd(d.FDMentropy.m(:)) nanmean(d.FDMentropy.m(:))+nanstd(d.FDMentropy.m(:))])
         %     end
         
-        %% 
+        %%
         figure;
         colors = GetFearGenColors;
         colors = [colors; .8 .8 .8];
@@ -1680,7 +1670,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
 elseif strcmp(varargin{1},'inter-subject-variance')
     
     subs = FPSA_FearGen('get_subjects');
-
+    
     pc = 0;
     for ph = 2:4
         pc = pc+1;
@@ -1855,17 +1845,17 @@ elseif strcmp(varargin{1},'SVM')
         savepath = sprintf('%s/data/midlevel/SVM/',path_project);
         filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d.mat',neig,random,run,crit,exclmouth);
         if exist(savepath)
-           save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+            save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
         else
-           fprintf('Creating SVM results folder...\n')
-           mkdir(savepath);
-           save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+            fprintf('Creating SVM results folder...\n')
+            mkdir(savepath);
+            save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
         end
     end
     %% check mouth exclusion
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
     files = cellstr(ls(savepath));
-%     neigs = [63 69 74 75 14 19 17 19];
+    %     neigs = [63 69 74 75 14 19 17 19];
     mouthex = [0 0 0 0  1 1 1 1];
     run = [1:4 1:4];
     for c = 1:8
@@ -1999,10 +1989,10 @@ elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
         neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
         
         fprintf('%002d Eigenvectors explain 90% of variance. \n',neig)
-
+        
         %collect loadings of every trial
         trialload = D'*eigen(:,1:neig)*diag(dv(1:neig))^-.5;%dewhitened
-
+        
         
         save(savedfile)
     else
@@ -2016,27 +2006,27 @@ elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
     end
     varargout{1} = trialload;
     varargout{2} = labels;
-
+    
 elseif strcmp(varargin{1},'svm_howmanytrialspersub')
     
-       [~,labels] = FPSA_FearGen('get_trials_for_svm_idiosync');
-       for run = 1:4
-           ind = labels.run == run;
-           ntrials(:,run)    = histc(labels.easy_sub(ind),unique(labels.easy_sub));
-       end
-       disp([unique(labels.easy_sub)' ntrials])
-       
-       fprintf('Minimum number of trials is (run 1 2 3 4):\n')
-       [minN, minisub] = min(ntrials);
-       disp(minN)
-              
-       fprintf('This should be fed into SVM classifying subjects to make it fairer.\n')
-       
-       
-      varargout{1} = minN;
-
+    [~,labels] = FPSA_FearGen('get_trials_for_svm_idiosync');
+    for run = 1:4
+        ind = labels.run == run;
+        ntrials(:,run)    = histc(labels.easy_sub(ind),unique(labels.easy_sub));
+    end
+    disp([unique(labels.easy_sub)' ntrials])
+    
+    fprintf('Minimum number of trials is (run 1 2 3 4):\n')
+    [minN, minisub] = min(ntrials);
+    disp(minN)
+    
+    fprintf('This should be fed into SVM classifying subjects to make it fairer.\n')
+    
+    
+    varargout{1} = minN;
+    
 elseif strcmp(varargin{1},'svm_classify_subs_1vs1')
-
+    
     nbootstrap = 1000;
     randomize  = 0;
     PHoldout    = .2;
@@ -2193,7 +2183,7 @@ elseif strcmp(varargin{1},'SFig_03')
     %% plot
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
     files = cellstr(ls(savepath));
-%     neigs = [63 69 74 75 14 19 17 19];
+    %     neigs = [63 69 74 75 14 19 17 19];
     crit = {'ellbow','ellbow','ellbow','ellbow','var','var','var','var'};
     run = [1:4 1:4];
     for c = 1:8
@@ -2255,14 +2245,14 @@ elseif strcmp(varargin{1},'SFig_03')
         axis square
         ylabel('Classified as CS+')
         set(gca,'YTick',[.3 .5 .7])
-        xlim([-170 215])        
+        xlim([-170 215])
         title(labels{spc})
     end
     subplot(1,3,3)
     clear results
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
     files = cellstr(ls(savepath));
-%     neigs = [63 69 74 75 14 19 17 19];
+    %     neigs = [63 69 74 75 14 19 17 19];
     crit = {'var','var','var','var'};
     for c = 1:4
         expr = sprintf('r0_run%d_crit%s_exclmouth_1.mat',c,crit{c});
@@ -2286,7 +2276,7 @@ elseif strcmp(varargin{1},'SFig_03')
     axis square
     ylabel('Classified as CS+')
     set(gca,'YTick',[.3 .5 .7])
-    xlim([-170 215])        
+    xlim([-170 215])
     title(labels{spc})
     
     for n = 1:3
@@ -2325,19 +2315,19 @@ elseif strcmp(varargin{1},'figure_01A');
     axis off
     
     %chose exemplary subject
-%     figure;
-%     subs = FPSA_FearGen('get_subjects');
-%     sim = FPSA_FearGen('get_rsa',1:100);
-%     for n = 1:61;
-%         subplot(8,8,n);
-%         dissmatz = squareform(sim.correlation(n,:));
-%         dissmatz = CancelDiagonals(dissmatz,0);
-%         dissmatz = dissmatz(9:end,9:end);
-%         [d u]   = GetColorMapLimits(dissmatz,2.5);
-%         imagesc(dissmatz,[0 2]);
-%             axis square;
-%     end
-
+    %     figure;
+    %     subs = FPSA_FearGen('get_subjects');
+    %     sim = FPSA_FearGen('get_rsa',1:100);
+    %     for n = 1:61;
+    %         subplot(8,8,n);
+    %         dissmatz = squareform(sim.correlation(n,:));
+    %         dissmatz = CancelDiagonals(dissmatz,0);
+    %         dissmatz = dissmatz(9:end,9:end);
+    %         [d u]   = GetColorMapLimits(dissmatz,2.5);
+    %         imagesc(dissmatz,[0 2]);
+    %             axis square;
+    %     end
+    
     
     exemplsub = 45;
     
@@ -2348,7 +2338,7 @@ elseif strcmp(varargin{1},'figure_01A');
     dissmat = squareform(mat.correlation(subs==exemplsub,:)); %get_rsa uses pdist, which is 1-r already, so no 1-squareform necessary.
     dissmat = dissmat(9:end,9:end);
     dissmat = CancelDiagonals(dissmat,NaN);
-%     [d2 u2]   = GetColorMapLimits(dissmat,2.5);
+    %     [d2 u2]   = GetColorMapLimits(dissmat,2.5);
     imagesc(dissmat,[0 1.8]);
     axis square;c = colorbar;
     set(c,'Ytick',caxis)
@@ -2363,7 +2353,7 @@ elseif strcmp(varargin{1},'figure_01A');
     colors        = GetFearGenColors;
     
     colors        = circshift(colors(1:8,:),s.csp-4); %need to resort them so that csp is red. (check again)
-   
+    
     for n = 1:8
         subplot(3,3,n);
         h = gca;
@@ -2371,7 +2361,7 @@ elseif strcmp(varargin{1},'figure_01A');
         y = ylim;
         rectangle('position',[x(1) y(1) diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
-elseif strcmp(varargin{1},'figure_01B');    
+elseif strcmp(varargin{1},'figure_01B');
     %% this is the cartoon figure where hypotheses are presented;
     figure
     set(gcf,'position',[1958         247        1443         740]);
@@ -2387,7 +2377,7 @@ elseif strcmp(varargin{1},'figure_01B');
     spi = {[1 2 13 14] 25 26 [37 38 49 50]};
     for ncol = 1:4
         
-        [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1,width);        
+        [model w] = getcorrmat(params{ncol}{1},params{ncol}{2},0,1,width);
         model     = 1-corrcov(model);
         
         % ori   = mdscale(1-model,2,'Criterion','strain','start','cmdscale','options',statset('display','final','tolfun',10^-12,'tolx',10^-12));
@@ -2447,7 +2437,7 @@ elseif strcmp(varargin{1},'figure_01B');
             end
         end
         
-    %last row
+        %last row
         subplot(6,12,spi{4}+(ncol-1)*3);
         %
         % row 3
@@ -2459,12 +2449,12 @@ elseif strcmp(varargin{1},'figure_01B');
             hc  = colorbar('eastoutside');
             set(gca,'position',pos);
             try
-                hc.Position(3:4) = hc.Position(3:4)./2;            
+                hc.Position(3:4) = hc.Position(3:4)./2;
                 set(hc,'Ticks',[0.1 2],'TickLabels',[0 2],'box','off');
             end
         end
-        %         
-%         imagesc(model);colorbar
+        %
+        %         imagesc(model);colorbar
         axis off;
         axis square;
         h = text(.5,4,'CS+');set(h,'HorizontalAlignment','right','fontsize',10);
@@ -2483,8 +2473,8 @@ elseif strcmp(varargin{1},'figure_01B');
         
         %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')
     end
-            
-%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'),'-r300');
+    
+    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'),'-r300');
     
 elseif strcmp(varargin{1},'figure_02B')
     %% Presents evidence for learning manipulation based on explicit ratings as well as skin conductance responses.
@@ -2519,7 +2509,7 @@ elseif strcmp(varargin{1},'figure_02B')
     test     = Tuning(data);
     test.GroupFit(3);
     params   = test.groupfit.Est;
-%     params(3)= deg2rad(params(3)); %for VonMises Fit
+    %     params(3)= deg2rad(params(3)); %for VonMises Fit
     
     nulltrials = out.y(:,[9 18 27]);
     
@@ -2553,7 +2543,7 @@ elseif strcmp(varargin{1},'figure_02B')
     Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
-%     ylim([-1 1]);
+    %     ylim([-1 1]);
     ylim([-1.25 1.25])
     ylabel('SCR (z-score)')
     
@@ -2569,7 +2559,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylim([-.5 2])
     line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
     text(40,max(ylim)+.05,'***','FontSize',20);
-
+    
     
     subplot(2,4,3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
@@ -2580,13 +2570,13 @@ elseif strcmp(varargin{1},'figure_02B')
     errorbar(-135:45:180,av(19:26),sem(19:26),'k.','LineWidth',1.5);
     x = -150:0.1:195;
     plot(test.groupfit.x_HD,test.groupfit.fit_HD,'k-','LineWidth',2)
-%     ylim([-1 1])
+    %     ylim([-1 1])
     ylim([-1.25 1.25])
     line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
     text(40,max(ylim)+.05,'***','FontSize',20);
-%     set(gca,'YTick',[0 1])
+    %     set(gca,'YTick',[0 1])
     
-   
+    
     %
     differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
@@ -2635,8 +2625,8 @@ elseif strcmp(varargin{1},'figure_02B')
         sp = n+4;
         subplot(2,4,sp)
         if n > 1
-             l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color','k','LineWidth',2);
-             set(l,'LineStyle',':')
+            l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color','k','LineWidth',2);
+            set(l,'LineStyle',':')
         end
         hold on
         Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
@@ -2679,7 +2669,7 @@ elseif strcmp(varargin{1},'figure_02B')
         set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',13)
         xlim([-180 225])
     end
-
+    
     keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
@@ -2690,49 +2680,49 @@ elseif strcmp(varargin{1},'figure_02B_get_params')
     pathparams = sprintf('%sdata/midlevel/params_fit_method_%d.mat',path_project,method);
     
     if ~exist(pathparams)|| force == 1
-    % get single subject fit's parameter - SCR
-    subs     = FPSA_FearGen('get_subjects');
-    scrsubs = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
-    
-    scr = [];
-    scr.params =nan(length(scrsubs),4,2);
-    scr.sub    =nan(length(scrsubs),4);
-    scr.pval   =nan(length(scrsubs),4);
-    sc = 0;
-    for n =  scrsubs(:)'
-        sc = sc+1;
-        s    = Subject(n);
-        s.fit_method = 3;
-        for ph = [2 4] % Cond no fit, just 2 datapoints
-            fit = s.get_fit('scr',ph);
-            scr.params(sc,ph,:)    = fit.params(1);
-            scr.pval(sc,ph)        = fit.pval;
-            scr.sub(sc,ph)         = n;
+        % get single subject fit's parameter - SCR
+        subs     = FPSA_FearGen('get_subjects');
+        scrsubs = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
+        
+        scr = [];
+        scr.params =nan(length(scrsubs),4,2);
+        scr.sub    =nan(length(scrsubs),4);
+        scr.pval   =nan(length(scrsubs),4);
+        sc = 0;
+        for n =  scrsubs(:)'
+            sc = sc+1;
+            s    = Subject(n);
+            s.fit_method = 3;
+            for ph = [2 4] % Cond no fit, just 2 datapoints
+                fit = s.get_fit('scr',ph);
+                scr.params(sc,ph,:)    = fit.params(1);
+                scr.pval(sc,ph)        = fit.pval;
+                scr.sub(sc,ph)         = n;
+            end
         end
-    end
-    scr.valid    = scr.pval > -log10(.05);%selection criteria
-    
-    % get single subject fit's parameter - Ratings
-    
-    subs     = FPSA_FearGen('get_subjects');
-    rate = [];
-    rate.params =nan(length(subs),4,2);
-    rate.sub    =nan(length(subs),4);
-    rate.pval   =nan(length(subs),4);
-    sc = 0;
-    for n =  subs(:)'
-        sc = sc+1;
-        s    = Subject(n);
-        s.fit_method = 3;
-        for ph = 2:4
-            fit = s.get_fit('rating',ph);
-            rate.params(sc,ph,:)    = fit.params(1:2);
-            rate.pval(sc,ph)        = fit.pval;
-            rate.sub(sc,ph)         = n;
+        scr.valid    = scr.pval > -log10(.05);%selection criteria
+        
+        % get single subject fit's parameter - Ratings
+        
+        subs     = FPSA_FearGen('get_subjects');
+        rate = [];
+        rate.params =nan(length(subs),4,2);
+        rate.sub    =nan(length(subs),4);
+        rate.pval   =nan(length(subs),4);
+        sc = 0;
+        for n =  subs(:)'
+            sc = sc+1;
+            s    = Subject(n);
+            s.fit_method = 3;
+            for ph = 2:4
+                fit = s.get_fit('rating',ph);
+                rate.params(sc,ph,:)    = fit.params(1:2);
+                rate.pval(sc,ph)        = fit.pval;
+                rate.sub(sc,ph)         = n;
+            end
         end
-    end
-    rate.valid    = rate.pval > -log10(.05);%selection criteria
-    save(pathparams,'rate','scr')
+        rate.valid    = rate.pval > -log10(.05);%selection criteria
+        save(pathparams,'rate','scr')
     else
         fprintf('Found saved file, loading it.\n')
         load(pathparams)
@@ -2764,9 +2754,9 @@ elseif strcmp(varargin{1},'figure_02B_get_params')
     set(gca,'XTick',[2 3 4 7 8 9],'XTickLabel',{'B','C','T','B','C','T'})
     line([5.5 10],[0 0],'Color','k')
     box off
-
-
-
+    
+    
+    
 elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     
     figure(1);
@@ -2787,8 +2777,8 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
         sn = n-1;
         subpl(n) =  subplot(2,3,sn);
         if n > 2
-             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
-             set(l,'LineStyle',':')
+            l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
+            set(l,'LineStyle',':')
         end
         hold on
         Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
@@ -2835,13 +2825,13 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     g.tunings.rate{2}.GroupFit(8);
     g.tunings.rate{3}.GroupFit(8);
     g.tunings.rate{4}.GroupFit(8);
-        
-     for n = 2:4
+    
+    for n = 2:4
         sn = n-1;
         subpl(n) =  subplot(2,3,sn+3);
         if n > 2
-             l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
-             set(l,'LineStyle',':')
+            l = line([-150 195],repmat(mean(mean(ratings(:,:,2))),[1 2]),'Color','k','LineWidth',2);
+            set(l,'LineStyle',':')
         end
         hold on
         Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
@@ -2878,7 +2868,7 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     text(30,8.5,'***','FontSize',20)
     
 elseif strcmp(varargin{1},'figure_03A')
-    %% selected subjects are 44 and 47, 31.    
+    %% selected subjects are 44 and 47, 31.
     roi_contours            = 0;
     fixmat                  = FPSA_FearGen('get_fixmat');
     fixmat.kernel_fwhm      = 30;
@@ -2886,7 +2876,7 @@ elseif strcmp(varargin{1},'figure_03A')
     nphase = 4;%we plot the generalization phase only.
     maps = [];
     for sub                     = varargin{2};
-        %  
+        %
         c  = 0;
         for ncond = circshift([0 45 90 135 180 -135 -90 -45],[1 3]);
             c    = c+1;
@@ -2900,10 +2890,10 @@ elseif strcmp(varargin{1},'figure_03A')
     end
     
     FPSA_FearGen('plot_fdm',maps,roi_contours);
-%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours),'-r300');
+    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours),'-r300');
     
 elseif strcmp(varargin{1},'figure_03B')
-    %% Produces the figure with fixation counts on 8 faces at different ROIs. 
+    %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
     force    = 0;
@@ -2911,7 +2901,7 @@ elseif strcmp(varargin{1},'figure_03B')
     fs       = 12; %fontsize
     counts   = FPSA_FearGen('get_fixation_counts');
     counts   = diff(counts,1,4);
-    counts   = counts*100;    
+    counts   = counts*100;
     m_counts = nanmean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));
     
@@ -2960,52 +2950,52 @@ elseif strcmp(varargin{1},'figure_03B')
     for nroi = 1:4
         tunedsubs{nroi} = find(pval(nroi,:)<.05);
     end
-%     %% plot single fits.
-%     for n = 1:length(pval)
-%         subplot(8,8,n);
-%         Project.plot_bar(-135:45:180,counts(:,2,n));hold on;
-%         plot(squeeze(X_fit(2,n,:)),squeeze(Y_fit(2,n,:)),'k','LineWidth',1.5);
-%         set(gca,'XTick',[],'YTick',ylim);
-%     end
-%     %% bar plots of parameter alpha
-%     figure;
-%     for nroi = 1:4
-%         m_all_alpha     = mean(params(nroi,:,1),2);
-%         sem_all_alpha   = std(params(nroi,:,1),0,2)./sqrt(length(params));
-%         m_pval_alpha   = mean(params(nroi,fitvalid(nroi,:),1),2);
-%         sem_pval_alpha = std(params(nroi,fitvalid(nroi,:),1),0,2)./sqrt(nvalidsubs(nroi));
-%         m_tuned_alpha   = mean(params(nroi,logical(realtuned(nroi,:)),1),2);
-%         sem_tuned_alpha = std(params(nroi,logical(realtuned(nroi,:)),1),0,2)./sqrt(nrealtuned(nroi));
-%         subplot(1,3,1)
-%         bar(nroi,m_all_alpha,'c'); hold on;
-%         errorbar(nroi,m_all_alpha,sem_all_alpha,'k.','LineWidth',1.5)
-%         subplot(1,3,2)
-%         bar(nroi,m_pval_alpha,'b'); hold on;
-%         errorbar(nroi,m_pval_alpha,sem_pval_alpha,'k.','LineWidth',1.5)
-%         subplot(1,3,3)
-%         bar(nroi,m_tuned_alpha,'r'); hold on;
-%         errorbar(nroi,m_tuned_alpha,sem_tuned_alpha,'k.','LineWidth',1.5)
-%     end
-%     
+    %     %% plot single fits.
+    %     for n = 1:length(pval)
+    %         subplot(8,8,n);
+    %         Project.plot_bar(-135:45:180,counts(:,2,n));hold on;
+    %         plot(squeeze(X_fit(2,n,:)),squeeze(Y_fit(2,n,:)),'k','LineWidth',1.5);
+    %         set(gca,'XTick',[],'YTick',ylim);
+    %     end
+    %     %% bar plots of parameter alpha
+    %     figure;
+    %     for nroi = 1:4
+    %         m_all_alpha     = mean(params(nroi,:,1),2);
+    %         sem_all_alpha   = std(params(nroi,:,1),0,2)./sqrt(length(params));
+    %         m_pval_alpha   = mean(params(nroi,fitvalid(nroi,:),1),2);
+    %         sem_pval_alpha = std(params(nroi,fitvalid(nroi,:),1),0,2)./sqrt(nvalidsubs(nroi));
+    %         m_tuned_alpha   = mean(params(nroi,logical(realtuned(nroi,:)),1),2);
+    %         sem_tuned_alpha = std(params(nroi,logical(realtuned(nroi,:)),1),0,2)./sqrt(nrealtuned(nroi));
+    %         subplot(1,3,1)
+    %         bar(nroi,m_all_alpha,'c'); hold on;
+    %         errorbar(nroi,m_all_alpha,sem_all_alpha,'k.','LineWidth',1.5)
+    %         subplot(1,3,2)
+    %         bar(nroi,m_pval_alpha,'b'); hold on;
+    %         errorbar(nroi,m_pval_alpha,sem_pval_alpha,'k.','LineWidth',1.5)
+    %         subplot(1,3,3)
+    %         bar(nroi,m_tuned_alpha,'r'); hold on;
+    %         errorbar(nroi,m_tuned_alpha,sem_tuned_alpha,'k.','LineWidth',1.5)
+    %     end
+    %
     % t-tests
     
     for nroi = 1:4
         [hypo(nroi,1) pval(nroi,1)] = ttest(params(nroi,:,1));
         [hypo(nroi,2) pval(nroi,2)] = ttest(params(nroi,fitvalid(nroi,:),1));
     end
-%     
-%     subplot(1,3,1);title('all subs');
-%     ylabel('Alpha VonMises \Delta %(test-base)')
-%     text(4, max(ylim)-.0075, pval2asterix(pval(end,1)),'HorizontalAlignment','center','fontsize',16);
-%     subplot(1,3,2);title('subs fit p<.05');
-%     subplot(1,3,3);title('subs fit p<.05 AND shift < 45');
-%     for n = 1:3
-%         subplot(1,3,n);set(gca,'XTick',1:4,'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'});
-%         box off
-%         axis square
-%     end
-%     EqualizeSubPlotYlim(gcf);
-
+    %
+    %     subplot(1,3,1);title('all subs');
+    %     ylabel('Alpha VonMises \Delta %(test-base)')
+    %     text(4, max(ylim)-.0075, pval2asterix(pval(end,1)),'HorizontalAlignment','center','fontsize',16);
+    %     subplot(1,3,2);title('subs fit p<.05');
+    %     subplot(1,3,3);title('subs fit p<.05 AND shift < 45');
+    %     for n = 1:3
+    %         subplot(1,3,n);set(gca,'XTick',1:4,'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'});
+    %         box off
+    %         axis square
+    %     end
+    %     EqualizeSubPlotYlim(gcf);
+    
     figure;
     bp = boxplot(params(:,:,1)'); %third dimension is params, 1 is Ampl
     set(bp,'LineWidth',1.5)
@@ -3022,7 +3012,7 @@ elseif strcmp(varargin{1},'figure_03B')
         t        = [];
         t        = Tuning(data);
         t.GroupFit(8);
-        X_fit = [X_fit ;t.groupfit.x_HD];        
+        X_fit = [X_fit ;t.groupfit.x_HD];
         if t.groupfit.pval > -log10(.05)
             Y_fit = [Y_fit ;t.groupfit.fit_HD];
         else
@@ -3040,15 +3030,15 @@ elseif strcmp(varargin{1},'figure_03B')
         hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
         if n == 1
             ylabel(sprintf('\\Delta%%\n(after-before)'));
-        end        
+        end
         hold on;
         errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
         try
-            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);        
+            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);
         catch
             plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0]);
         end
-        hold off;        
+        hold off;
         set(gca,'linewidth',1.2,'YTick',[-8 -4 0 4 8],'fontsize',fs,'YTickLabel',{'-8' '' '0' '' '8'});
         if n ~= 1;
             set(gca,'xticklabel','');
@@ -3069,15 +3059,15 @@ elseif strcmp(varargin{1},'figure_03B')
             h = text(-90,-1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
         end
         try
-        set(gca,'XAxisLocation','origin')
+            set(gca,'XAxisLocation','origin')
         end
         set(gca,'XGrid','on','YGrid','off')
     end
-    subplotChangeSize(H,.025,.025);            
+    subplotChangeSize(H,.025,.025);
     %
-    %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);    
-%     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%d.png',current_subject_pool));
-elseif strcmp(varargin{1},'figure_04A')    
+    %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);
+    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%d.png',current_subject_pool));
+elseif strcmp(varargin{1},'figure_04A')
     %% observed similarity matrices
     clf
     sim     = varargin{2};
@@ -3094,7 +3084,7 @@ elseif strcmp(varargin{1},'figure_04A')
     set(gcf,'position',[0 0         995         426]);
     %subplot(9,6,[1 2 3 7 8 9 13 14 15]);
     H(1) = subplot(1,3,1);
-    h = imagesc(cormatz(1:8,1:8),[d u]);    
+    h = imagesc(cormatz(1:8,1:8),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
     h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
@@ -3105,17 +3095,17 @@ elseif strcmp(varargin{1},'figure_04A')
     h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Baseline','fontweight','normal','fontsize',15);    
-%     subplot(9,6,[4 5 6 10 11 12 16 17 18]);
+    title('Baseline','fontweight','normal','fontsize',15);
+    %     subplot(9,6,[4 5 6 10 11 12 16 17 18]);
     H(2) = subplot(1,3,2);
     h=imagesc(cormatz(9:16,9:16),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
-    axis square;axis off;        
+    axis square;axis off;
     h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
     h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Generalization','fontweight','normal','fontsize',15);    
+    title('Generalization','fontweight','normal','fontsize',15);
     %
     [indices] = FPSA_FearGen('CompareB2T_RSA');
     [Y X]     = ind2sub([8 8],indices(:,1));
@@ -3145,17 +3135,17 @@ elseif strcmp(varargin{1},'figure_04A')
     h2.AxisLocation ='out';
     h2.Box          = 'off';
     h2.TickLength   = 0;
-    h2.Ticks        = [.62 .85];    
+    h2.Ticks        = [.62 .85];
     h2.TickLabels   = {'.6' '.8'};
-%     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
+    %     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
     pos = get(gca,'position')
     try
-    set(h2,'Position',[pos(1)+pos(3)+.004 .268 .01 .25])
+        set(h2,'Position',[pos(1)+pos(3)+.004 .268 .01 .25])
     end
-% 	set(h2,'Position',pos)    
-
+    % 	set(h2,'Position',pos)
+    
     % plot the similarity to cs+
-%     subplot(9,6,[25:27 19:21])
+    %     subplot(9,6,[25:27 19:21])
     H(3) = subplot(1,3,3);
     Y         = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
@@ -3195,8 +3185,8 @@ elseif strcmp(varargin{1},'figure_04A')
             scatter(y(nface+8,1),y(nface+8,2),500,'markerfacecolor',colors(nface,:),'markeredgecolor',colors(nface,:));
         end
     end
-%     text(y(8+4,1)-.02,y(8+4,2)+.065,'CS+','FontWeight','normal','fontsize',12);
-%     text(y(8+8,1)-.08,y(8+8,2)+.07,['CS-'],'FontWeight','normal','fontsize',12);
+    %     text(y(8+4,1)-.02,y(8+4,2)+.065,'CS+','FontWeight','normal','fontsize',12);
+    %     text(y(8+8,1)-.08,y(8+8,2)+.07,['CS-'],'FontWeight','normal','fontsize',12);
     xlim([-.4 .4]);
     ylim([-.4 .4]);
     box off;axis square;axis off
@@ -3212,10 +3202,10 @@ elseif strcmp(varargin{1},'figure_04A')
     text(-.37+.06,.34,'Generaliz.','fontsize',12)
     hold off;
     %%
-%     subplotChangeSize(H,.025,.025);    
+    %     subplotChangeSize(H,.025,.025);
     %subplot(9,6,[22 23 24 28 29 30])
     %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04A.png','-transparent');
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04A.png','-transparent');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
@@ -3262,7 +3252,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
     groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 61 1]);
     
-    varargout{2} = groups;    
+    varargout{2} = groups;
     %% Compute fixation density and their change.
     P = mean(mean(mean(count(:,:,:,1:2),4),3));
     fprintf('Fixation density in percentage in Baseline + Generalization:\n')
@@ -3293,11 +3283,11 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     
     
     Y = Vectorize(count(:,:,:,1)-count(:,:,:,2));
-
+    
     t = table(Y(:),abs(groups.g1(1:1952)-4)',categorical( groups.g2(1:1952)'),categorical( groups.g3(1:1952)'),'variablenames',{'count' 'faces' 'roi' 'subjects'});
     a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
-
-       
+    
+    
 elseif strcmp(varargin{1},'behavior_correlation');
     %% Computes correlation with behavior
     
@@ -3317,7 +3307,7 @@ elseif strcmp(varargin{1},'behavior_correlation');
         %         b.rating_04_center              = ;
         %         b.scr_04_center                 = abs(b.scr_04_center);
     end
-    b.rating_04_sigma_y     = [];
+    b.rating_04_sigma_y     = [];c
     b.rating_03_sigma_y     = [];
     b.rating_03_offset      = [];
     b.rating_04_offset      = [];
