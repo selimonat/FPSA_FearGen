@@ -1027,7 +1027,7 @@ elseif strcmp(varargin{1},'model2behavior')
         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
     end
     
-elseif strcmp(varargin{1},'get_table_model2behavior');
+elseif strcmp(varargin{1},'FPSA_get_table_behavior');
     %%
     % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
     % Steps:
