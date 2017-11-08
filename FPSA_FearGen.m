@@ -1300,41 +1300,20 @@ elseif strcmp(varargin{1},'plot_searchlight')
     %sine^2) weight combination term.
     
     Mori            = FPSA_FearGen('searchlight',1,15);
-    %
-    M               = nanmean(Mori,4);%average across subjects.
-    M(:,:,1,:,:)    = sqrt(M(:,:,2,:,:).^2+M(:,:,3,:,:).^2);%average across sine and cosine
-    M(:,:,2:end,:,:)= [];%delete cos and sine;
-    M(:,:,:,:,2)    = mean(M(:,:,:,:,2:end),5);
-    M(:,:,:,:,3:end)= [];
-    %
-    fixmat = Fixmat([],[]);
-    fixmat.maps = squeeze(M);
-    fixmat.plot;
-    
-    %
-    Mori         = squeeze(nanmean(M,4));
-    Mori(:,:,:,2)= nanmean(Mori(:,:,:,2:4),4);
-    Mori(:,:,:,3:4)= [];
-    %
-    M           = Mori;
-    crop_amount = [0 0];
-    M           = M( 1+crop_amount(1):end-crop_amount(1), 1+crop_amount(2):end-crop_amount(2),:,:,:,:,:);
-    %     M           = padarray(M,[crop_amount],'replicate','both');
-    M           = reshape(M,[size(M,1) size(M,2) 6]);
-    fs          = 15;%font size
-    fixmat      = Fixmat([],[]);
-    stim        = fixmat.stimulus;
-    stim        = stim( 1+crop_amount(1):end-crop_amount(1), 1+crop_amount(2):end-crop_amount(2),:,:,:,:,:);
-    %
-    G           = make_gaussian2D(51,51,45,45,26,26);
-    G           = G./sum(G(:));
-    mask        = conv2(M(:,:,4),G,'same');
-    
-    k = .22;
-    M(:,:,4) = conv2(M(:,:,4),G,'same');
-    M(:,:,1) = conv2(M(:,:,1),G,'same');
-    
-    
+    %MORI(pixel,pixle,regressor,subject,phase)
+    %%
+    M                = nanmean(Mori,4);%average across subjects.
+    M(:,:,1,:,:)     = sqrt(M(:,:,2,:,:).^2+M(:,:,3,:,:).^2);%average across sine and cosine
+    M(:,:,2:end,:,:) = [];%delete cos and sine;
+    M(:,:,:,:,2)     = mean(M(:,:,:,:,2:end),5);%merge the 3 test runs.
+    M(:,:,:,:,3:end) = [];
+    %%
+    fixmat           = Fixmat([],[]);
+    fixmat.maps      = squeeze(M);
+    fixmat.plot;    
+    %%        
+    figure;
+    B = fixmat.EyeNoseMouth(M(:,:,1,1,2))-fixmat.EyeNoseMouth(M(:,:,1,1,1));bar(B(1:4))
     
     
 elseif strcmp(varargin{1},'searchlight_stimulus')
