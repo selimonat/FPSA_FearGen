@@ -1238,7 +1238,8 @@ elseif strcmp(varargin{1},'searchlight')
     fixations         = 1:100;
     runs_per_phase{2} = 1;
     runs_per_phase{4} = runs;
-    runc              = 0;%1 run from B + 3 runs from T.
+    fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block   
+    runc             = 0;%1 run from B + 3 runs from T.
     for phase = [2 4];
         conds = condition_borders{phase};%default parameter
         for run = runs_per_phase{phase}
