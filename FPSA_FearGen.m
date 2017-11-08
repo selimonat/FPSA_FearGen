@@ -1064,7 +1064,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
         for sub = subs(scrsubs(:)');
             ns                          = ns + 1;
             s                           = Subject(sub);
-            bla(ns,1) = s.get_fit('scr',4).params(1);
+            bla(ns,1)                   = s.get_fit('scr',4).params(1);
         end
         scr_test_parametric(scrsubs,1) = bla;
         %% prepare rating data
@@ -1074,8 +1074,9 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
             ns     = ns+1;
             s      = Subject(sub);
             rating = s.get_rating(4);
-            Y      = zscore(rating.y);%zscored rating
-            Y      = accumarray(rating.x'/45+4,Y,[8 1],@mean)';
+%             Y      = zscore(rating.y);%zscored rating
+%             Y      = accumarray(rating.x'/45+4,Y,[8 1],@mean)';
+            Y = rating.y_mean;
 %             amp_test_nonparam(ns,1)   = 
             rating_test_parametric(ns,1) = s.get_fit('rating',4).params(1);
             rating_test_nonparam(ns,1)   = mean(Y([3 4 5]))-mean(Y([1 7 8]));
