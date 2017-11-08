@@ -1033,7 +1033,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
     % Steps:
     % collect necessary data
     % set up table
-    force =0;
+    force    = 1;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -1066,7 +1066,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
         beta1 = C.model_02.w1(:,2);
         beta2 = C.model_02.w2(:,2);
         %% concatenate everything in the table
-        t = table(amp_test,scr_test,beta1,beta2,'variablenames',{'AMPtest','SCRtest','beta1','beta2'});
+        t = table(amp_test,scr_test,beta1,beta2,'variablenames',{'rating_test_PvsM','scr_test_PvsM','beta1','beta2'});
         save(path2table,'t');
     else
         fprintf('Found table at %s, loading it.\n',path2table)
