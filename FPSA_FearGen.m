@@ -1073,7 +1073,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
         load(path2table);
     end
     %%
-    vargout{1} = t;
+    varargout{1} = t;
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model
     t           = FPSA_FearGen('FPSA_get_table',1:100);
