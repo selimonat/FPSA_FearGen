@@ -1073,7 +1073,7 @@ elseif strcmp(varargin{1},'get_table_model2behavior');
         load(path2table);
     end
     %%
-    vargout{1} = t;
+    varargout{1} = t;
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model
     t           = FPSA_FearGen('FPSA_get_table',1:100);
@@ -2583,11 +2583,14 @@ elseif strcmp(varargin{1},'figure_02B')
     std(differ)
     
     subplot(2,4,4)
-    boxplot(scr_ampl(:,[2 4]),'positions',[2 4],'boxstyle','filled');
+    boxplot(scr_ampl(:,[2 4]),'positions',[1 3],'boxstyle','filled');
     set(gca,'FontSize',13)
-    xlim([0 5])
-    set(gca,'XTick',[2 4],'XTickLabel',{'Base','Gen'},'FontSize',13,'XTickLabelRotation',45)
+    xlim([0 4])
+    set(gca,'XTick',[1 3],'XTickLabel',{'Base','Gen'},'FontSize',13,'XTickLabelRotation',45)
     ylabel('Amplitude')
+    ht = text(2.5,max(scr_ampl(:,4))+.4,'***','FontSize',18);
+%     set(ht,'Rotation',0);
+    ylim([-3 5])
     box off
     
     %% plot ratings
@@ -2602,6 +2605,7 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         load(ratepath)
     end
+    % check all three phases for tuning
     for ph = 1:3
         data.y   = ratings(:,:,ph);
         data.x   = repmat(-135:45:180,[length(subs) 1]);
@@ -2610,6 +2614,7 @@ elseif strcmp(varargin{1},'figure_02B')
         t.GroupFit(3);
         fit(ph) = t.groupfit;
     end
+    % get single sub Gaussian ampl
     for ph = 1:3
         sc = 0;
         for sub = subs(:)'
@@ -2657,10 +2662,13 @@ elseif strcmp(varargin{1},'figure_02B')
     text(30,8.5,'***','FontSize',20)
     
     subplot(2,4,8)
-    boxplot(rate_ampl,'positions',2:4,'boxstyle','filled');
-    xlim([0 5])
-    set(gca,'XTick',2:4,'XTickLabel',{'Base','Cond','Gen'},'FontSize',13,'XTickLabelRotation',45)
+    boxplot(rate_ampl,'positions',1:3,'boxstyle','filled');
+    xlim([0 4])
+    set(gca,'XTick',1:3,'XTickLabel',{'Base','Cond','Gen'},'FontSize',13,'XTickLabelRotation',45)
     box off
+    ylim([-10 13])
+    ht = text(1.5,max(rate_ampl(:,2))+.2,'***','FontSize',18);
+    ht = text(2.5,max(rate_ampl(:,2))+.2,'***','FontSize',18);
     ylabel('Amplitude')
     
     
