@@ -1234,18 +1234,19 @@ elseif strcmp(varargin{1},'searchlight')
     % average windows with full overlap).
     % At each searchlight position the flexible model is fit.
     b1                = varargin{2};
-    b2                = varargin{3};    
+    b2                = varargin{3};
     fixations         = 1:100;
     runs_per_phase{2} = 1;
     runs_per_phase{4} = runs;
-    fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block   
+    fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
+    
     runc             = 0;%1 run from B + 3 runs from T.
     for phase = [2 4];
         conds = condition_borders{phase};%default parameter
         for run = runs_per_phase{phase}
             runc             = runc + 1;
             fixmat           = FPSA_FearGen('get_fixmat','runs',run);%get the fixmat for this run
-            filename         = DataHash({b1,b2,phase,run,fixations});
+            filename         = DataHash({fixmat.kernel_fwhm,b1,b2,phase,run,fixations});
             subc = 0;
             for subject = unique(fixmat.subject);
                 subc                 = subc + 1;%subject counter
@@ -1268,7 +1269,6 @@ elseif strcmp(varargin{1},'searchlight')
         end
     end
     varargout{1} = B1;
-    
 elseif strcmp(varargin{1},'fun_handle')
     %% This is the function kernel executed for each seachlight position.
     
