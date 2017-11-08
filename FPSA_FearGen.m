@@ -63,7 +63,7 @@ function [varargout]=FPSA_FearGen(varargin);
 % machine and will add paths. Before starting you need to set the
 % PATH_PROJECT variable below for your own liking.
 %
-% Contact: sonat@uke.de
+% Contact: sonat@uke.de; lkampermann@uke.de
 
 %% Set the default parameters
 path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
@@ -75,6 +75,7 @@ current_subject_pool = 0;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
+kernel_fwhm          = Fixmat.PixelPerDegree*.8;                            % size of the smoothing window (.8 degrees by default);
 url                  = 'https://www.dropbox.com/s/0wix64zy2dlwh8g/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
@@ -91,6 +92,8 @@ for nf = 1:length(varargin)
         criterion            = varargin{nf+1};
     elseif strcmp(varargin{nf} , 'force')
         force                = varargin{nf+1};
+    elseif strcmp(varargin{nf} , 'kernel_fwhm')
+        kernel_fwhm          = varargin{nf+1};
     else
         invalid_varargin(nf) = true;%detect which varargins modify the default values and delete them
     end
@@ -215,7 +218,8 @@ elseif strcmp(varargin{1},'get_fixmat');
     else
         load(filename)
     end
-    varargout{1} = fix;
+    fix.kernel_fwhm = kernel_fwhm;
+    varargout{1}    = fix;
 elseif strcmp(varargin{1},'fix_counts')
     %% Sanity check: counts fixations in 5 different ROI
     %during baseline and generalization, returns [subjects, roi, phase].
@@ -1027,13 +1031,13 @@ elseif strcmp(varargin{1},'model2behavior')
         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
     end
     
-elseif strcmp(varargin{1},'get_table_model2behavior');
+elseif strcmp(varargin{1},'FPSA_get_table_behavior');
     %%
     % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
     % Steps:
     % collect necessary data
     % set up table
-    force =0;
+    force    = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -1041,32 +1045,48 @@ elseif strcmp(varargin{1},'get_table_model2behavior');
     if ~exist(path2table)||force == 1
         %% prepare scr data
         scrsubs  = ismember(subs,p.subjects(p.subjects_scr));
-        scrpath           = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,sum(scrsubs));
+        scrpath  = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,sum(scrsubs));
         %get scr data
-        if ~exist(scrpath)
-            g        = Group(scrsubs);
+        if ~exist(scrpath) || force == 1
+            g        = Group(subs(scrsubs));
             out      = g.getSCR(2.5:5.5);
             save(scrpath,'out');
             clear g
         else
             load(scrpath)
         end
-        scr_test = nan(length(subs),1); % the table needs same number of rows, so we just fill a column of nans with scr params.
-        scr_test(scrsubs,:) = out.y(:,22)-out.y(:,26); %% diff between CSP and CSN
+        scr_test_nonparam            = nan(length(subs),1); % the table needs same number of rows, so we just fill a column of nans with scr params.
+        scr_test_nonparam(scrsubs,:) = mean(out.y(:,[21 22 23]),2)-mean(out.y(:,[25 26 19]),2); %% diff between CSP and CSN (IS THIS ZSCORED?)
+        
+        %% scr data with fits        
+        ns = 0;
+        scr_test_parametric            = nan(length(subs),1);
+        for sub = subs(scrsubs(:)');
+            ns                          = ns + 1;
+            s                           = Subject(sub);
+            bla(ns,1)                   = s.get_fit('scr',4).params(1);
+        end
+        scr_test_parametric(scrsubs,1) = bla;
         %% prepare rating data
         % collect rating amplitudes
         ns = 0;
         for sub = subs(:)'
-            ns = ns+1;
-            s = Subject(sub);
-            amp_test(ns,1) = s.get_fit('rating',4).params(1);
+            ns     = ns+1;
+            s      = Subject(sub);
+            rating = s.get_rating(4);
+%             Y      = zscore(rating.y);%zscored rating
+%             Y      = accumarray(rating.x'/45+4,Y,[8 1],@mean)';
+            Y = rating.y_mean;
+%             amp_test_nonparam(ns,1)   = 
+            rating_test_parametric(ns,1) = s.get_fit('rating',4).params(1);
+            rating_test_nonparam(ns,1)   = mean(Y([3 4 5]))-mean(Y([1 7 8]));
         end
         %% get model parameters
         C          = FPSA_FearGen('FPSA_model_singlesubject',1:100);
-        beta1 = C.model_02.w1(:,2);
-        beta2 = C.model_02.w2(:,2);
+        beta1         = C.model_02.w1(:,2);
+        beta2         = C.model_02.w2(:,2);        
         %% concatenate everything in the table
-        t = table(amp_test,scr_test,beta1,beta2,'variablenames',{'AMPtest','SCRtest','beta1','beta2'});
+        t = table(subs(:),rating_test_parametric,rating_test_nonparam,scr_test_parametric,scr_test_nonparam,beta1,beta2,'variablenames',{'subject_id' 'rating_test_parametric','rating_test_nonparam','scr_test_parametric','scr_test_nonparam','beta1','beta2'});
         save(path2table,'t');
     else
         fprintf('Found table at %s, loading it.\n',path2table)
@@ -1214,11 +1234,14 @@ elseif strcmp(varargin{1},'searchlight')
     % average windows with full overlap).
     % At each searchlight position the flexible model is fit.
     b1                = varargin{2};
-    b2                = varargin{3};
+    b2                = varargin{3};    
     fixations         = 1:100;
     runs_per_phase{2} = 1;
     runs_per_phase{4} = runs;
-    fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
+    if funtype == 1
+        fun               = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
+    else
+    end
     
     runc             = 0;%1 run from B + 3 runs from T.
     for phase = [2 4];
@@ -1226,7 +1249,7 @@ elseif strcmp(varargin{1},'searchlight')
         for run = runs_per_phase{phase}
             runc             = runc + 1;
             fixmat           = FPSA_FearGen('get_fixmat','runs',run);%get the fixmat for this run
-            filename         = DataHash({fixmat.kernel_fwhm,b1,b2,phase,run,fixations});
+            filename         = DataHash({b1,b2,phase,run,fixations});
             subc = 0;
             for subject = unique(fixmat.subject);
                 subc                 = subc + 1;%subject counter
@@ -1271,9 +1294,8 @@ elseif strcmp(varargin{1},'get_design_matrix');
     w          = [cos(x);sin(x)];
     %
     model2_c   = squareform_force(cos(x)'*cos(x));
-    model2_s   = squareform_force(sin(x)'*sin(x));
-    X          = [ones(length(model2_c(:)),1) model2_c model2_s];
-    
+    model2_s   = squareform_force(sin(x)'*sin(x));    
+    X          = [ones(length(model2_c(:)),1) model2_c model2_s];        
     varargout{1}  = X;
     
     
