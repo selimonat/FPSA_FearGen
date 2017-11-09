@@ -737,8 +737,11 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     %%
     figure(fixations(1));
-    set(gcf,'position',[-200+500*fixations(1)        1400        898         604]);
-    %     set(gcf,'position',[2150         335         898         604]);
+    if ispc
+        set(gcf,'position',[-200+500*fixations(1)        1400        898         604]);
+    else
+        set(gcf,'position',[2150         335         898         604]);
+    end
     X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
     Y    = [M Mc Ms Mcg Msg Mg];
     Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
@@ -800,15 +803,15 @@ elseif strcmp(varargin{1},'figure_04C');
     h= line([X(4)-bw/2 X(6)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
     
     h= line([X(7)-bw/2 X(8)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-    h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
-    h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
+%     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+%     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
     %
     text(mean(X(1:2))  ,max(ylim)-.0075, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
     text(mean(X(3:4))  ,max(ylim)-.0075, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
     text(mean(X([4 6])),max(ylim)      , pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
     text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+%     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
+%     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
     % model names
     ylim([-.04 .2])
     %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
@@ -2529,20 +2532,22 @@ elseif strcmp(varargin{1},'figure_02B')
     end
     %% plot SCR
     grayshade = [.8 .8 .8];
-    figure(1022);
+    figure(1022);clf;
     h = gcf;
-    h.Position = [750 1000 700 450];
+    h.Position = [78         319        1372         775];
     subplot(2,4,1);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
+    set(gca,'ytick',[-.5 0 .5],'fontsize',13)
     line([-180 225],repmat(mean(nulltrials(:,1)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',1.5);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color','k','LineWidth',2)
     %     ylim([-1 1]);
-    ylim([-1.25 1.25])
-    ylabel('SCR (z-score)')
+    YLIM = .75
+    ylim([-YLIM YLIM])
+    ylabel(sprintf('SCR\n(z-score)'))
     
     
     subplot(2,4,2);
@@ -2552,10 +2557,11 @@ elseif strcmp(varargin{1},'figure_02B')
     hold on;
     Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
     errorbar(-135:45:180,av(10:17),sem(10:17),'k.','LineWidth',1.5);
-    set(gca,'YTick',0:2)
-    ylim([-.5 2])
-    line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
-    text(40,max(ylim)+.05,'***','FontSize',20);
+    set(gca,'YTick',0:2,'fontsize',13)    
+    ylim([-.5 2.1])
+%     line([0 180],[max(ylim) max(ylim)]+range(ylim)/10,'Color','k','LineWidth',1.5);
+%     text(40,[max(ylim)]+range(ylim)/10+.1,'***','FontSize',20);
+    
     
     
     subplot(2,4,3);
@@ -2565,25 +2571,41 @@ elseif strcmp(varargin{1},'figure_02B')
     hold on;
     Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
     errorbar(-135:45:180,av(19:26),sem(19:26),'k.','LineWidth',1.5);
+    set(gca,'ytick',[-.5 0 .5],'fontsize',13)
     x = -150:0.1:195;
     plot(test.groupfit.x_HD,test.groupfit.fit_HD,'k-','LineWidth',2)
     %     ylim([-1 1])
-    ylim([-1.25 1.25])
-    line([0 180],[max(ylim) max(ylim)],'Color','k','LineWidth',1.5);
-    text(40,max(ylim)+.05,'***','FontSize',20);
+    ylim([-YLIM YLIM])
+%     line([0 180],[max(ylim) max(ylim)]+range(ylim)/10,'Color','k','LineWidth',1.5);
+%     text(40,[max(ylim)]+range(ylim)/10+.1,'***','FontSize',20);
+%     axis tight
     %     set(gca,'YTick',[0 1])
     
-    
+    %
     %
     differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
     std(differ)
     
     subplot(2,4,4)
-    boxplot(scr_ampl(:,[2 4]),'positions',[2 4],'boxstyle','filled');
-    set(gca,'FontSize',13)
-    xlim([0 5])
-    set(gca,'XTick',[2 4],'XTickLabel',{'Base','Gen'},'FontSize',13,'XTickLabelRotation',45)
+    H=plot(linspace(1,2,63),scr_ampl(:,2),'ko',linspace(1,2,63)+2,scr_ampl(:,4),'ko',[1 2],[mean(scr_ampl(:,2)) mean(scr_ampl(:,2))],'k-',[3 4],[mean(scr_ampl(:,4)) mean(scr_ampl(:,4))],'k-');
+    xlim([0 5]);ylim([-2.5 4]);
+    box off;
+    set(gca,'xtick',[1.5 3.5],'XTickLabel',{'Base.','Gen.'},'XTickLabelRotation',0,'fontsize',13,'ytick',[-4 -2 0 2 4]);    
+    CCC=100;
+    H(1).Color=[CCC CCC CCC]./255;
+    H(2).Color=[CCC CCC CCC]./255;
+    H(3).LineWidth = 4;
+    H(4).LineWidth = 4;;    
+%     line([1.5 3.5],[max(ylim) max(ylim)]+range(ylim)/10,'color','k','linewidth',1.5)      
+%     text(2.5,[max(ylim)]+range(ylim)/10+.1,'***','fontsize',20,'horizontalalignment','center');
+%     text(3.5,3.6,'***','fontsize',20,'horizontalalignment','center');
+    axis tight
+    xlim([0 5]);
+    box off;
+    set(gca,'color','none');
+    box off;axis square;drawnow;alpha(.5);
+    
     ylabel('Amplitude')
     box off
     
@@ -2641,32 +2663,45 @@ elseif strcmp(varargin{1},'figure_02B')
         box off
     end
     %
-    subplot(2,4,5);ylabel('Rating of p(shock)','FontSize',13)
+    subplot(2,4,5);ylabel(sprintf('Shock\nExpectancy'))
     hold on;
     line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color','k','LineWidth',2); %null model in baseline
     subplot(2,4,6);
     plot(fit(2).x_HD,fit(2).fit_HD,'k','LineWidth',2)%add Groupfit line Cond
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
+%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
+%     text(30,8.5,'***','FontSize',20)
     subplot(2,4,7);
     plot(fit(3).x_HD,fit(3).fit_HD,'k','LineWidth',2)%add Groupfit line Test
-    line([0 180],[8 8],'Color','k','LineWidth',1.5)
-    text(30,8.5,'***','FontSize',20)
+%     line([0 180],[8 8],'Color','k','LineWidth',1.5)
+%     text(30,8.5,'***','FontSize',20)
     
-    subplot(2,4,8)
-    boxplot(rate_ampl,'positions',2:4,'boxstyle','filled');
-    xlim([0 5])
-    set(gca,'XTick',2:4,'XTickLabel',{'Base','Cond','Gen'},'FontSize',13,'XTickLabelRotation',45)
-    box off
+    %
+    subplot(2,4,8)    
+    H=plot(linspace(1,2,74)+4,rate_ampl(:,3),'ko',linspace(1,2,74),rate_ampl(:,1),'ko',linspace(1,2,74)+2,rate_ampl(:,2),'ko',[1 2],[mean(rate_ampl(:,1)) mean(rate_ampl(:,1))],'k-',[3 4],[mean(rate_ampl(:,2)) mean(rate_ampl(:,2))],'k-',[5 6],[mean(rate_ampl(:,3)) mean(rate_ampl(:,3))],'k-');
+    xlim([0 7]);
+    %
+    ylim([-12 12]);
+    box off;
+    set(gca,'xtick',[1.5 3.5 5.5],'XTickLabel',{'Base.','Cond.' 'Gen.'},'XTickLabelRotation',0,'fontsize',13,'ytick',[-10 -5 0 5 10],'xgrid','on');    
+    CCC=100;
+    H(1).Color=[CCC CCC CCC]./255;
+    H(2).Color=[CCC CCC CCC]./255;
+    H(3).Color=[CCC CCC CCC]./255;
+    H(4).LineWidth = 4;
+    H(5).LineWidth = 4;;    
+    H(6).LineWidth = 4;;    
+    %
+%     line([1.5 3.5],[max(ylim) max(ylim)]+range(ylim)/10,'color','k','linewidth',1.5)      
+%     text(2.5,[max(ylim)]+range(ylim)/10+.1,'***','fontsize',20,'horizontalalignment','center');
+%     text(3.5,3.6,'***','fontsize',20,'horizontalalignment','center');        
+    box off;
+    set(gca,'color','none');
+    box off;axis square;drawnow;alpha(.5);
+    
     ylabel('Amplitude')
+    box off
     
-    
-    for n = [1:3 5:7]
-        subplot(2,4,n)
-        set(gca,'XTick',[0 180],'XTickLabel',{'CS+' 'CS-'},'FontSize',13)
-        xlim([-180 225])
-    end
-    
+    %%
     keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
