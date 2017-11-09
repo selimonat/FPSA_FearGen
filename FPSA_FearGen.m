@@ -75,7 +75,7 @@ current_subject_pool = 0;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-kernel_fwhm          = Fixmat.PixelPerDegree*.8;                            % size of the smoothing window (.8 degrees by default);
+kernel_fwhm          = Fixmat([],[]).PixelPerDegree*.8;                            % size of the smoothing window (.8 degrees by default);
 url                  = 'https://www.dropbox.com/s/0wix64zy2dlwh8g/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
