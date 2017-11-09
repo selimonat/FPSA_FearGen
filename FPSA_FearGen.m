@@ -1303,21 +1303,38 @@ elseif strcmp(varargin{1},'plot_searchlight')
     %sine^2) weight combination term.
     
     Mori            = FPSA_FearGen('searchlight',1,15);
-    %MORI(pixel,pixle,regressor,subject,phase)
-    %%
-    M                = nanmean(Mori,4);%average across subjects.
-    M(:,:,1,:,:)     = sqrt(M(:,:,2,:,:).^2+M(:,:,3,:,:).^2);%average across sine and cosine
-    M(:,:,2:end,:,:) = [];%delete cos and sine;
-    M(:,:,:,:,2)     = mean(M(:,:,:,:,2:end),5);%merge the 3 test runs.
+    %% MORI(pixel,pixle,regressor,subject,phase)
+    M                = Mori;
+    M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
     M(:,:,:,:,3:end) = [];
-    %%
-    fixmat           = Fixmat([],[]);
-    fixmat.maps      = squeeze(M);
-    fixmat.plot;    
-    %%        
-    figure;
-    B = fixmat.EyeNoseMouth(M(:,:,1,1,2))-fixmat.EyeNoseMouth(M(:,:,1,1,1));bar(B(1:4))
-    
+    M(:,:,1,:,:)     = [];
+    M(:,:,3,:,:)     = sqrt(M(:,:,1,:,:).^2+M(:,:,2,:,:).^2);
+    M(:,:,3,:,:)     = (M(:,:,1,:,:)+M(:,:,2,:,:))./2;
+    %% plot the number of subjects present per pixel
+    figure(1);
+    C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
+    imagesc(C,[0 100]);colorbar;hold on;
+    contourf(C,[90 75 50],'fill','off');axis ij;hold off;
+    axis off
+    title('Counts')
+    %% plot the specific and unspecific components
+    figure(2);
+    N=0;
+    fix      = Fixmat([],[]);
+    fix.cmap_limits = 5;
+    fix.maps = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
+    fix.plot;
+    colormap jet
+    %% count the beta values from 4 rois
+    C = [];
+    for np = 1:2
+        for ns = 1:74
+            for w = 1:3
+                C(:,ns,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0);
+            end
+        end
+    end
+   
     
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %% applies the search light analysis to the V1 representations.
