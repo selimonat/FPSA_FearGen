@@ -1047,7 +1047,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
         scrsubs  = ismember(subs,p.subjects(p.subjects_scr));
         scrpath  = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,sum(scrsubs));
         %get scr data
-        if ~exist(scrpath) || force == 1
+        if ~exist(scrpath)
             g        = Group(subs(scrsubs));
             out      = g.getSCR(2.5:5.5);
             save(scrpath,'out');
