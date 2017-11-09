@@ -1050,7 +1050,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
         scrsubs  = ismember(subs,p.subjects(p.subjects_scr));
         scrpath  = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,sum(scrsubs));
         %get scr data
-        if ~exist(scrpath) || force == 1
+        if ~exist(scrpath)
             g        = Group(subs(scrsubs));
             out      = g.getSCR(2.5:5.5);
             save(scrpath,'out');
@@ -2607,6 +2607,9 @@ elseif strcmp(varargin{1},'figure_02B')
     box off;axis square;drawnow;alpha(.5);
     
     ylabel('Amplitude')
+    ht = text(2.5,max(scr_ampl(:,4))+.4,'***','FontSize',18);
+%     set(ht,'Rotation',0);
+    ylim([-3 5])
     box off
     
     %% plot ratings
@@ -2621,6 +2624,7 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         load(ratepath)
     end
+    % check all three phases for tuning
     for ph = 1:3
         data.y   = ratings(:,:,ph);
         data.x   = repmat(-135:45:180,[length(subs) 1]);
@@ -2629,6 +2633,7 @@ elseif strcmp(varargin{1},'figure_02B')
         t.GroupFit(3);
         fit(ph) = t.groupfit;
     end
+    % get single sub Gaussian ampl
     for ph = 1:3
         sc = 0;
         for sub = subs(:)'
@@ -2674,8 +2679,7 @@ elseif strcmp(varargin{1},'figure_02B')
     plot(fit(3).x_HD,fit(3).fit_HD,'k','LineWidth',2)%add Groupfit line Test
 %     line([0 180],[8 8],'Color','k','LineWidth',1.5)
 %     text(30,8.5,'***','FontSize',20)
-    
-    %
+   %
     subplot(2,4,8)    
     H=plot(linspace(1,2,74)+4,rate_ampl(:,3),'ko',linspace(1,2,74),rate_ampl(:,1),'ko',linspace(1,2,74)+2,rate_ampl(:,2),'ko',[1 2],[mean(rate_ampl(:,1)) mean(rate_ampl(:,1))],'k-',[3 4],[mean(rate_ampl(:,2)) mean(rate_ampl(:,2))],'k-',[5 6],[mean(rate_ampl(:,3)) mean(rate_ampl(:,3))],'k-');
     xlim([0 7]);
