@@ -1308,28 +1308,64 @@ elseif strcmp(varargin{1},'plot_searchlight')
     M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
     M(:,:,:,:,3:end) = [];
     M(:,:,1,:,:)     = [];
-    M(:,:,3,:,:)     = sqrt(M(:,:,1,:,:).^2+M(:,:,2,:,:).^2);
-    M(:,:,3,:,:)     = (M(:,:,1,:,:)+M(:,:,2,:,:))./2;
-    %% plot the number of subjects present per pixel
+%     M(:,:,3,:,:)     = sqrt(M(:,:,1,:,:).^2+M(:,:,2,:,:).^2);
+%     M(:,:,3,:,:)     = (M(:,:,1,:,:)+M(:,:,2,:,:))./2;
+    % plot the number of subjects present per pixel, get a mask
     figure(1);
     C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
-    imagesc(C,[0 100]);colorbar;hold on;
-    contourf(C,[90 75 50],'fill','off');axis ij;hold off;
-    axis off
-    title('Counts')
+%     imagesc(C,[0 100]);colorbar;hold on;
+%     contourf(C,[90 75 50],'fill','off');axis ij;hold off;
+%     axis off
+%     title('Counts');
+    % remove the data outside of the mask
+    M             = reshape(M,[500*500 2 74 2]);
+    mask          = C < 50;
+    mask          = mask(:);
+    M(mask,:,:,:) = NaN;
+    M             = reshape(M,[500 500 2 74 2]);
     %% plot the specific and unspecific components
     figure(2);
-    N=0;
-    fix      = Fixmat([],[]);
+    N               = 0;
+    fix             = Fixmat([],[]);
     fix.cmap_limits = 5;
-    fix.maps = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
+    fix.maps        = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
     fix.plot;
     colormap jet
+    %%
+    M     = reshape(M,[500*500 2 74 2]);
+    h     = nan(250000,1);p = h;
+    nbeta = 1;
+    for npix = 1:250000;        
+        if mask(npix) == 0
+            data              = squeeze(M(npix,nbeta,:,2)-M(npix,nbeta,:,1));
+%             [h(npix) p(npix)] = signtest( data(:));
+            [p(npix) h(npix)] = signtest( data(:));
+        end
+    end
+    fix.maps  = reshape([h(:) -log10(p(:))],[500 500 2]);
+    imagesc(fix.maps(:,:,2));    
+    fix.plot;
+    %%
+    tuned         = ismember(FPSA_FearGen('get_subjects'),FPSA_FearGen('current_subject_pool',1,'get_subjects'))'
+    M             = reshape(M,[500*500 2 74 2]);
+    p             = nan(250000,1);    
+    h             = nan(250000,1);    
+    for i             = 1:250000;
+        if mask(i) == 0
+            data          = reshape(permute( squeeze(M(i,:,:,:)),[2 3 1]),[74 4]);%(subjects,phase,betas)
+%             G             = [Vectorize([zeros(74,2) ones(74,2)]) Vectorize([zeros(74,1) ones(74,1) zeros(74,1) ones(74,1)])];    
+%             p(i,:)        = anovan(data(:),G,'model','interaction','display','off');
+%             data          = (data(:,2)-data(:,1))-(data(:,4)-data(:,3));
+            data          = (data(tuned ,2)-data(tuned ,1));%-(data(tuned ,4)-data(tuned ,3));
+            [h(i,1) p(i,1)] = signrank(data);
+            
+        end
+    end        
     %% count the beta values from 4 rois
     C = [];
     for np = 1:2
         for ns = 1:74
-            for w = 1:3
+            for w = 1:2
                 C(:,ns,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0);
             end
         end
