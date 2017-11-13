@@ -708,19 +708,19 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     % circular model
     M         = mean(C.model_01.w1);
-    SEM       = std(C.model_01.w1)./sqrt(61);
+    SEM       = std(C.model_01.w1)./sqrt(length(C.model_01.w1));
     %flexible model
     Mc        = mean(C.model_02.w1);
-    SEMc      = std(C.model_02.w1)./sqrt(61);
+    SEMc      = std(C.model_02.w1)./sqrt(length(C.model_01.w1));
     Ms        = mean(C.model_02.w2);
-    SEMs      = std(C.model_02.w2)./sqrt(61);
+    SEMs      = std(C.model_02.w2)./sqrt(length(C.model_01.w1));
     %gaussian model
     Mcg       = mean(C.model_03.w1);
-    SEMcg     = std(C.model_03.w1)./sqrt(61);
+    SEMcg     = std(C.model_03.w1)./sqrt(length(C.model_01.w1));
     Msg       = mean(C.model_03.w2);
-    SEMsg     = std(C.model_03.w2)./sqrt(61);
+    SEMsg     = std(C.model_03.w2)./sqrt(length(C.model_01.w1));
     Mg        = mean(C.model_03.w3);
-    SEMg      = std(C.model_03.w3)./sqrt(61);
+    SEMg      = std(C.model_03.w3)./sqrt(length(C.model_01.w1));
     
     
     %% get the p-values
@@ -827,7 +827,172 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
-    
+    set(gcf,'Color',[1 1 1]);
+       if ispc
+            fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04C.png'])
+            export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04C.png'],'-r600')
+       end
+        %
+elseif strcmp(varargin{1},'figure_04D')
+    if nargin ==2
+        fixations = varargin{2};
+    else
+        fixations = 1:6;
+    end
+        %% plots the adversity gradient betas for single fixations;
+        Mc = [];Ms=[];SEMc=[];SEMs=[];combined = [];M=[];SEM=[];beta1bc=[];beta2bc=[];
+        for fixx = fixations(:)'
+            C         = FPSA_FearGen('FPSA_model_singlesubject',fixx);
+            %
+            %flexible model, baseline corrected
+            Mc(fixx,:)        = mean(C.model_02.w1(:,2)-C.model_02.w1(:,1));
+            SEMc(fixx,:)      = std(C.model_02.w1(:,2)-C.model_02.w1(:,1))./sqrt(length(C.model_02.w1));
+            Ms(fixx,:)        = mean(C.model_02.w2(:,2)-C.model_02.w2(:,1));
+            SEMs(fixx,:)      = std(C.model_02.w2(:,2)-C.model_02.w2(:,1))./sqrt(length(C.model_02.w2));
+            
+            combined(:,fixx) = [C.model_02.w1(:,2)-C.model_02.w1(:,1)]-[C.model_02.w2(:,2)-C.model_02.w2(:,1)];
+            beta1bc(:,fixx) =  [C.model_02.w1(:,2)-C.model_02.w1(:,1)];
+            beta2bc(:,fixx) =  [C.model_02.w2(:,2)-C.model_02.w2(:,1)];
+            
+            M(fixx,:)    = mean(combined(:,fixx));
+            SEM(fixx,:)  = std(combined(:,fixx))./sqrt(length(C.model_02.w2));
+            % get p-values
+            [Hc(fixx) Pc(fixx)]     = ttest(C.model_02.w1(:,2)-C.model_02.w1(:,1));%compares cosine before to after
+            [Hs(fixx) Ps(fixx)]     = ttest(C.model_02.w2(:,2)-C.model_02.w2(:,1));%compares sine before to after
+            [Hcs(fixx) Pcs(fixx)]   = ttest(C.model_02.w1(:,2)-C.model_02.w1(:,1),C.model_02.w2(:,2)-C.model_02.w2(:,1));%compares cosine after to sine after
+        end
+        keyboard
+        
+        %%
+        clf
+        subplot(1,2,1);
+        bw = .5;
+        h = bar(M);
+        try %2016b compatibility.
+            set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+        catch
+            set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+        end
+        hold on;
+        errorbar(M,SEM,'k.')
+        title('N = 74')
+        %% only tuned people
+        subs = FPSA_FearGen('get_subjects');
+        tunedsubs = [];
+        for ss = subs(:)'
+            s = Subject(ss);
+            if (10.^-s.get_fit('rating',4).pval)<.05
+            tunedsubs = [tunedsubs; s.id];
+            end
+        end
+        ind = ismember(subs,tunedsubs);
+        
+        combinedT = combined(ind,:);
+        M2 = mean(combinedT);
+        SEM2 = std(combinedT)./sqrt(sum(ind));
+        subplot(1,2,2);
+        bw = .5;
+        h = bar(M2);
+        try %2016b compatibility.
+            set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+        catch
+            set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+        end
+        hold on;
+        errorbar(M2,SEM2,'k.')
+        title(sprintf('N = %02d',sum(ind)))
+        %%
+        
+        
+        %%
+        close all
+         figure;
+        if ispc
+            set(gcf,'position',[300        1200          898         604]);
+        else
+            set(gcf,'position',[2150         335         898         604]);
+        end
+        XX    = [1:4;6:9;11:14;16:19]/1.5;
+         clf;
+        %% plotting
+               clf
+        for fixx = 1:4
+            %
+            X    = XX(fixx,:);
+            Y    = [Mc(fixx,:) Ms(fixx,:)];
+            Y2   = [SEMc(fixx,:) SEMs(fixx,:)];
+            bw   = .5;
+            for n = 1:size(Y,2)
+                h       = bar(X(n),Y(n));
+                legh(n) = h;
+                hold on
+                try %capsize is 2016b compatible.
+                    errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5,'capsize',10);
+                catch
+                    errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5);
+                end
+                if ismember(n,[1 3 5 7 9 11])
+                    try %2016b compatibility.
+                        set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+                    catch
+                        set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+                    end
+                else
+                    try
+                        set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+                    catch
+                        set(h,'FaceColor',[0 0 0],'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+                    end
+                end
+            end
+            ylim([-.03 .13]);
+            % put lines and asterixxx
+            if Hc(fixx)==1
+                h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
+                text(mean(X(1:2))  ,max(ylim)-.01, pval2asterix(Pc(fixx)),'HorizontalAlignment','center','fontsize',16);
+            end
+            if Hs(fixx)==1
+                h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
+                text(mean(X(3:4))   ,max(ylim)-.01, pval2asterix(Ps(fixx)),'HorizontalAlignment','center','fontsize',16);
+            end
+            if Hcs(fixx)==1
+                h= line([X(2)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
+                text(mean(X([2 4])),max(ylim) -.01, pval2asterix(Pcs(fixx)),'HorizontalAlignment','center','fontsize',16);
+            end
+        end
+        %% general figure things
+        box off;
+        L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
+        try
+            L.Position = L.Position + [0.1/2 0 0 0];
+            L.FontSize = 12;
+        end
+        set(gca,'linewidth',1.8);
+        % xticks
+        XX = sort(reshape(XX,1,16));
+        xtick = [mean(XX(1:2)) mean(XX(3:4)) mean(XX(5:6)) mean(XX(7:8)) mean(XX(9:10)) mean(XX(11:12))  mean(XX(13:14)) mean(XX(15:16)) ];
+        label = { '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' };
+        for nt = 1:length(xtick)
+            h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
+        end
+        try
+            set(gca,'xtick',[5 10 15]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
+        catch
+            set(gca,'xtick',[5 10 15]./1.5,'color','none','XGrid','on','fontsize',16);
+        end
+        %
+        text(-.9,.135,'\beta','fontsize',28,'fontweight','bold');
+        set(gca,'ytick',-.05:.05:.1,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
+        axis normal
+        for n=1:4
+            text(mean(XX((n-1)*4+[1:4])),max(ylim),sprintf('Fix %d',n),'fontsize',16,'horizontalalignment','center','fontname','times new roman')
+        end
+        set(gcf,'Color',[1 1 1]);
+        if ispc
+            fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04D.png'])
+            export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04D.png'],'-r600')
+        end
+        %
 elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
     %% plots the main model comparison figure;
     fixations = varargin{2};
@@ -1040,7 +1205,7 @@ elseif strcmp(varargin{1},'FPSA_get_table_behavior');
     % Steps:
     % collect necessary data
     % set up table
-    force    = 0;
+    force    = 1;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -1177,8 +1342,111 @@ elseif strcmp(varargin{1},'CompareB2T_RSA')
     p      = p(i);
     varargout{1} = [i p];
     
+elseif strcmp(varargin{1},'numbers_fpsa_result')
+    %% returns the coordinates and pvalue of the test comparing corresponding similarity entries of between baseline and generalization.
+    %the full B and T similarity matrix;
+    sim = FPSA_FearGen('get_fpsa_fair',1:100,1:3);%
+    %%we only want the B and T parts
+    [~,B] = FPSA_FearGen('get_block',sim,1,1);
+    [~,T] = FPSA_FearGen('get_block',sim,2,2);
+    subs = FPSA_FearGen('get_subjects');
+    nsubs = length(subs);
+    
+    for n = 1:nsubs;
+        Bsquare(:,:,n) = squareform(B(n,:));
+        Tsquare(:,:,n) = squareform(T(n,:));
+    end
+    
+    %off diagonal averages
+    for sc = 1:nsubs
+        for ndiag = 1:7
+            avediagB(ndiag,sc) = mean(diag(Bsquare(:,:,sc),ndiag));
+            avediagT(ndiag,sc) = mean(diag(Tsquare(:,:,sc),ndiag));
+        end
+    end
+    M_B   = mean(avediagB,2);
+    SEM_B = std(avediagB,0,2)./sqrt(nsubs);
+    M_T   = mean(avediagT,2);
+    SEM_T = std(avediagT,0,2)./sqrt(nsubs);
+    %text: 1st and 4th
+    fprintf(['direct neighbors: %04.2f ' char(177) ' %04.2f\n'],M_B(1),SEM_B(1))
+	fprintf(['180 degrees: %04.2f ' char(177) ' %04.2f\n'],M_B(4),SEM_B(4)) 
+    [h p ci stats] = ttest(avediagB(4,:),avediagB(1,:));
+	fprintf('t-test: t(%d) = %04.2f, p = %06.5f\n\n.',stats.df,stats.tstat,p)
+    %
+    %    
+    %% Reporting Model fits:
+    out      = FPSA_FearGen('FPSA_model',1:100);
+    %% 
+    %S1 Table (baseline group fit mixed effects): 
+    out.baseline.model_01_mixed;
+    %
+    bic_null      = out.baseline.model_00_mixed.ModelCriterion.BIC;
+    bic           = out.baseline.model_01_mixed.ModelCriterion.BIC;
+    rsquared      = out.baseline.model_01_mixed.Rsquared.Adjusted;
+    
+    fprintf('Model parameters for Baseline, mixed effects:\n');
+    fprintf('Rsquared adjusted: %05.2f \n BIC_null: %05.1f \n BIC: %05.1f \n',rsquared,bic_null,bic)
+    %% on single subs:
+    C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+    fprintf('Model parameters for single subjects:\n');
+    [h p ci stats] = ttest(C.model_01.w1(:,1));
+    fprintf(['M = %05.3f' char(177) '%05.3f, t(%d) = %05.3f, p = %06.5f\n'],mean(C.model_01.w1(:,1)),std(C.model_01.w1(:,1))./sqrt(nsubs),stats.df,stats.tstat,p)
+    
+    %% S2 Table, (generalization, group fit mixed effects):
+    out.generalization.model_01_mixed;
+    %
+    bic_null = out.generalization.model_00_mixed.ModelCriterion.BIC;
+    bic      = out.generalization.model_01_mixed.ModelCriterion.BIC;
+    rsquared =  out.generalization.model_01_mixed.Rsquared.Adjusted; 
+    fprintf('Model parameters for Generalization phase, mixed effects:\n');
+    fprintf('Rsquared adjusted: %05.2f \n BIC_null: %05.1f \n BIC: %05.1f \n',rsquared,bic_null,bic)
+    %% increase of model parameter from baseline to generalization:
+    fprintf('Model parameters for single subjects:\n');
+    [h p ci stats] = ttest(C.model_01.w1(:,2),C.model_01.w1(:,1));
+    fprintf(['M = %05.3f' char(177) '%05.3f, t(%d) = %05.3f, p = %06.5f\n'],mean(C.model_01.w1(:,2)),std(C.model_01.w1(:,2))./sqrt(nsubs),stats.df,stats.tstat,p)
+    %% Model comparison indicated that this model performed better than the bottom-up model 
+    fprintf('bottom-up vs adversity tuning model:\n');
+    bic_bottomup     = out.generalization.model_01_mixed.ModelCriterion.BIC;
+    bic_adv_Cat_tuning   = out.generalization.model_02_mixed.ModelCriterion.BIC;
+    fprintf('BIC_bottomup= %05.1f, BIC_advtune= %05.1f\n Rsquared adjusted: %03.2f\n',bic_bottomup,bic_adv_Cat_tuning,out.generalization.model_02_mixed.Rsquared.Adjusted)
+    %% specific component stronger than unspecific component
+    fprintf('Model parameters for single subjects:\n');
+    [h p ci stats] = ttest(C.model_02.w1(:,2));
+    fprintf(['Specific:   M = %05.3f' char(177) '%05.3f, t(%d) = %04.3f, p = %06.5f\n'],mean(C.model_02.w1(:,2)),std(C.model_02.w1(:,2))./sqrt(nsubs),stats.df,stats.tstat,p)
+    [h p ci stats] = ttest(C.model_02.w2(:,2));
+    fprintf(['Unspecific: M = %05.3f' char(177) '%05.3f, t(%d) = %04.3f, p = %06.5f\n'],mean(C.model_02.w2(:,2)),std(C.model_02.w2(:,2))./sqrt(nsubs),stats.df,stats.tstat,p)
+    fprintf('Corresponds to factor: A = %03.2f\n',mean(C.model_02.w1(:,2))/mean(C.model_02.w2(:,2)));
+    fprintf('---------------------------\n');
+    fprintf('Specific versus unspecific:');
+    [h p ci stats] = ttest(C.model_02.w1(:,2),C.model_02.w2(:,2));
+    fprintf('  t(%d) = %04.3f, p = %06.5f\n',stats.df,stats.tstat,p)
+    fprintf('No change from learning for unspecific component:');
+    [h p ci stats] = ttest(C.model_02.w2(:,2),C.model_02.w2(:,1));
+    fprintf('  t(%d) = %04.3f, p = %06.5f\n',stats.df,stats.tstat,p)
+
+    %% adversity categorization model better than adversity tuning model 
+    out.generalization.model_03_mixed;
+    %
+    bic_adv_Cat_tuning   = out.generalization.model_02_mixed.ModelCriterion.BIC;
+    bic_adv_Tuning       = out.generalization.model_03_mixed.ModelCriterion.BIC;
+    rsquared =  out.generalization.model_03_mixed.Rsquared.Adjusted; 
+    fprintf('Adversity categorization model better than adversity tuning model :\n');
+    fprintf('Rsquared adjusted: %05.2f \nBIC_AdvCatTuning %05.1f \nBIC_AdvTuning: %05.1f \n',rsquared,bic_adv_Cat_tuning,bic_adv_Tuning)
+    
+    %% the parameter estimates for the adversity component were not significantly different from zero neither in baseline or generalization phases 
+    w_gaussian = C.model_03.w3;
+    fprintf('parameter estimates for single subjects not different from zero:\n');
+    [h p ci stats] = ttest(w_gaussian(:,1));
+    fprintf(['Baseline:                M = %05.3f' char(177) '%05.3f, t(%d) = %04.3f, p = %04.2f\n'],mean(w_gaussian(:,1)),std(w_gaussian(:,1))./sqrt(nsubs),stats.df,stats.tstat,p)
+    [h p ci stats] = ttest(w_gaussian(:,2));
+    fprintf(['Generalization phase:    M = %05.3f' char(177) '%05.3f, t(%d) = %04.3f, p = %04.2f\n'],mean(w_gaussian(:,2)),std(w_gaussian(:,2))./sqrt(nsubs),stats.df,stats.tstat,p)
+    fprintf('Pairwise not different:  ');
+    [h p ci stats] = ttest(w_gaussian(:,2),w_gaussian(:,1));
+    fprintf('t(%d) = %04.3f, p = %04.2f\n',stats.df,stats.tstat,p)
     
 elseif strcmp(varargin{1},'get_betas')
+    
     %% compute loadings on these
     sim    = varargin{2};
     tsub   = size(sim.correlation,1);
@@ -2518,17 +2786,28 @@ elseif strcmp(varargin{1},'figure_02B')
     %are SCRS CS+ vs CS- sign. different?
     [h,pval,ci,teststat] = ttest(out.y(:,13),out.y(:,17))
     [h,pval,ci,teststat] = ttest(out.y(:,22),out.y(:,26))
+     % get the numbers for the text
+    differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
+    mean(differ)
+    std(differ)
     
     % single subject fits for parameter plot
-    scr_ampl = nan(length(scrsubs),4);
-    sc = 0;
-    for sub = scrsubs(:)'
-        sc = sc+1;
-        for ph = [2 4]
-            s = Subject(sub);
-            s.get_fit('scr',ph)
-            scr_ampl(sc,ph) = s.get_fit('scr',ph).params(1);
+    path_scrampl = sprintf('%sdata/midlevel/SCR_N%d_fits.mat',path_project,length(scrsubs));
+    
+    if ~exist(path_scrampl)||force_scr ==1
+        scr_ampl = nan(length(scrsubs),4);
+        sc = 0;
+        for sub = scrsubs(:)'
+            sc = sc+1;
+            for ph = [2 4]
+                s = Subject(sub);
+                s.get_fit('scr',ph)
+                scr_ampl(sc,ph) = s.get_fit('scr',ph).params(1);
+                save(path_scrampl,'scr_ampl');
+            end
         end
+    else
+        load(path_scrampl)
     end
     %% plot SCR
     grayshade = [.8 .8 .8];
@@ -2582,16 +2861,12 @@ elseif strcmp(varargin{1},'figure_02B')
     %     set(gca,'YTick',[0 1])
     
     %
-    %
-    differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
-    mean(differ)
-    std(differ)
-    
+
     subplot(2,4,4)
     H=plot(linspace(1,2,63),scr_ampl(:,2),'ko',linspace(1,2,63)+2,scr_ampl(:,4),'ko',[1 2],[mean(scr_ampl(:,2)) mean(scr_ampl(:,2))],'k-',[3 4],[mean(scr_ampl(:,4)) mean(scr_ampl(:,4))],'k-');
     xlim([0 5]);ylim([-2.5 4]);
     box off;
-    set(gca,'xtick',[1.5 3.5],'XTickLabel',{'Base.','Gen.'},'XTickLabelRotation',0,'fontsize',13,'ytick',[-4 -2 0 2 4]);    
+    set(gca,'xtick',[1.5 3.5],'XTickLabel',{'Base.','Gen.'},'XTickLabelRotation',0,'fontsize',13,'ytick',[-4 -2 0 2 4],'xgrid','on');   
     CCC=100;
     H(1).Color=[CCC CCC CCC]./255;
     H(2).Color=[CCC CCC CCC]./255;
@@ -2605,7 +2880,6 @@ elseif strcmp(varargin{1},'figure_02B')
     box off;
     set(gca,'color','none');
     box off;axis square;drawnow;alpha(.5);
-    
     ylabel('Amplitude')
     ht = text(2.5,max(scr_ampl(:,4))+.4,'***','FontSize',18);
 %     set(ht,'Rotation',0);
@@ -2634,14 +2908,21 @@ elseif strcmp(varargin{1},'figure_02B')
         fit(ph) = t.groupfit;
     end
     % get single sub Gaussian ampl
-    for ph = 1:3
-        sc = 0;
-        for sub = subs(:)'
-            sc = sc+1;
-            s = Subject(sub);
-            s.fit_method = 3;
-            rate_ampl(sc,ph) = s.get_fit('rating',ph+1).params(1);
+    path_rateampl = sprintf('%sdata/midlevel/Ratings_N%d_fits.mat',path_project,length(subs));
+    
+    if ~exist(path_rateampl)||force_scr ==1
+        for ph = 1:3
+            sc = 0;
+            for sub = subs(:)'
+                sc = sc+1;
+                s = Subject(sub);
+                s.fit_method = 3;
+                rate_ampl(sc,ph) = s.get_fit('rating',ph+1).params(1);
+                save(path_rateampl,'rate_ampl');
+            end
         end
+    else
+        load(path_rateampl)
     end
     
     %%
@@ -2692,19 +2973,16 @@ elseif strcmp(varargin{1},'figure_02B')
     H(2).Color=[CCC CCC CCC]./255;
     H(3).Color=[CCC CCC CCC]./255;
     H(4).LineWidth = 4;
-    H(5).LineWidth = 4;;    
-    H(6).LineWidth = 4;;    
+    H(5).LineWidth = 4;  
+    H(6).LineWidth = 4;   
     %
 %     line([1.5 3.5],[max(ylim) max(ylim)]+range(ylim)/10,'color','k','linewidth',1.5)      
 %     text(2.5,[max(ylim)]+range(ylim)/10+.1,'***','fontsize',20,'horizontalalignment','center');
 %     text(3.5,3.6,'***','fontsize',20,'horizontalalignment','center');        
     box off;
-    set(gca,'color','none');
-    box off;axis square;drawnow;alpha(.5);
-    
+    set(gca,'color','none');axis square;drawnow;alpha(.5); 
     ylabel('Amplitude')
-    box off
-    
+    set(gcf,'Color',[1 1 1]);
     %%
     keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
@@ -2928,13 +3206,13 @@ elseif strcmp(varargin{1},'figure_03A')
     FPSA_FearGen('plot_fdm',maps,roi_contours);
     %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_03A_SingleSubjects_%02d_phase_%02d_contour_%02d.png',sub,nphase,roi_contours),'-r300');
     
-elseif strcmp(varargin{1},'figure_03B')
+elseif strcmp(varargin{1},'figure_03')
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
     force    = 0;
     method   = 3;
-    fs       = 12; %fontsize
+    fs       = 13; %fontsize
     counts   = FPSA_FearGen('get_fixation_counts');
     counts   = diff(counts,1,4);
     counts   = counts*100;
@@ -2943,6 +3221,77 @@ elseif strcmp(varargin{1},'figure_03B')
     
     
     path_write = sprintf('%s/data/midlevel/ROI_fixcount_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
+    
+    %% fit group
+    X_fit = [];
+    Y_fit = [];
+    for nroi = 1:4
+        data.y   = squeeze(counts(:,nroi,:))';
+        data.x   = repmat(-135:45:180,size(counts,3),1);
+        data.ids = [1:size(counts,3)]';
+        t        = [];
+        t        = Tuning(data);
+        t.GroupFit(method);
+        X_fit = [X_fit ;t.groupfit.x_HD];
+        if t.groupfit.pval > -log10(.05)
+            Y_fit = [Y_fit ;t.groupfit.fit_HD];
+        else
+            Y_fit = [Y_fit ;repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)])];
+        end
+    end
+    %% plot the 4 count-profiles for whole group
+    figure;
+    clf
+     if ispc
+        set(gcf,'position',[120 1097 1000 550]);
+    else
+        set(gcf,'position',[2176         705        1000        550]);
+    end
+    hold on;
+    t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
+    for n = 1:4
+        H(n) = subplot(2,4,n);
+        Project.plot_bar(-135:45:180,m_counts(:,n,1,1));
+        set(gca,'XTickLabel','');
+        hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
+        if n == 1
+            ylabel(sprintf('\\Delta%%\n(after-before)'));
+        end
+        hold on;
+        errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
+        try
+            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);
+        catch
+            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0]);
+        end
+        hold off;
+        set(gca,'linewidth',1.2,'YTick',[-8 -4 0 4 8],'fontsize',fs,'YTickLabel',{'-8' '' '0' '' '8'});
+        if n ~= 1;
+            set(gca,'xticklabel','');
+        end
+        if n == 2 | n == 4 | n == 3
+            set(gca,'yticklabel',[]);
+        end
+        ylim([-8 8]);
+        if n < 3
+            h = text(0,1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs);
+            h = text(180,1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs);
+            h = text(90,1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
+            h = text(-90,1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
+        else
+            h = text(0,-1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs);
+            h = text(180,-1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs);
+            h = text(90,-1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
+            h = text(-90,-1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
+        end
+        try
+            set(gca,'XAxisLocation','origin')
+        end
+        set(gca,'XGrid','on','YGrid','off')
+    end
+    subplotChangeSize(H,.025,.025);
+    
+    
     %% fit single subs
     X_fit = [];
     Y_fit = [];
@@ -2986,120 +3335,55 @@ elseif strcmp(varargin{1},'figure_03B')
     for nroi = 1:4
         tunedsubs{nroi} = find(pval(nroi,:)<.05);
     end
-    %     %% plot single fits.
-    %     for n = 1:length(pval)
-    %         subplot(8,8,n);
-    %         Project.plot_bar(-135:45:180,counts(:,2,n));hold on;
-    %         plot(squeeze(X_fit(2,n,:)),squeeze(Y_fit(2,n,:)),'k','LineWidth',1.5);
-    %         set(gca,'XTick',[],'YTick',ylim);
-    %     end
-    %     %% bar plots of parameter alpha
-    %     figure;
-    %     for nroi = 1:4
-    %         m_all_alpha     = mean(params(nroi,:,1),2);
-    %         sem_all_alpha   = std(params(nroi,:,1),0,2)./sqrt(length(params));
-    %         m_pval_alpha   = mean(params(nroi,fitvalid(nroi,:),1),2);
-    %         sem_pval_alpha = std(params(nroi,fitvalid(nroi,:),1),0,2)./sqrt(nvalidsubs(nroi));
-    %         m_tuned_alpha   = mean(params(nroi,logical(realtuned(nroi,:)),1),2);
-    %         sem_tuned_alpha = std(params(nroi,logical(realtuned(nroi,:)),1),0,2)./sqrt(nrealtuned(nroi));
-    %         subplot(1,3,1)
-    %         bar(nroi,m_all_alpha,'c'); hold on;
-    %         errorbar(nroi,m_all_alpha,sem_all_alpha,'k.','LineWidth',1.5)
-    %         subplot(1,3,2)
-    %         bar(nroi,m_pval_alpha,'b'); hold on;
-    %         errorbar(nroi,m_pval_alpha,sem_pval_alpha,'k.','LineWidth',1.5)
-    %         subplot(1,3,3)
-    %         bar(nroi,m_tuned_alpha,'r'); hold on;
-    %         errorbar(nroi,m_tuned_alpha,sem_tuned_alpha,'k.','LineWidth',1.5)
-    %     end
-    %
-    % t-tests
-    
+    % this is fed to Venn diagram.
+   %%
+    %t-tests
+    %are amplitudes > 0?
     for nroi = 1:4
-        [hypo(nroi,1) pval(nroi,1)] = ttest(params(nroi,:,1));
-        [hypo(nroi,2) pval(nroi,2)] = ttest(params(nroi,fitvalid(nroi,:),1));
+        [hypo(nroi,1) pttest(nroi,1)] = ttest(params(nroi,:,1));
     end
-    %
-    %     subplot(1,3,1);title('all subs');
-    %     ylabel('Alpha VonMises \Delta %(test-base)')
-    %     text(4, max(ylim)-.0075, pval2asterix(pval(end,1)),'HorizontalAlignment','center','fontsize',16);
-    %     subplot(1,3,2);title('subs fit p<.05');
-    %     subplot(1,3,3);title('subs fit p<.05 AND shift < 45');
-    %     for n = 1:3
-    %         subplot(1,3,n);set(gca,'XTick',1:4,'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'});
-    %         box off
-    %         axis square
-    %     end
-    %     EqualizeSubPlotYlim(gcf);
+    %% single subject fit plot
+    Hn(5)=subplot(2,4,5:6);
+    Hn(5).Position=[0.1200 0.0564 0.3850 0.4145];
+    nsubs = length(params);
+    xhelp = [1 3 5 7];
     
-    figure;
-    bp = boxplot(params(:,:,1)'); %third dimension is params, 1 is Ampl
-    set(bp,'LineWidth',1.5)
-    set(gca,'XTick',1:4,'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'},'YTick',-20:20:40,'FontSize',14);
-    ylabel('Amplitude \Delta% (Test-Base)')
-    box off
-    %% fit group
-    X_fit = [];
-    Y_fit = [];
-    for nroi = 1:4
-        data.y   = squeeze(counts(:,nroi,:))';
-        data.x   = repmat(-135:45:180,size(counts,3),1);
-        data.ids = [1:size(counts,3)]';
-        t        = [];
-        t        = Tuning(data);
-        t.GroupFit(8);
-        X_fit = [X_fit ;t.groupfit.x_HD];
-        if t.groupfit.pval > -log10(.05)
-            Y_fit = [Y_fit ;t.groupfit.fit_HD];
-        else
-            Y_fit = [Y_fit ;repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)])];
-        end
-    end
-    
-    %% plot the 4 count-profiles for whole group
-    figure;set(gcf,'position',[2176         705        1099         294]);
-    t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
+    H=plot(linspace(1,2,nsubs),params(1,:,1),'ko',linspace(1,2,nsubs)+2,params(2,:,1),'ko',linspace(1,2,nsubs)+4,params(3,:,1),'ko',linspace(1,2,nsubs)+6,params(4,:,1),'ko');
+    xlim([0 9]);ylim([-35 50]);
+    box off;
+    set(gca,'linewidth',1.2,'xtick',[1.5 3.5],'XTick',[1.5 3.5 5.5 7.5],'XTickLabel',{'LeftEye','RightEye','Nose','Mouth'},'YTick',-20:20:40,'XTickLabelRotation',0,'fontsize',fs);
+    CCC=100;
     for n = 1:4
-        H(n) = subplot(1,4,n);
-        Project.plot_bar(-135:45:180,m_counts(:,n,1,1));
-        set(gca,'XTickLabel','');
-        hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
-        if n == 1
-            ylabel(sprintf('\\Delta%%\n(after-before)'));
-        end
-        hold on;
-        errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
-        try
-            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);
-        catch
-            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0]);
-        end
-        hold off;
-        set(gca,'linewidth',1.2,'YTick',[-8 -4 0 4 8],'fontsize',fs,'YTickLabel',{'-8' '' '0' '' '8'});
-        if n ~= 1;
-            set(gca,'xticklabel','');
-        end
-        if n == 2 | n == 4 | n == 3
-            set(gca,'yticklabel',[]);
-        end
-        ylim([-8 8]);
-        if n < 3
-            h = text(0,1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(180,1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(90,1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-            h = text(-90,1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-        else
-            h = text(0,-1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(180,-1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',12);
-            h = text(90,-1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-            h = text(-90,-1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',9);
-        end
-        try
-            set(gca,'XAxisLocation','origin')
-        end
-        set(gca,'XGrid','on','YGrid','off')
+        H(n).Color=[CCC CCC CCC]./255;
     end
-    subplotChangeSize(H,.025,.025);
+    hold on;
+    % show subs where Gauss > null-model
+    for group = 1:4
+        xx = linspace(xhelp(group),xhelp(group)+1,nsubs);
+        sc=scatter(xx(tunedsubs{group}),params(group,tunedsubs{group},1),'o');
+        set(sc,'MarkerEdgeColor',repmat(CCC,1,3)./255,'MarkerFaceColor',repmat(CCC,1,3)./255,'MarkerFaceAlpha' , .3);
+    end
+    %plot mean as horizontal bar
+    hold on;
+    HH=plot( [1 2],[mean(params(1,:,1)) mean(params(1,:,1))],'k-',[3 4],[mean(params(2,:,1)) mean(params(2,:,1))],'k-',[5 6],[mean(params(3,:,1)) mean(params(3,:,1))],'k-',[7 8],[mean(params(4,:,1)) mean(params(4,:,1))],'k-');
+    for n = 1:4
+        HH(n).LineWidth = 4;
+    end
+    % plot sign. t-test bars
+    sign = find(hypo==1);
+    for n = sign(:)'
+          h= line([Xpos(n) Xpos(n)+1],repmat(max(ylim)-max(ylim)*.08,1,2));set(h,'color','k','linewidth',1);
+          text(mean([Xpos(n) Xpos(n)+1])  ,max(ylim)-max(ylim)*.05,pval2asterix(pttest(n)),'HorizontalAlignment','center','fontsize',fs+3);
+    end
+    ylim([-35 50]);
+    xlim([0 9]);
+    box off;drawnow;alpha(.5);
+    ylabel('Amplitude \Delta% (Test-Base)')
+    h = gcf;h.Color= [1 1 1];
+    if ispc
+        fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_03AB.png'])
+        export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_03AB.png'],'-r600')
+    end
     %
     %     supertitle(sprintf('Subject: %d, Runs: %d - %d', current_subject_pool, runs(1) , runs(end)) ,1);
     %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_3B_CountTuning_SubjectPool_%d.png',current_subject_pool));
