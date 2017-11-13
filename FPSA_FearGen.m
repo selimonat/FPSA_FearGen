@@ -1356,7 +1356,6 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
         Bsquare(:,:,n) = squareform(B(n,:));
         Tsquare(:,:,n) = squareform(T(n,:));
     end
-    
     %off diagonal averages
     for sc = 1:nsubs
         for ndiag = 1:7
@@ -1368,18 +1367,24 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     SEM_B = std(avediagB,0,2)./sqrt(nsubs);
     M_T   = mean(avediagT,2);
     SEM_T = std(avediagT,0,2)./sqrt(nsubs);
+    %    
+    
+    
+    %% Reporting Model fits:
+    out      = FPSA_FearGen('FPSA_model',1:100);
+    %% on single subs:
+    C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+    %% print everything nicely
+    clc
+    %% 
     %text: 1st and 4th
     fprintf(['direct neighbors: %04.2f ' char(177) ' %04.2f\n'],M_B(1),SEM_B(1))
 	fprintf(['180 degrees: %04.2f ' char(177) ' %04.2f\n'],M_B(4),SEM_B(4)) 
     [h p ci stats] = ttest(avediagB(4,:),avediagB(1,:));
 	fprintf('t-test: t(%d) = %04.2f, p = %06.5f\n\n.',stats.df,stats.tstat,p)
     %
-    %    
-    %% Reporting Model fits:
-    out      = FPSA_FearGen('FPSA_model',1:100);
-    %% 
-    %S1 Table (baseline group fit mixed effects): 
-    out.baseline.model_01_mixed;
+
+    %S1 Table (baseline group fit mixed effects):
     %
     bic_null      = out.baseline.model_00_mixed.ModelCriterion.BIC;
     bic           = out.baseline.model_01_mixed.ModelCriterion.BIC;
@@ -1387,8 +1392,7 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     
     fprintf('Model parameters for Baseline, mixed effects:\n');
     fprintf('Rsquared adjusted: %05.2f \n BIC_null: %05.1f \n BIC: %05.1f \n',rsquared,bic_null,bic)
-    %% on single subs:
-    C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
+    %% single subs report
     fprintf('Model parameters for single subjects:\n');
     [h p ci stats] = ttest(C.model_01.w1(:,1));
     fprintf(['M = %05.3f' char(177) '%05.3f, t(%d) = %05.3f, p = %06.5f\n'],mean(C.model_01.w1(:,1)),std(C.model_01.w1(:,1))./sqrt(nsubs),stats.df,stats.tstat,p)
@@ -1444,6 +1448,10 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('Pairwise not different:  ');
     [h p ci stats] = ttest(w_gaussian(:,2),w_gaussian(:,1));
     fprintf('t(%d) = %04.3f, p = %04.2f\n',stats.df,stats.tstat,p)
+    
+    varargout{1} = out;
+    varargout{1} = C;
+    varargout{1} = sim;
     
 elseif strcmp(varargin{1},'get_betas')
     
