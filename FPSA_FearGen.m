@@ -75,7 +75,8 @@ current_subject_pool = 0;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-kernel_fwhm          = 37*.8;                            % size of the smoothing window (.8 degrees by default);
+kernel_fwhm          = 37*.8;                                               % size of the smoothing window (.8 degrees by default);
+random_noise         = 1;                                                   % should fixation maps be slightly added with noise.
 url                  = 'https://www.dropbox.com/s/0wix64zy2dlwh8g/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
 invalid_varargin = logical(zeros(1,length(varargin)));
@@ -259,6 +260,7 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a fixatio
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
     end
     varargout{1} = maps;
+    %possibility to add random noise.
 elseif  strcmp(varargin{1},'get_fixmap_oddeven') %% same as get_fixmat however returns 2 times many fixation maps separated by odd/even trial numbers.
     %%
     fixmat  = varargin{2};
@@ -401,36 +403,53 @@ elseif strcmp(varargin{1},'get_fpsa2') %% same as get_fpsa but computes as many 
     %Example usage:
     %clear all;for nfix = 1:5;sim = FPSA_FearGen('get_fpsa',nfix);T = FPSA_FearGen('FPSA_sim2table',sim);[~, W(:,:,:,:,nfix)] = FPSA_FearGen('FPSA_model_singlesubject',T.t);end
     
-    force          = 1;
+    force          = 0;
     %
     window_size    = varargin{2};
     window_overlap = varargin{3};
-    t              = 0:1:(window_size-1);
-    start_times    = 0:window_overlap:1500-window_size+1
+    t              = 0:1:(window_size-1);%running window
+    start_times    = 1:window_overlap:1500-window_size+1;%in milliseconds
     time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
+    fprintf('Has %d time windows in total...\n',size(time,1));
     %
-    filename  = sprintf('%s/data/midlevel/fpsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,window_size,window_overlap,current_subject_pool,runs(1),runs(end));
+    filename  = sprintf('%s/data/midlevel/fpsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d_runs_%02d_%02d_new.mat',path_project,window_size,window_overlap,current_subject_pool,runs(1),runs(end));
     %
-    if exist(filename) ==0 | force;
+    if exist(filename) ==0 | force;        
+        fixmat          = FPSA_FearGen('get_fixmat');
+        sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));        
+        %
         tc = 0;
-        for t = 1:size(time,1)-1
+        for t = 1:size(time,1)
+            fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
             tc       = tc+1;
             fixmat   = FPSA_FearGen('get_fixmat');
-            fixmat.UpdateSelection('start',time(t,:),'stop',time(t+1,:));
+            fixmat.UpdateSelection('start',time(t,:)+1);%selection works with ismember
             fixmat.ApplySelection;
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                     = subc + 1;
                 maps                     = FPSA_FearGen('get_fixmap',fixmat,subject,1:100);
+%                 imagesc(reshape(maps(:,1),500,500));drawnow;
                 fprintf('Subject: %03d, Method: %s\n',subject,method);
-                sim.(method)(subc,:,tc)  = pdist(maps',method);%                
+%                 if ~isnan(sum(maps(:)))
+                   sim.(method)(subc,:,tc)  = pdist(maps',method);%(subject,correlation,time-course)
+%                 else
+%                    sim.(method)(subc,:,tc)  = NaN;
+%                 end
             end                        
-            T                            = FPSA_FearGen('FPSA_sim2table',sim);
-            [~, sim.M(:,:,:,:,tc)]       = FPSA_FearGen('FPSA_model_singlesubject',T(end).t);                        
+%             current_sim.correlation      = sim.correlation(:,:,1);
+%             if sumcurrennt_sim.correlation            
             try
-                figure(1);imagesc(squareform(nanmean(sim.correlation(:,:,end))));
+%                 figure(1);imagesc(squareform(nanmean(sim.correlation(:,:,tc))));drawnow;
             end
-        end        
+            %EmailText(mat2str(t),'');
+        end
+        for tc = 1:size(time,1)
+            current_sim.correlation = sim.correlation(:,:,tc);
+            T                            = FPSA_FearGen('FPSA_sim2table',current_sim);
+            [~, sim.M(:,:,:,:,tc)]       = FPSA_FearGen('FPSA_model_singlesubject',T(end).t);                        
+        end
+        sim.start_times = start_times;
         save(filename,'sim');
     else
         load(filename);
@@ -712,42 +731,48 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
         t       = varargin{2};
     end
     %% test the model for B, T    
-    Model.model_01.w1 = [];
-    Model.model_02.w1 = [];
-    Model.model_02.w2 = [];
-    Model.model_03.w1 = [];
-    Model.model_03.w2 = [];
-    Model.model_03.w3 = [];
+    Model.model_01.w1 = nan(length(unique(t.subject)'),2);
+    Model.model_02.w1 = nan(length(unique(t.subject)'),2);
+    Model.model_02.w2 = nan(length(unique(t.subject)'),2);
+    Model.model_03.w1 = nan(length(unique(t.subject)'),2);
+    Model.model_03.w2 = nan(length(unique(t.subject)'),2);
+    Model.model_03.w3 = nan(length(unique(t.subject)'),2);
     M                 = nan(length(unique(t.subject)'),2,3,3);%[subjects,phase,model,param]
-    for ns = unique(t.subject)'
-        fprintf('Fitting an circular and flexibile LM to subject %03d...\n',double(ns));
+    
+    for ns = unique(t.subject)'        
         t2                = t(ismember(t.subject,categorical(ns)),:);
-        B                 = fitlm(t2,'FPSA_B ~ 1 + circle');
-        T                 = fitlm(t2,'FPSA_G ~ 1 + circle');
-        Model.model_01.w1 = [Model.model_01.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-        M(ns,1,1,1)       = B.Coefficients.Estimate(2);
-        M(ns,2,1,1)       = T.Coefficients.Estimate(2);
-        %
-        B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
-        T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
-        Model.model_02.w1 = [Model.model_02.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-        Model.model_02.w2 = [Model.model_02.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
-        M(ns,1,2,1)       = B.Coefficients.Estimate(2);
-        M(ns,2,2,1)       = T.Coefficients.Estimate(2);
-        M(ns,1,2,2)       = B.Coefficients.Estimate(3);
-        M(ns,2,2,2)       = T.Coefficients.Estimate(3);
-        %
-        B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
-        T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
-        Model.model_03.w1 = [Model.model_03.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-        Model.model_03.w2 = [Model.model_03.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
-        Model.model_03.w3 = [Model.model_03.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
-        M(ns,1,3,1)       = B.Coefficients.Estimate(2);
-        M(ns,2,3,1)       = T.Coefficients.Estimate(2);
-        M(ns,1,3,2)       = B.Coefficients.Estimate(3);
-        M(ns,2,3,2)       = T.Coefficients.Estimate(3);
-        M(ns,1,3,3)       = B.Coefficients.Estimate(4);
-        M(ns,2,3,3)       = T.Coefficients.Estimate(4);
+        if ~isnan(sum([t2.FPSA_B;t2.FPSA_G]))% valid or not: Criteria for validity: Both the B and G FPSA matrices must not contain any NaNs.
+            cprintf([0 1 0],'Fitting an circular and flexibile LM to subject %03d...\n',double(ns));
+            B                 = fitlm(t2,'FPSA_B ~ 1 + circle');
+            T                 = fitlm(t2,'FPSA_G ~ 1 + circle');
+            
+            Model.model_01.w1 = [Model.model_01.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+            M(ns,1,1,1)       = B.Coefficients.Estimate(2);
+            M(ns,2,1,1)       = T.Coefficients.Estimate(2);
+            %
+            B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
+            T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
+            Model.model_02.w1 = [Model.model_02.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+            Model.model_02.w2 = [Model.model_02.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
+            M(ns,1,2,1)       = B.Coefficients.Estimate(2);
+            M(ns,2,2,1)       = T.Coefficients.Estimate(2);
+            M(ns,1,2,2)       = B.Coefficients.Estimate(3);
+            M(ns,2,2,2)       = T.Coefficients.Estimate(3);
+            %
+            B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
+            T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
+            Model.model_03.w1 = [Model.model_03.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
+            Model.model_03.w2 = [Model.model_03.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
+            Model.model_03.w3 = [Model.model_03.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
+            M(ns,1,3,1)       = B.Coefficients.Estimate(2);
+            M(ns,2,3,1)       = T.Coefficients.Estimate(2);
+            M(ns,1,3,2)       = B.Coefficients.Estimate(3);
+            M(ns,2,3,2)       = T.Coefficients.Estimate(3);
+            M(ns,1,3,3)       = B.Coefficients.Estimate(4);
+            M(ns,2,3,3)       = T.Coefficients.Estimate(4);
+        else
+            cprintf([1 0 0],'FPSA matrix contains NaN, will not be modelled...\n');
+        end
     end
     varargout{1} = Model;
     varargout{2} = M;
