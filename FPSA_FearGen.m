@@ -472,14 +472,16 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% gets an FPSA matrix per run to be 
     %
     filename     = sprintf('%s/data/midlevel/fpsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%s.mat',path_project,fixations(1),fixations(end),current_subject_pool,mat2str(runs));
     if exist(filename) ==0 | force;
+        runc = 0;
         for run = runs
+            runc     = runc+1;
             fixmat   = FPSA_FearGen('get_fixmat','runs',run);
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
                 maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
                 fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
-                sim.(method)(subc,:,run)= pdist(maps',method);%
+                sim.(method)(subc,:,runc)= pdist(maps',method);%
             end
         end
         %average across runs
@@ -747,30 +749,30 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
             B                 = fitlm(t2,'FPSA_B ~ 1 + circle');
             T                 = fitlm(t2,'FPSA_G ~ 1 + circle');
             
-            Model.model_01.w1 = [Model.model_01.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-            M(ns,1,1,1)       = B.Coefficients.Estimate(2);
-            M(ns,2,1,1)       = T.Coefficients.Estimate(2);
+            Model.model_01.w1(ns,:) = [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)];
+            M(ns,1,1,1)             = B.Coefficients.Estimate(2);
+            M(ns,2,1,1)             = T.Coefficients.Estimate(2);
             %
-            B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
-            T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
-            Model.model_02.w1 = [Model.model_02.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-            Model.model_02.w2 = [Model.model_02.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
-            M(ns,1,2,1)       = B.Coefficients.Estimate(2);
-            M(ns,2,2,1)       = T.Coefficients.Estimate(2);
-            M(ns,1,2,2)       = B.Coefficients.Estimate(3);
-            M(ns,2,2,2)       = T.Coefficients.Estimate(3);
+            B                       = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
+            T                       = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
+            Model.model_02.w1(ns,:) = [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)];
+            Model.model_02.w2(ns,:) = [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)];
+            M(ns,1,2,1)             = B.Coefficients.Estimate(2);
+            M(ns,2,2,1)             = T.Coefficients.Estimate(2);
+            M(ns,1,2,2)             = B.Coefficients.Estimate(3);
+            M(ns,2,2,2)             = T.Coefficients.Estimate(3);
             %
-            B                 = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
-            T                 = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
-            Model.model_03.w1 = [Model.model_03.w1; [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)]];
-            Model.model_03.w2 = [Model.model_03.w2; [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)]];
-            Model.model_03.w3 = [Model.model_03.w3; [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)]];
-            M(ns,1,3,1)       = B.Coefficients.Estimate(2);
-            M(ns,2,3,1)       = T.Coefficients.Estimate(2);
-            M(ns,1,3,2)       = B.Coefficients.Estimate(3);
-            M(ns,2,3,2)       = T.Coefficients.Estimate(3);
-            M(ns,1,3,3)       = B.Coefficients.Estimate(4);
-            M(ns,2,3,3)       = T.Coefficients.Estimate(4);
+            B                       = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
+            T                       = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
+            Model.model_03.w1(ns,:) = [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)];
+            Model.model_03.w2(ns,:) = [B.Coefficients.Estimate(3) T.Coefficients.Estimate(3)];
+            Model.model_03.w3(ns,:) = [B.Coefficients.Estimate(4) T.Coefficients.Estimate(4)];
+            M(ns,1,3,1)             = B.Coefficients.Estimate(2);
+            M(ns,2,3,1)             = T.Coefficients.Estimate(2);
+            M(ns,1,3,2)             = B.Coefficients.Estimate(3);
+            M(ns,2,3,2)             = T.Coefficients.Estimate(3);
+            M(ns,1,3,3)             = B.Coefficients.Estimate(4);
+            M(ns,2,3,3)             = T.Coefficients.Estimate(4);
         else
             cprintf([1 0 0],'FPSA matrix contains NaN, will not be modelled...\n');
         end
@@ -829,6 +831,7 @@ elseif strcmp(varargin{1},'figure_04C');
     else
         set(gcf,'position',[2150         335         898         604]);
     end
+    %%
     X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
     Y    = [M Mc Ms Mcg Msg Mg];
     Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
@@ -857,6 +860,7 @@ elseif strcmp(varargin{1},'figure_04C');
             end
         end
     end
+    %%
     box off;
     L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
     try
