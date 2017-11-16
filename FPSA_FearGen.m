@@ -470,9 +470,9 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% gets an FPSA matrix per run to be 
     fixations = varargin{2};%which fixations
     runs      = varargin{3};%whichs runs would you like to have
     %
-    for run = runs
-        filename     = sprintf('%s/data/midlevel/fpsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_run_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,run(1));
-        if exist(filename) ==0 | force;
+    filename     = sprintf('%s/data/midlevel/fpsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%s.mat',path_project,fixations(1),fixations(end),current_subject_pool,mat2str(runs));
+    if exist(filename) ==0 | force;
+        for run = runs
             fixmat   = FPSA_FearGen('get_fixmat','runs',run);
             subc     = 0;
             for subject = unique(fixmat.subject);
@@ -481,13 +481,14 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% gets an FPSA matrix per run to be 
                 fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
                 sim.(method)(subc,:,run)= pdist(maps',method);%
             end
-            %average across runs
-            sim.(method) = mean(sim.(method),3);
-            save(filename,'sim');
-        else
-            load(filename);
         end
+        %average across runs
+        sim.(method) = mean(sim.(method),3);
+        save(filename,'sim');
+    else
+        load(filename);
     end
+
     varargout{1} = sim;    
 elseif strcmp(varargin{1},'get_fpsa_oddeven') %% Computes FPSA with cross-validation based on odd and even trials.
     %%
