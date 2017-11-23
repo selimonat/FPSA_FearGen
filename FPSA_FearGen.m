@@ -827,14 +827,15 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     figure(fixations(1));
     if ispc
-        set(gcf,'position',[-200+500*fixations(1)        1400        898         604]);
+        set(gcf,'position',[-200+500*fixations(1)        1200        898         604]);
     else
         set(gcf,'position',[2150         335         898         604]);
     end
-    %%
+    %
     X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
     Y    = [M Mc Ms Mcg Msg Mg];
     Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
+    ylims = [floor(min(Y-Y2)*100)./100 ceil(max(Y+Y2)*100)./100+.07];
     bw   = .5;
     hold off;
     for n = 1:size(Y,2)
@@ -860,7 +861,7 @@ elseif strcmp(varargin{1},'figure_04C');
             end
         end
     end
-    %%
+    %
     box off;
     L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
     try
@@ -869,7 +870,7 @@ elseif strcmp(varargin{1},'figure_04C');
     end
     set(gca,'linewidth',1.8);
     % xticks
-    xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
+    xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)+.1) ];
     label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
     for nt = 1:length(xtick)
         h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
@@ -880,41 +881,43 @@ elseif strcmp(varargin{1},'figure_04C');
         set(gca,'xtick',[3 8]./1.5,'color','none','XGrid','on','fontsize',16);
     end
     %
-    text(-.5,.215,'\beta','fontsize',28,'fontweight','bold');
+    text(-.5,ylims(2),'\beta','fontsize',28,'fontweight','bold');
     
     
-    ylim([-.05 .2]);
-    set(gca,'ytick',-.05:.05:.2,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
+    ylim(ylims);
+    set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
     axis normal
     % asteriks
+    ast_line = repmat(max(Y+Y2)+.002,1,2);
     hold on
-    ylim([min(ylim) .16]);
-    h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-    h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-    h= line([X(4)-bw/2 X(6)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+    ylim(ylims);
+    h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    h= line([X(4)-bw/2 X(6)+bw/2],ast_line+.008);set(h,'color','k','linewidth',1);
     
-    h= line([X(7)-bw/2 X(8)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
+    h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1);
 %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
 %     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
     %
-    text(mean(X(1:2))  ,max(ylim)-.0075, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X(3:4))  ,max(ylim)-.0075, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X([4 6])),max(ylim)      , pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
+%     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
+    text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
 %     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
 %     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
     % model names
-    ylim([-.04 .2])
+    ylim(ylims)
     %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(1:2)),.18,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    text(mean(X(1:2)),ast_line(1)+.04,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(3:6)),.18,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     
     %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(7:end)),.18,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %%
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
@@ -924,6 +927,7 @@ elseif strcmp(varargin{1},'figure_04C');
             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04C.png'],'-r600')
        end
         %
+        keyboard %otherwise everything is gone
 elseif strcmp(varargin{1},'figure_04D')
     %%
     if nargin ==2
@@ -1297,7 +1301,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
     % Steps:
     % collect necessary data
     % set up table
-    force    = 1;
+    force    = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -1316,7 +1320,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
             load(scrpath)
         end
         scr_test_nonparam            = nan(length(subs),1); % the table needs same number of rows, so we just fill a column of nans with scr params.
-        scr_test_nonparam(scrsubs,:) = mean(out.y(:,[21 22 23]),2)-mean(out.y(:,[25 26 19]),2); %% diff between CSP and CSN (IS THIS ZSCORED?)
+        scr_test_nonparam(scrsubs,:) = mean(out.y(:,[21 22 23]),2)-mean(out.y(:,[25 26 19]),2); %% diff between CSP and CSN (IS THIS ZSCORED?) yes
         
         %% scr data with fits        
         ns = 0;
@@ -1531,8 +1535,8 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('t(%d) = %04.3f, p = %04.2f\n',stats.df,stats.tstat,p)
     
     varargout{1} = out;
-    varargout{1} = C;
-    varargout{1} = sim;
+    varargout{2} = C;
+    varargout{3} = sim;
     
 
 elseif strcmp(varargin{1},'searchlight')
@@ -3480,7 +3484,7 @@ elseif strcmp(varargin{1},'figure_04A')
     h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
     title('Generalization','fontweight','normal','fontsize',15);
     %
-    [indices] = FPSA_FearGen('CompareB2T_RSA');
+    [indices] = FPSA_FearGen('FPSA_CompareB2T');
     [Y X]     = ind2sub([8 8],indices(:,1));
     Y         = Y - .25;
     X         = X - .45;
