@@ -354,67 +354,38 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         hold off;
     end
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
-elseif strcmp(varargin{1},'get_fpsa2') %% same as get_fpsa but computes as many similarity matrices as time-windows
+elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
     %WINDOWN_OVERLAP must be equal to WINDOW_SIZE to conduct the analysis
     %on non-overlapping segments.
     %
     %Example usage:
-    %clear all;for nfix = 1:5;sim = FPSA_FearGen('get_fpsa',nfix);T = FPSA_FearGen('FPSA_sim2table',sim);[~, W(:,:,:,:,nfix)] = FPSA_FearGen('FPSA_model_singlesubject',T.t);end
-    
-    force          = 0;
+    %[sim,model] = FPSA_FearGen('get_fpsa_timewindowed',500,500);
+        
     %
     window_size    = varargin{2};
     window_overlap = varargin{3};
     t              = 0:1:(window_size-1);%running window
     start_times    = 1:window_overlap:1500-window_size+1;%in milliseconds
     time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
-    fprintf('Has %d time windows in total...\n',size(time,1));
+    fprintf('Has %d time windows in total...\n',size(time,1));    
+    %    
+    fixmat          = FPSA_FearGen('get_fixmat');
+    sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));
     %
-    filename  = sprintf('%s/data/midlevel/fpsa2_all_windowsize_%03d_window_overlap_%03d_subjectpool_%03d_runs_%02d_%02d_new.mat',path_project,window_size,window_overlap,current_subject_pool,runs(1),runs(end));
-    %
-    if exist(filename) ==0 | force;        
-        fixmat          = FPSA_FearGen('get_fixmat');
-        sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));        
-        %
-        tc = 0;
-        for t = 1:size(time,1)
-            fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
-            tc       = tc+1;
-            fixmat   = FPSA_FearGen('get_fixmat');
-            fixmat.UpdateSelection('start',time(t,:)+1);%selection works with ismember
-            fixmat.ApplySelection;
-            subc     = 0;
-            for subject = unique(fixmat.subject);
-                subc                     = subc + 1;
-                maps                     = FPSA_FearGen('get_fixmap',fixmat,subject,1:100);
-%                 imagesc(reshape(maps(:,1),500,500));drawnow;
-                fprintf('Subject: %03d, Method: %s\n',subject,method);
-%                 if ~isnan(sum(maps(:)))
-                   sim.(method)(subc,:,tc)  = pdist(maps',method);%(subject,correlation,time-course)
-%                 else
-%                    sim.(method)(subc,:,tc)  = NaN;
-%                 end
-            end                        
-%             current_sim.correlation      = sim.correlation(:,:,1);
-%             if sumcurrennt_sim.correlation            
-            try
-%                 figure(1);imagesc(squareform(nanmean(sim.correlation(:,:,tc))));drawnow;
-            end
-            %EmailText(mat2str(t),'');
-        end
-        for tc = 1:size(time,1)
-            current_sim.correlation = sim.correlation(:,:,tc);
-            T                            = FPSA_FearGen('FPSA_sim2table',current_sim);
-            [~, sim.M(:,:,:,:,tc)]       = FPSA_FearGen('FPSA_model_singlesubject',T(end).t);                        
-        end
-        sim.start_times = start_times;
-        save(filename,'sim');
-    else
-        load(filename);
-    end
-    varargout{1} = sim;    
+    tc = 0;
+    for t = 1:size(time,1)
+        fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
+        tc                   = tc+1;
+        dummy                = FPSA_FearGen('get_fpsa_fair',{'start' time(t,:)},1:3);
+        sim.(method)(:,:,tc) = dummy.correlation;
+        T                    = FPSA_FearGen('FPSA_sim2table',dummy);
+        [~, C]               = FPSA_FearGen('FPSA_model_singlesubject',T.t);
+    end    
+    varargout{1}      = sim;
+    varargout{2}      = C;
+    
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%    
     % FPSA for the 3 test-phase runs are individually computed and averaged.
@@ -588,7 +559,7 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
     end
     varargout{1} = t;
 elseif strcmp(varargin{1},'FPSA_sim2table'); %% subroutine to transform a FPSA matrix to a table for modelling
-    
+    %%
     tsubject        = size(varargin{2}.correlation,1);
     predictor_table = repmat(FPSA_FearGen('FPSA_predictortable'),tsubject,1);
     for n_level = 1:size(varargin{2}.correlation,3)
@@ -613,7 +584,7 @@ elseif strcmp(varargin{1},'FPSA_sim2table'); %% subroutine to transform a FPSA m
     %% will now add the predictors to the table    
     varargout{1} = dummy; 
 elseif strcmp(varargin{1},'FPSA_predictortable');
-    %returns the basic predictors as a table
+    %% returns the basic predictors as a table
     x            = [pi/4:pi/4:2*pi];
     w            = [cos(x);sin(x)];
     model1       = squareform_force(w'*w);%we use squareform_force as the w'*w is not perfectly positive definite matrix due to rounding errors.
@@ -625,12 +596,11 @@ elseif strcmp(varargin{1},'FPSA_predictortable');
     [cmat]       = getcorrmat(0,3,1,1);%see model_rsa_testgaussian_optimizer
     model3_g     = squareform_force(cmat);%
     % add all this to a TABLE object.
-    varargout{1} = table(model1(:),model2_c(:),model2_s(:),model3_g(:),'variablenames',{'circle' 'specific' 'unspecific' 'Gaussian' });
-    
+    varargout{1} = table(model1(:),model2_c(:),model2_s(:),model3_g(:),'variablenames',{'circle' 'specific' 'unspecific' 'Gaussian' });    
 elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and fixed models.
     %%    
-    fixations  = varargin{2};
-    t          = FPSA_FearGen('FPSA_get_table',fixations);
+    selector   = varargin{2};
+    t          = FPSA_FearGen('FPSA_get_table',selector);
     % MIXED EFFECT MODEL
     % null model
     out.baseline.model_00_mixed          = fitlme(t,'FPSA_B ~ 1 + (1|subject)');
@@ -643,8 +613,7 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.generalization.model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
     % FPSA_model_adversitytuning
     out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
-    out.generalization.model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
-    
+    out.generalization.model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');    
     %% FIXED EFFECT MODEL
     % FPSA null model
     out.baseline.model_00_fixed          = fitlm(t,'FPSA_B ~ 1');
@@ -659,14 +628,14 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.baseline.model_03_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;
-    
+ 
 elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject FPSA matrices.
     %% same as FPSA_model, but on gathers a model parameter for single subjects.
     % Input a table if you like to model a custom FPSA matrix.
     if ~istable(varargin{2})
-       fprintf('VARARGIN interpreted as FIXATION index.\n')
-       fixations  = varargin{2};
-       t          = FPSA_FearGen('FPSA_get_table',fixations);
+       fprintf('VARARGIN interpreted as SELECTOR cell.\n')
+       selector   = varargin{2};
+       t          = FPSA_FearGen('FPSA_get_table',selector);
     else fprintf('VARARGIN interpreted as a TABLE.\n')
         t       = varargin{2};
     end
@@ -729,8 +698,8 @@ elseif strcmp(varargin{1},'model2text'); %% spits text from a model object
             
 elseif strcmp(varargin{1},'figure_04C');
     %% plots the main model comparison figure;
-    fixations = varargin{2};
-    C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
+    selector  = varargin{2};
+    C         = FPSA_FearGen('FPSA_model_singlesubject',selector);
     %%
     % circular model
     M         = mean(C.model_01.w1);
@@ -762,9 +731,9 @@ elseif strcmp(varargin{1},'figure_04C');
     
     %%
     %%
-    figure(fixations(1));
+    figure;
     if ispc
-        set(gcf,'position',[-200+500*fixations(1)        1400        898         604]);
+        set(gcf,'position',[-200+500        1400        898         604]);
     else
         set(gcf,'position',[2150         335         898         604]);
     end
@@ -862,7 +831,7 @@ elseif strcmp(varargin{1},'figure_04C');
        end
         %
 elseif strcmp(varargin{1},'figure_04D')
-    %%
+    %% !!! is probably now broken. !!!
     if nargin ==2
         fixations = varargin{2};
     else
@@ -1022,137 +991,7 @@ elseif strcmp(varargin{1},'figure_04D')
             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04D.png'],'-r600')
         end
         %
-elseif strcmp(varargin{1},'figure_04C_BDNFcheck');
-    %% plots the main model comparison figure;
-    fixations = varargin{2};
-    C         = FPSA_FearGen('FPSA_model_singlesubject',fixations);
-    %%
-    subgr{1} = ones(61,1);
-    subgr{2} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==1;
-    subgr{3} = Project.BDNF(ismember(Project.subjects_bdnf,FPSA_FearGen('get_subjects')))==2;
-    
-    for n = 1:3
-        inds = logical(subgr{n});
-        M(n,:)         = mean(C.model_01.w1(inds,:));
-        SEM(n,:)       = std(C.model_01.w1(inds,:))./sqrt(sum(subgr{n}));
-        %flexible model
-        Mc(n,:)        = mean(C.model_02.w1(inds,:));
-        SEMc(n,:)      = std(C.model_02.w1(inds,:))./sqrt(sum(subgr{n}));
-        Ms(n,:)        = mean(C.model_02.w2(inds,:));
-        SEMs(n,:)      = std(C.model_02.w2(inds,:))./sqrt(sum(subgr{n}));
-        %gaussian model
-        Mcg(n,:)       = mean(C.model_03.w1(inds,:));
-        SEMcg(n,:)     = std(C.model_03.w1(inds,:))./sqrt(sum(subgr{n}));
-        Msg(n,:)       = mean(C.model_03.w2(inds,:));
-        SEMsg(n,:)     = std(C.model_03.w2(inds,:))./sqrt(sum(subgr{n}));
-        Mg(n,:)        = mean(C.model_03.w3(inds,:));
-        SEMg(n,:)      = std(C.model_03.w3(inds,:))./sqrt(sum(subgr{n}));
-        
-        %% get the p-values
-        [H(n)   P(n)]     = ttest(C.model_01.w1(inds,1)-C.model_01.w1(inds,2));%compares baseline vs test the circular model parameters
-        
-        [Hc(n) Pc(n)]     = ttest(C.model_02.w1(inds,1)-C.model_02.w1(inds,2));%compares cosine before to after
-        [Hs(n) Ps(n)]     = ttest(C.model_02.w2(inds,1)-C.model_02.w2(inds,2));%compares sine before to after
-        [Hcs(n) Pcs(n)]   = ttest(C.model_02.w1(inds,2)-C.model_02.w2(inds,2));%compares cosine after to sine after
-        % same as before
-        [Hgc(n) Pgc(n)]   = ttest(C.model_03.w1(inds,1)-C.model_03.w1(inds,2));%compares cosine before to after
-        [Hgcs(n) Pgcs(n)] = ttest(C.model_03.w1(inds,2)-C.model_03.w2(inds,2));%compares cosine after to sine after
-        [Hgg(n) Pgg(n)]   = ttest(C.model_03.w3(inds,1)-C.model_03.w3(inds,2));%compares sine before to after
-    end
-    %%
-    %%
-    figure;
-    set(gcf,'position',[0        0        898         604]);
-    X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
-    Y    = [M Mc Ms Mcg Msg Mg];
-    Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
-    bw   = .5;
-    hold off;
-    groupcolors = {[.4 .4 .4],[0 0 1],[1 0 0]};
-    for subpl = 1:3
-        subplot(3,1,subpl);
-        for n = 1:size(Y,2)
-            h       = bar(X(n),Y(subpl,n));
-            legh(n) = h;
-            hold on
-            try %capsize is 2016b compatible.
-                errorbar(X(n),Y(subpl,n),Y2(subpl,n),'k.','marker','none','linewidth',1.5,'capsize',10);
-            catch
-                errorbar(X(n),Y(subpl,n),Y2(subpl,n),'k.','marker','none','linewidth',1.5);
-            end
-            if ismember(n,[1 3 5 7 9 11])
-                try %2016b compatibility.
-                    set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
-                catch
-                    set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
-                end
-            else
-                try
-                    set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',groupcolors{subpl},'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-                catch
-                    set(h,'FaceColor',[0 0 0],'EdgeColor',groupcolors{subpl},'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-                end
-            end
-        end
-        box off;
-        L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
-        try
-            L.Position = L.Position + [0.1/2 0 0 0];
-            L.FontSize = 12;
-        end
-        set(gca,'linewidth',1.8);
-        % xticks
-        xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)) ];
-        label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
-        for nt = 1:length(xtick)
-            h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
-        end
-        try
-            set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
-        catch
-            set(gca,'xtick',[3 8]./1.5,'color','none','XGrid','on','fontsize',16);
-        end
-        %
-        text(-.5,.215,'\beta','fontsize',28,'fontweight','bold');
-        
-        
-        ylim([-.05 .2]);
-        set(gca,'ytick',-.05:.05:.2,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
-        axis normal
-        % asteriks
-        hold on
-        ylim([min(ylim) .16]);
-        h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-        h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-        h= line([X(4)-bw/2 X(6)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
-        
-        h= line([X(7)-bw/2 X(8)+bw/2],repmat(max(ylim),1,2)-.01);set(h,'color','k','linewidth',1);
-        h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
-        h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
-        %
-        text(mean(X(1:2))  ,max(ylim)-.0075, pval2asterix(P(subpl)),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X(3:4))  ,max(ylim)-.0075, pval2asterix(Pc(subpl)),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([4 6])),max(ylim)      , pval2asterix(Pcs(subpl)),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([7 8])),max(ylim)-.0075, pval2asterix(Pgc(subpl)),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs(subpl)),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg(subpl)),'HorizontalAlignment','center','fontsize',12);
-        % model names
-        ylim([-.04 .2])
-        %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
-        %     set(h(1),'color','k','linewidth',1,'clipping','off');
-        text(mean(X(1:2)),.18,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-        %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
-        %     set(h(1),'color','k','linewidth',1,'clipping','off');
-        text(mean(X(3:6)),.18,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-        
-        %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
-        %     set(h(1),'color','k','linewidth',1,'clipping','off');
-        text(mean(X(7:end)),.18,sprintf('Univariate\nGeneralization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-        %%
-        %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
-        %
-    end
-        
+  
 elseif strcmp(varargin{1},'model2behavior')
     %%
     C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
@@ -1479,7 +1318,7 @@ elseif strcmp(varargin{1},'searchlight')
     % At each searchlight position the flexible model is fit.
     b1                = varargin{2};
     b2                = varargin{3};
-    fixations         = 1:100;
+    selector          = varargin{4};
     runs_per_phase{2} = 1;
     runs_per_phase{4} = runs;
     fun               = @(block_data) FPSA_FearGen('searchlight_fun_handle',block_data.data);%what we will do in every block
@@ -1490,7 +1329,7 @@ elseif strcmp(varargin{1},'searchlight')
         for run = runs_per_phase{phase}
             runc             = runc + 1;
             fixmat           = FPSA_FearGen('get_fixmat','runs',run);%get the fixmat for this run
-            filename         = DataHash({fixmat.kernel_fwhm,b1,b2,phase,run,fixations});
+            filename         = DataHash({fixmat.kernel_fwhm,b1,b2,phase,run,selector{:}});
             subc = 0;
             for subject = unique(fixmat.subject);
                 subc                 = subc + 1;%subject counter
@@ -1500,7 +1339,7 @@ elseif strcmp(varargin{1},'searchlight')
                 %analysis proper
                 if exist(path_write) == 0 | force
                     % create the query cell
-                    maps             = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject 'fix' fixations});
+                    maps             = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject selector{:}});
                     maps             = reshape(maps(:,conds),[500 500 length(conds)]);
                     out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true,'DisplayWaitbar',false);
                     save(path_write,'out');
