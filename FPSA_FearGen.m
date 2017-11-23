@@ -40,9 +40,9 @@ function [varargout]=FPSA_FearGen(varargin);
 %   phase (2). Use 4 for test phase.
 % FPSA_FearGen('fix_counts',fixmat) counts the fixation density on 4
 %   different ROIs used in the manuscript. Get FIXMAT with FPSA_FearGen('get_fixmat')
-% FPSA_FearGen('get_fixmap',fixmat,12,1) returns FDMs using FIXMAT, for
+% FPSA_FearGen('get_fixmap',fixmat,{'subject' 12 'fix' 1}) returns FDMs using FIXMAT, for
 %   participant 12 and fixation index 1.
-% FPSA_FearGen('get_fixmap',fixmat,subjects,1:100) returns FDMs for
+% FPSA_FearGen('get_fixmap',fixmat,{'subject' subjects 'fix' 1:100}) returns FDMs for
 %   SUBJECTS and fixations from 1 to 100 (well, basically all the
 %   fixations). Each FDM is a column vector.
 % FPSA_FearGen('plot_fdm',maps) plots FDMs similar to Fig 3A.
@@ -134,8 +134,7 @@ if strcmp(varargin{1},'download_project');
     system(['git clone https://github.com/selimonat/globalfunctions.git']);
     cd('./globalfunctions');
     addpath(pwd)
-    cd ..
-    
+    cd ..    
 elseif strcmp(varargin{1},'get_subjects'); %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
     %% 
     % For the paper we use current_pool = 1, which discards all subjects:
@@ -197,7 +196,11 @@ elseif strcmp(varargin{1},'get_fixmat'); %% load the fixation data in the form o
     %   For more information on Fixmat structure refer to (1), where this
     %   data is also published.
     %   Will return fixmat for the baseline and test phases. Generalization
-    %   phase has 3 runs, by default all are returned.
+    %   phase has 3 runs, by default all are returned. Use 
+    %           fixmat   = FPSA_FearGen('get_fixmat','runs',run); 
+    %   to return the required run. For example FPSA_Fair uses this method
+    %   to compute a separate FPSA on separate runs.
+    %
     %   Use force = 1 to recache (defined at the top).
     %
     %   Example: fixmat = FPSA_FearGen('get_fixmat')
@@ -241,12 +244,17 @@ elseif strcmp(varargin{1},'fix_counts') %% Sanity check: counts fixations in 5 d
         end
     end
     varargout{1} = count;    
-elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a fixation map for a SUBJECT recorded at both phases for fixations FIX (vector) based on a FIXMAT.
+elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a FDMs i.e. probability of fixation as a function of space.
     %%
+    %   Always returns 16 maps, 8 per baseline and generalization phases.
+    %   By default uses all the fixations available in the FIXMAT provided
+    %   in the first VARARGIN. The second VARARGIN is a selector cell array
+    %   as it is understood by the fixmat object.
+    %
+    % FDMs for a SUBJECT, recorded at both phases for fixations FIX (vector) based on a FIXMAT.
     % maps are mean corrected for each phase separately.
     fixmat  = varargin{2};
-    subject = varargin{3};
-    fixs    = varargin{4};
+    selector= varargin{3};
     %create the query cell to talk to Fixmat object
     maps    = [];
     for phase = [2 4];
@@ -254,35 +262,12 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a fixatio
         c    = 0;
         for cond = -135:45:180
             c    =  c+1;
-            v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
+            v{c} = {'phase', phase, 'deltacsp' cond selector{:}};
         end
         fixmat.getmaps(v{:});%real work done by the fixmat object.
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
     end
-    varargout{1} = maps;
-    %possibility to add random noise.
-elseif  strcmp(varargin{1},'get_fixmap_oddeven') %% same as get_fixmat however returns 2 times many fixation maps separated by odd/even trial numbers.
-    %%
-    fixmat  = varargin{2};
-    subject = varargin{3};
-    fixs    = varargin{4};
-    %creaete the query cell
-    maps    = [];
-    for phase = [2 4];
-        v    = [];
-        c    = 0;
-        for cond = -135:45:180
-            c    =  c+1;
-            v{c} = {'phase', phase, 'deltacsp' cond 'subject' subject 'fix' fixs};
-        end
-        fixmat.getmaps_split(v{:});
-        if ~isempty(fixmat.maps)
-            maps = cat(2,maps,demean(fixmat.vectorize_maps')');
-        else
-            maps = [];
-        end
-    end
-    varargout{1} = maps;
+    varargout{1} = maps;    
 elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the paper in a similar way to Figure 3A. 
     %%
     % Use the second VARARGIN to plot ROIs on top.
@@ -291,7 +276,7 @@ elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the pape
     % reshaped. size(VARARGIN{1},3) must be a multiple of 8.
     maps          = varargin{2};
     tsubject      = size(maps,3)/8;
-    contour_lines = 0;%FACIAL ROIs Plot or not.
+    contour_lines = 1;%FACIAL ROIs Plot or not.
     fs            = 18;%fontsize;
     if nargin == 3
         contour_lines = varargin{3};
@@ -369,31 +354,6 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         hold off;
     end
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
-elseif strcmp(varargin{1},'get_fpsa')  %% Computes similarity matrices based on FDMs that are computed with FIXATIONS.
-    %% 
-    % sim = FPSA_FearGen('get_fpsa',1:100) would compute a similarity matrix with all the
-    % available fixations (given 1.5 presentation duration). To do it with
-    % only the first fixation use 1 instead of 1:100.
-    %
-    % Example: sim = FPSA_FearGen('get_fpsa',1:100)
-    fixations = varargin{2};
-    %
-    filename  = sprintf('%s/data/midlevel/fpsa_all_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
-    %
-    if exist(filename) ==0 | force;
-        fixmat   = FPSA_FearGen('get_fixmat');%returns by defaults all the 3 runs;
-        subc     = 0;
-        for subject = unique(fixmat.subject);
-            subc                    = subc + 1;
-            maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
-            fprintf('Subject: %03d, Method: %s\n',subject,method);
-            sim.(method)(subc,:)    = pdist(maps',method);%
-        end
-        save(filename,'sim');
-    else
-        load(filename);
-    end
-    varargout{1} = sim;
 elseif strcmp(varargin{1},'get_fpsa2') %% same as get_fpsa but computes as many similarity matrices as time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -455,29 +415,34 @@ elseif strcmp(varargin{1},'get_fpsa2') %% same as get_fpsa but computes as many 
         load(filename);
     end
     varargout{1} = sim;    
-elseif strcmp(varargin{1},'get_fpsa_fair') %% gets an FPSA matrix per run to be fair to the baseline condition (main routine to get similarity matrices).
-    %%
-    % the FPSA for the 3 test-phase runs are individually computed and averaged.
+elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
+    %%    
+    % FPSA for the 3 test-phase runs are individually computed and averaged.
     % Doing it the other way (i.e. average FDMs from the 3 phases and compute
     % FPSA as in get_fpsa) would have led to comparably less noisy FDMs for the test
     % phase and thus differences btw B and T simply because the number of
     % trials are different. See (4) for more information on how noise
-    % affects similarity values
+    % affects similarity values.
     %
     % Example usage:
     % sim = FPSA_FearGen('get_fpsa_fair',1:100,1:3);
     
-    fixations = varargin{2};%which fixations
-    runs      = varargin{3};%whichs runs would you like to have
+    selector = varargin{2};%which fixations
+    runs     = varargin{3};%whichs runs would you like to have
+    hash     = DataHash(selector);
+    fprintf('===================\n')
+    selector
+    hash
+    fprintf('===================\n')
     %
-    filename     = sprintf('%s/data/midlevel/fpsa_fair_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%s.mat',path_project,fixations(1),fixations(end),current_subject_pool,mat2str(runs));
+    filename     = sprintf('%s/data/midlevel/fpsa_fair_subjectpool_%03d_runs_%s_selector_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
     if exist(filename) ==0 | force;
         for run = runs
             fixmat   = FPSA_FearGen('get_fixmat','runs',run);
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
-                maps                    = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
+                maps                    = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject,selector{:}});
                 fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
                 sim.(method)(subc,:,run)= pdist(maps',method);%
             end
@@ -490,33 +455,6 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% gets an FPSA matrix per run to be 
     end
 
     varargout{1} = sim;    
-elseif strcmp(varargin{1},'get_fpsa_oddeven') %% Computes FPSA with cross-validation based on odd and even trials.
-    %%
-    %  See also: get_fixmap_oddeven
-    
-    fixations = varargin{2};
-    filename  = sprintf('%s/data/midlevel/fpsa_all_oddeven_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
-    force     = 0;
-    %
-    if exist(filename) ==0 | force
-        fixmat   = FPSA_FearGen('get_fixmat');
-        subc     = 0;
-        for subject = setdiff(unique(fixmat.subject),58);
-            subc                    = subc + 1;
-            maps                    = FPSA_FearGen('get_fixmap_oddeven',fixmat,subject,fixations);
-            if size(maps,2) == 32;
-                fprintf('Subject: %03d, Method: %s\n',subject,method);
-                sim.(method)(subc,:)    = pdist(maps',method);%
-            else
-                fprintf('no map found...\n');
-                subc = subc - 1;
-            end
-        end
-        save(filename,'sim');
-    else
-        load(filename);
-    end
-    varargout{1} = sim;
 elseif strcmp(varargin{1},'plot_fpsa');%% A routine to plot similarity matrices
     %%
     figure;
@@ -602,14 +540,13 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
     % phase      : indicator variable for baseline and generalizaation
     % phases.
     %
-    % Example: FPSA_FearGen('FPSA_get_table',1:100)
-    fixations = varargin{2};
-    force = 1;
-    runs      = 1:3;
-    filename  = sprintf('%s/data/midlevel/fpsa_modelling_table_firstfix_%03d_lastfix_%03d_subjectpool_%03d_runs_%02d_%02d.mat',path_project,fixations(1),fixations(end),current_subject_pool,runs(1),runs(end));
+    % Example: FPSA_FearGen('FPSA_get_table',1:100)    
+    selector  = varargin{2};
+    hash      = DataHash(selector);    
+    filename  = sprintf('%s/data/midlevel/fpsa_modelling_table_subjectpool_%03d_runs_%02d_%02d_selector_%s.mat',path_project,current_subject_pool,runs(1),runs(end),hash);
     if ~exist(filename) | force
         %the full B and T similarity matrix which are jointly computed;
-        sim       = FPSA_FearGen('get_fpsa_fair',fixations,runs);%
+        sim       = FPSA_FearGen('get_fpsa_fair',selector,runs);%returns FPSA per subject
         %%we only want the B and T parts
         B         = FPSA_FearGen('get_block',sim,1,1);
         T         = FPSA_FearGen('get_block',sim,2,2);
@@ -722,7 +659,7 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     varargout{1}   = out;
     
 elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject FPSA matrices.
-    %% same as FPSA_model, but on gathers a model paramter for single subjects.
+    %% same as FPSA_model, but on gathers a model parameter for single subjects.
     % Input a table if you like to model a custom FPSA matrix.
     if ~istable(varargin{2})
        fprintf('VARARGIN interpreted as FIXATION index.\n')
@@ -1553,13 +1490,13 @@ elseif strcmp(varargin{1},'searchlight')
             subc = 0;
             for subject = unique(fixmat.subject);
                 subc                 = subc + 1;%subject counter
-                path_write           = sprintf('%ssub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);
+                path_write           = sprintf('%s/data/midlevel/sub%03d/p%02d/midlevel/%s.mat',path_project,subject,phase,filename);
                 cprintf([1 0 0],'Processing subject %03d\ncache name: %s\n',subject,path_write);
                 if exist(fileparts(path_write)) == 0;mkdir(fileparts(path_write));end;%create midlevel folder if not there.
                 %analysis proper
                 if exist(path_write) == 0 | force
                     % create the query cell
-                    maps             = FPSA_FearGen('get_fixmap',fixmat,subject,fixations);
+                    maps             = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject 'fix' fixations});
                     maps             = reshape(maps(:,conds),[500 500 length(conds)]);
                     out              = blockproc(maps,[b1 b1],fun,'BorderSize',[b2 b2],'TrimBorder', false, 'PadPartialBlocks', true,'UseParallel',true,'DisplayWaitbar',false);
                     save(path_write,'out');
@@ -1673,7 +1610,7 @@ elseif strcmp(varargin{1},'searchlight_stimulus')
     b2          = varargin{3};
     noise_level = varargin{4};
     filename    = 'stimulus_searchlight';
-    path_write  = sprintf('%smidlevel/%s_noiselevel_%02d.mat',path_project,filename,noise_level);
+    path_write  = sprintf('%sdata/midlevel/%s_noiselevel_%02d.mat',path_project,filename,noise_level);
     fun         = @(block_data) FPSA_FearGen('fun_handle',block_data.data);%what we will do in every block
     maps        = [];
     for n = 1:8
