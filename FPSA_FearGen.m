@@ -848,167 +848,42 @@ elseif strcmp(varargin{1},'figure_04C');
         %
         keyboard %otherwise everything is gone
 elseif strcmp(varargin{1},'figure_04D')
-    %% !!! is probably now broken. !!!
-    if nargin ==2
-        fixations = varargin{2};
-    else
-        fixations = 1:6;
-    end
-        %% plots the adversity gradient betas for single fixations;
-        Mc = [];Ms=[];SEMc=[];SEMs=[];combined = [];M=[];SEM=[];beta1bc=[];beta2bc=[];
-        for fixx = fixations(:)'
-            C         = FPSA_FearGen('FPSA_model_singlesubject',fixx);
-            %
-            %flexible model, baseline corrected
-            Mc(fixx,:)        = mean(C.model_02.w1(:,2)-C.model_02.w1(:,1));
-            SEMc(fixx,:)      = std(C.model_02.w1(:,2)-C.model_02.w1(:,1))./sqrt(length(C.model_02.w1));
-            Ms(fixx,:)        = mean(C.model_02.w2(:,2)-C.model_02.w2(:,1));
-            SEMs(fixx,:)      = std(C.model_02.w2(:,2)-C.model_02.w2(:,1))./sqrt(length(C.model_02.w2));
-            
-            combined(:,fixx) = [C.model_02.w1(:,2)-C.model_02.w1(:,1)]-[C.model_02.w2(:,2)-C.model_02.w2(:,1)];
-            beta1bc(:,fixx) =  [C.model_02.w1(:,2)-C.model_02.w1(:,1)];
-            beta2bc(:,fixx) =  [C.model_02.w2(:,2)-C.model_02.w2(:,1)];
-            
-            M(fixx,:)    = mean(combined(:,fixx));
-            SEM(fixx,:)  = std(combined(:,fixx))./sqrt(length(C.model_02.w2));
-            % get p-values
-            [Hc(fixx) Pc(fixx)]     = ttest(C.model_02.w1(:,2)-C.model_02.w1(:,1));%compares cosine before to after
-            [Hs(fixx) Ps(fixx)]     = ttest(C.model_02.w2(:,2)-C.model_02.w2(:,1));%compares sine before to after
-            [Hcs(fixx) Pcs(fixx)]   = ttest(C.model_02.w1(:,2)-C.model_02.w1(:,1),C.model_02.w2(:,2)-C.model_02.w2(:,1));%compares cosine after to sine after
-        end
-        keyboard
-        
-        %%
-        clf
-        subplot(1,2,1);
-        bw = .5;
-        h = bar(M);
-        try %2016b compatibility.
-            set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
-        catch
-            set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-        end
-        hold on;
-        errorbar(M,SEM,'k.')
-        title('N = 74')
-        %% only tuned people
-        subs = FPSA_FearGen('get_subjects');
-        tunedsubs = [];
-        for ss = subs(:)'
-            s = Subject(ss);
-            if (10.^-s.get_fit('rating',4).pval)<.05
-            tunedsubs = [tunedsubs; s.id];
-            end
-        end
-        ind = ismember(subs,tunedsubs);
-        
-        combinedT = combined(ind,:);
-        M2 = mean(combinedT);
-        SEM2 = std(combinedT)./sqrt(sum(ind));
-        subplot(1,2,2);
-        bw = .5;
-        h = bar(M2);
-        try %2016b compatibility.
-            set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
-        catch
-            set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-        end
-        hold on;
-        errorbar(M2,SEM2,'k.')
-        title(sprintf('N = %02d',sum(ind)))
-        %%
-        
-        
-        %%
-        close all
-         figure;
-        if ispc
-            set(gcf,'position',[300        1200          898         604]);
-        else
-            set(gcf,'position',[2150         335         898         604]);
-        end
-        XX    = [1:4;6:9;11:14;16:19]/1.5;
-         clf;
-        %% plotting
-               clf
-        for fixx = 1:4
-            %
-            X    = XX(fixx,:);
-            Y    = [Mc(fixx,:) Ms(fixx,:)];
-            Y2   = [SEMc(fixx,:) SEMs(fixx,:)];
-            bw   = .5;
-            for n = 1:size(Y,2)
-                h       = bar(X(n),Y(n));
-                legh(n) = h;
+        %% now plots band of timewindowed model params
+        window_size    = varargin{2};
+        window_overlap = varargin{3};
+        [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',window_size,window_overlap);
+        %model.w[subjects,phase,model,param,time]
+        modelnum = 2;
+        figure
+        colors = {'r','b'};
+        titles = {'Base','Generalization'};
+        for run = 1:2
+            subplot(1,2,run)
+            for param = 1:2
+                params = squeeze(model.w(:,run,modelnum,param,:));
+                M = nanmean(params);
+                SEM = nanSEM(params);
+                plot(M,colors{param},'LineWidth',2)
                 hold on
-                try %capsize is 2016b compatible.
-                    errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5,'capsize',10);
-                catch
-                    errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5);
-                end
-                if ismember(n,[1 3 5 7 9 11])
-                    try %2016b compatibility.
-                        set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
-                    catch
-                        set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-                    end
-                else
-                    try
-                        set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-                    catch
-                        set(h,'FaceColor',[0 0 0],'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
-                    end
-                end
+                x = 1:size(params,2);
+                h=fill([x fliplr(x)],[M+SEM fliplr(M-SEM)],colors{param});
+                h.EdgeColor = colors{param};
+                h.FaceAlpha = .5;
             end
-            ylim([-.03 .13]);
-            % put lines and asterixxx
-            if Hc(fixx)==1
-                h= line([X(1)-bw/2 X(2)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
-                text(mean(X(1:2))  ,max(ylim)-.01, pval2asterix(Pc(fixx)),'HorizontalAlignment','center','fontsize',16);
+            xlim([0 max(x)+1]);
+            
+            box off
+            axis square
+            title(titles{run},'FontSize',14);
+            set(gca,'FontSize',12)
+            if run ==1
+                ylabel('beta [a.u.]')
             end
-            if Hs(fixx)==1
-                h= line([X(3)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
-                text(mean(X(3:4))   ,max(ylim)-.01, pval2asterix(Ps(fixx)),'HorizontalAlignment','center','fontsize',16);
-            end
-            if Hcs(fixx)==1
-                h= line([X(2)-bw/2 X(4)+bw/2],repmat(max(ylim),1,2)-.015);set(h,'color','k','linewidth',1);
-                text(mean(X([2 4])),max(ylim) -.01, pval2asterix(Pcs(fixx)),'HorizontalAlignment','center','fontsize',16);
-            end
+            xlabel('bin')
         end
-        %% general figure things
-        box off;
-        L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
-        try
-            L.Position = L.Position + [0.1/2 0 0 0];
-            L.FontSize = 12;
-        end
-        set(gca,'linewidth',1.8);
-        % xticks
-        XX = sort(reshape(XX,1,16));
-        xtick = [mean(XX(1:2)) mean(XX(3:4)) mean(XX(5:6)) mean(XX(7:8)) mean(XX(9:10)) mean(XX(11:12))  mean(XX(13:14)) mean(XX(15:16)) ];
-        label = { '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' };
-        for nt = 1:length(xtick)
-            h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
-        end
-        try
-            set(gca,'xtick',[5 10 15]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
-        catch
-            set(gca,'xtick',[5 10 15]./1.5,'color','none','XGrid','on','fontsize',16);
-        end
-        %
-        text(-.9,.135,'\beta','fontsize',28,'fontweight','bold');
-        set(gca,'ytick',-.05:.05:.1,'yticklabel',{'-.05' '0' '.05' '.1' '.15' '.2'})
-        axis normal
-        for n=1:4
-            text(mean(XX((n-1)*4+[1:4])),max(ylim),sprintf('Fix %d',n),'fontsize',16,'horizontalalignment','center','fontname','times new roman')
-        end
-        set(gcf,'Color',[1 1 1]);
-        if ispc
-            fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04D.png'])
-            export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04D.png'],'-r600')
-        end
-        %
-  
+        EqualizeSubPlotYlim(gcf)
+        varargout{1} = sim;
+        varargout{2} = model;
 elseif strcmp(varargin{1},'model2behavior')
     %%
     C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
