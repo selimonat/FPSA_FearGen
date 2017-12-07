@@ -733,7 +733,7 @@ elseif strcmp(varargin{1},'figure_04C');
     %%
     figure;
     if ispc
-        set(gcf,'position',[-200+500        1400        898         604]);
+        set(gcf,'position',[-200+500        1200        898         604]);
     else
         set(gcf,'position',[2150         335         898         604]);
     end
@@ -3230,8 +3230,8 @@ elseif strcmp(varargin{1},'figure_04A')
     [d u]   = GetColorMapLimits(cormatz,2.5);
     labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
     labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
-    d       = .62;
-    u       = .85;
+%     d       = .62;
+%     u       = .85;
     fs      = 12;
     %
     set(gcf,'position',[0 0         995         426]);
