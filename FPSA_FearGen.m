@@ -362,27 +362,40 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     %
     %Example usage:
     %[sim,model] = FPSA_FearGen('get_fpsa_timewindowed',500,500);
+    %
+    %model.w contains weights for the linear model as
+    %[subjects,phase,model,param,time]
+    
         
     %
     window_size    = varargin{2};
     window_overlap = varargin{3};
-    t              = 0:1:(window_size-1);%running window
-    start_times    = 1:window_overlap:1500-window_size+1;%in milliseconds
-    time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
-    fprintf('Has %d time windows in total...\n',size(time,1));    
-    %    
-    fixmat          = FPSA_FearGen('get_fixmat');
-    sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));
-    %
-    tc = 0;
-    for t = 1:size(time,1)
-        fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
-        tc                   = tc+1;
-        dummy                = FPSA_FearGen('get_fpsa_fair',{'start' time(t,:)},1:3);
-        sim.(method)(:,:,tc) = dummy.correlation;
-        T                    = FPSA_FearGen('FPSA_sim2table',dummy);
-        [~, C]               = FPSA_FearGen('FPSA_model_singlesubject',T.t);
-    end    
+    hash           = DataHash(varargin);
+    filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
+    if exist(filename) == 0 | force
+        t              = 0:1:(window_size-1);%running window
+        start_times    = 1:window_overlap:1500-window_size+1;%in milliseconds
+        time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
+        fprintf('Has %d time windows in total...\n',size(time,1));
+        %
+        fixmat          = FPSA_FearGen('get_fixmat');
+        sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));
+        %
+        tc = 0;
+        for t = 1:size(time,1)
+            fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
+            tc                   = tc+1;
+            dummy                = FPSA_FearGen('get_fpsa_fair',{'start' time(t,:)},1:3);
+            sim.(method)(:,:,tc) = dummy.correlation;
+            T                    = FPSA_FearGen('FPSA_sim2table',dummy);
+            [~, C.w(:,:,:,:,tc)] = FPSA_FearGen('FPSA_model_singlesubject',T.t);
+            
+        end
+        C.t               = start_times;
+        save(filename,'C','sim')
+    else
+        load(filename);
+    end
     varargout{1}      = sim;
     varargout{2}      = C;
     
