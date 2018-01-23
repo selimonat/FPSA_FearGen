@@ -398,6 +398,28 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     end
     varargout{1}      = sim;
     varargout{2}      = C;
+    %%
+    model = C;
+    subplot(2,2,1);
+    hold off;%plot(model.t,squeeze(nanmean(model.w(:,1,1,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,1,1,:))),'r');
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,1,1,:)))',squeeze(nanSEM(model.w(:,1,1,1,:)))','lineprops','b');hold on;
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);
+    title('circular W model 1');
+    
+    subplot(2,2,2);hold off;
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),squeeze(nanSEM(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),'lineprops','r');hold on;
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);
+    title('Generalization - Baseline');
+    
+    subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r--');hold on;
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b--');box off;axis tight;ylim([-.05 0.2]);
+    title('Baseline');
+    
+    subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);    
+    title('Generalization');
     
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%    
@@ -1149,32 +1171,35 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
     varargout{1} = t;
 elseif strcmp(varargin{1},'model_fpsa_testgaussian_optimizer');
     %% create Gaussian models with different parameters to find the best one to compare against the flexible model
-    t           = FPSA_FearGen('FPSA_get_table',1:100);
+    t           = FPSA_FearGen('FPSA_get_table',{'fix' 1:100});
     tsubject    = length(unique(t.subject));
     res         = 50;
-    amps        = linspace(0.25,2,res);
-    sds         = linspace(0.25,3,res);
+    amps        = linspace(0.1,5,res);
+    sds         = linspace(0.4,5,res);    
+    %%
     c           = 0;
-    
-    for amp = amps
-        for sd = sds
+    BIC2 = nan(res,1);
+    for amp = (amps)
+        for sd = (sds)
             c          = c + 1;
+            fprintf('%d of %d finished...\n',c,res^2);
             %
-            [cmat]     = getcorrmat(0,amp,0,1,sd);
-            imagesc(cmat,[-1 1]);
-            colorbar;title('Currently fitted Gau component');drawnow;
+            [cmat]     = getcorrmat(0,amp,0,amp,sd);
+%             imagesc(cmat,[-1 1]);
+%             colorbar;title('Currently fitted Gau component');drawnow;
             model3_g   = Vectorize(repmat(repmat(squareform_force(cmat),1,1),1,tsubject));%
             %
             t.gau      = model3_g(:);
-            a          = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
-            BIC2(c)    = a.ModelCriterion.BIC;
+            a          = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + gau');           
+            BIC2(c)    = a.Rsquared.Ordinary;%a.ModelCriterion.BIC;
         end
     end
+    %%
     BIC2         = reshape(BIC2,res,res);
     varargout{1} = BIC2;
     
     %% prepare the output;
-    [y x]  = find(BIC2 == min(BIC2(:)));
+    [y x]  = find(BIC2 == max(BIC2(:)));
     amp    = amps(x);
     sd     = sds(y);
     clf
@@ -1396,41 +1421,133 @@ elseif strcmp(varargin{1},'searchlight_plot')
     %% will spatially plot the ellipses area using the sqrt(cosine^2 +
     %sine^2) weight combination term.
     
-    Mori            = FPSA_FearGen('searchlight',1,15);
-    %% MORI(pixel,pixle,regressor,subject,phase)
+    Mori            = FPSA_FearGen('searchlight',1,15,{'start' 300:1500});
+    %% MORI(pixel,pixel,regressor,subject,phase)
     M                = Mori;
     M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
     M(:,:,:,:,3:end) = [];
-    M(:,:,1,:,:)     = [];
-%     M(:,:,3,:,:)     = sqrt(M(:,:,1,:,:).^2+M(:,:,2,:,:).^2);
-%     M(:,:,3,:,:)     = (M(:,:,1,:,:)+M(:,:,2,:,:))./2;
+    M(:,:,1,:,:)     = [];%remove the intercept
+    M                = mean(M,3);%compute the weight for the circular model.
     % plot the number of subjects present per pixel, get a mask
     figure(1);
     C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
-%     imagesc(C,[0 100]);colorbar;hold on;
-%     contourf(C,[90 75 50],'fill','off');axis ij;hold off;
-%     axis off
-%     title('Counts');
+    imagesc(C,[0 100]);colorbar;hold on;
+    contourf(C,[90 75 50],'fill','off');axis ij;hold off;
+    axis off
+    title('Counts');
     % remove the data outside of the mask
     M             = reshape(M,[500*500 2 74 2]);
     mask          = C < 50;
     mask          = mask(:);
     M(mask,:,:,:) = NaN;
-    M             = reshape(M,[500 500 2 74 2]);
-    %% plot the specific and unspecific components
+    M             = reshape(M,[500 500 2 74 2]);    
+    % plot specific and unspecific components
     figure(2);
-    N               = 0;
+    N   = 0;
+    clf;
+    d = 0;u = .1;F = @(x) nanmedian(x,4);
+    subplot(3,2,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;
+    subplot(3,2,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;
+    subplot(3,2,3);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;
+    subplot(3,2,4);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;
+    %%
+    fix             = Fixmat([],[]);
+    fix.cmap_limits = 5;
+    fix.maps        = squeeze(F(M));
+    fix.plot;
+    %%
+    fix             = Fixmat([],[]);
+    fix.cmap_limits = 5;
+    fix.maps        = squeeze(F(M(:,:,:,:,2)-M(:,:,:,:,1)));
+    fix.plot;
+    %% count the beta values from 4 rois
+    C = [];
+    for np = 1:size(M,5)
+        for ns = 1:size(M,4)
+            for w = 1:size(M,3)
+                C(ns,:,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0);
+            end
+        end
+    end
+    %%
+%     C       = C(:,1:4,1,2)-C(:,1:4,1,1);
+%     C = C(:,:,1)-C(:,:,2);
+    figure;bar(nanmean(C),'k');hold on;errorbar(nanmean(C),nanstd(C)./sqrt(74),'or');hold off;
+    %%
+    ttest((C(:,1:4,1,2)-C(:,1:4,1,1)),0,'alpha',.01)
+    %%
+    G       = [ repmat(Vectorize(repmat(1:4,74,1)),4,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1],74,1)),1,1) ];
+    anovan(Vectorize(C(:,1:4,1:2,1:2)),G,'model','interaction')
+    %%
+    G       = [ repmat(Vectorize(repmat(1:4,74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),1,1) ];
+    anovan(Vectorize(C(:,1:4,1:2,2)-C(:,1:4,1:2,1)),G,'model','interaction')
+    %%    
+    F  = [];
+    CF = [];
+    for phase = [2 4]
+        %
+        M = [];
+        for deltacsp = [0 180]
+            c = 0;
+            v = [];
+            for subjects = unique(fixmat.subject)
+                c    = c+1;
+                v{c} = {'subject' subjects 'phase' phase 'deltacsp',[deltacsp] 'start' 300:1500};
+            end
+            fixmat.getmaps(v{:});
+            M{deltacsp+1} = fixmat.maps;
+        end
+        M = M{1} - M{181};
+        %        
+        CF2 = [];
+        for subjects = 1:size(fixmat.maps,3)
+            CF2 = [CF2; fixmat.EyeNoseMouth(M(:,:,subjects))];
+        end
+        CF = cat(3,CF,CF2);
+        F  = cat(3,F,mean(M,3));
+    end
+    %%
+    ttest(CF(:,:,2)-CF(:,:,1))
+    figure;bar(mean(CF(:,:,2)-CF(:,:,1)))
+    %%
+    fixmat.maps = F(:,:,2)-F(:,:,1);
+    figure;fixmat.plot;
+    %%
+    fixmat.getmaps(v{:});
+    
+    %%
+%     subplot(3,2,5);imagesc(squeeze(F(M(:,:,1,:,2))-F(M(:,:,1,:,1))),[d u]);colorbar;
+%     subplot(3,2,6);imagesc(squeeze(F(M(:,:,2,:,2))-F(M(:,:,2,:,1))),[d u]);colorbar;
+    
     fix             = Fixmat([],[]);
     fix.cmap_limits = 5;
     fix.maps        = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
     fix.plot;
     colormap jet
-    %%
+    subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
+    %% plot the differences
+    figure(2);
+    N               = 0;
+    fix             = Fixmat([],[]);
+    Mdiff           = cat(3,nanmedian(M(:,:,1,:,2)-M(:,:,1,:,1),3),nanmedian(M(:,:,2,:,2)-M(:,:,2,:,1),3));
+    fix.maps        = Mdiff;
+    fix.plot;
+    colormap jet
+%     subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
+    %% make a ttest
+    M2      = reshape(M,[500*500 2 74 2]);%[pixel regressor subject phase];
+    Md     = squeeze(M2(:,1,:,2)-M2(:,1,:,1));%-(M(:,2,:,2)-M(:,2,:,1)));
+    [h p]  = q;
+    
+    fix.maps = cat(3,reshape(h,500,500),reshape(-log10(p),500,500));
+    fix.plot;
+    %% make a signtest
     M     = reshape(M,[500*500 2 74 2]);
     h     = nan(250000,1);p = h;
     nbeta = 1;
     for npix = 1:250000;        
         if mask(npix) == 0
+            npix
             data              = squeeze(M(npix,nbeta,:,2)-M(npix,nbeta,:,1));
 %             [h(npix) p(npix)] = signtest( data(:));
             [p(npix) h(npix)] = signtest( data(:));
@@ -1455,15 +1572,7 @@ elseif strcmp(varargin{1},'searchlight_plot')
             
         end
     end        
-    %% count the beta values from 4 rois
-    C = [];
-    for np = 1:2
-        for ns = 1:74
-            for w = 1:2
-                C(:,ns,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0);
-            end
-        end
-    end
+    
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %% applies the search light analysis to the V1 representations.
     b1          = varargin{2};
