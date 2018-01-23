@@ -51,7 +51,7 @@ function [varargout]=FPSA_FearGen(varargin);
 %   computed with exploration patterns containing all the fixations
 %   (1:100). This is not a recommended method for computing dissimilarity
 %   matrices, rather use:
-% FPSA_FearGen('get_fpsa_fair',1:100,1:3) which would compute a fair
+% FPSA_FearGen('get_fpsa_fair',{'fix',1:100},1:3) which would compute a fair
 %   dissimilarity matrix for each run separately. 3 runs in generalization
 %   are averaged later.
 %
@@ -63,7 +63,7 @@ function [varargout]=FPSA_FearGen(varargin);
 % machine and will add paths. Before starting you need to set the
 % PATH_PROJECT variable below for your own liking.
 %
-% Contact: sonat@uke.de; lkampermann@uke.de
+% Contact: sonat@uke.de; l.kampermann@uke.de
 
 %% Set the default parameters
 path_project         = sprintf('%s%s',homedir,'/Documents/Experiments/project_FPSA_FearGen/');% location of the project folder (MUST END WITH A FILESEP);
@@ -369,7 +369,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         
     %
     window_size    = varargin{2};
-    window_overlap = varargin{3};
+    window_overlap = varargin{3};%this is actually not an overlap, but distance between start points
     hash           = DataHash(varargin);
     filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
     if exist(filename) == 0 | force
@@ -398,6 +398,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     end
     varargout{1}      = sim;
     varargout{2}      = C;
+    varargout{3}      = time;
     
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%    
@@ -409,7 +410,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     % affects similarity values.
     %
     % Example usage:
-    % sim = FPSA_FearGen('get_fpsa_fair',1:100,1:3);
+    % sim = FPSA_FearGen('get_fpsa_fair',{'fix',1:100},1:3);
     
     selector = varargin{2};%which fixations
     runs     = varargin{3};%whichs runs would you like to have
@@ -741,7 +742,10 @@ elseif strcmp(varargin{1},'figure_04C');
     [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
     [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
     [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
-    
+    %%anova on interaction of Time x Parameter
+    y = [C.model_02.w1;C.model_02.w2];
+    reps = length(C.model_02.w1);
+    p = anova2(y,reps);
     %%
     %%
     figure;
@@ -848,13 +852,19 @@ elseif strcmp(varargin{1},'figure_04C');
         %
         keyboard %otherwise everything is gone
 elseif strcmp(varargin{1},'figure_04D')
+   
         %% now plots band of timewindowed model params
         window_size    = varargin{2};
         window_overlap = varargin{3};
-        [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',window_size,window_overlap);
+        [sim,model,timebins] = FPSA_FearGen('get_fpsa_timewindowed',window_size,window_overlap);
         %model.w[subjects,phase,model,param,time]
         modelnum = 2;
-        figure
+         figure;
+         if ispc
+             set(gcf,'position',[-200+500        1200        898         504]);
+         else
+             set(gcf,'position',[2150         335         898         504]);
+         end
         colors = {'r','b'};
         titles = {'Base','Generalization'};
         for run = 1:2
@@ -879,11 +889,17 @@ elseif strcmp(varargin{1},'figure_04D')
             if run ==1
                 ylabel('beta [a.u.]')
             end
-            xlabel('bin')
+            xlabel('mean timewindow [ms]')
+            set(gca,'XTick',1:4:length(x),'XTickLabels',floor(mean(timebins(1:4:end,:),2)),'XTickLabelRotation',45,'fontsize',16)
         end
         EqualizeSubPlotYlim(gcf)
         varargout{1} = sim;
         varargout{2} = model;
+       if ispc
+            fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
+            export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
+       end
+        keyboard
 elseif strcmp(varargin{1},'model2behavior')
     %%
     C         = FPSA_FearGen('FPSA_model_singlesubject',1:100);
@@ -1079,7 +1095,7 @@ elseif strcmp(varargin{1},'NvsO') %% compares neighboring correlation to opposin
 elseif strcmp(varargin{1},'FPSA_CompareB2T'); %% element-wise analysis of the FPSA matrix
     %% returns the coordinates and pvalue of the test comparing corresponding similarity entries of between baseline and generalization.
     %the full B and T similarity matrix;
-    sim = FPSA_FearGen('get_fpsa_fair',1:100,1:3);%
+    sim = FPSA_FearGen('get_fpsa_fair',{'fix',1:100},1:3);%
     %%we only want the B and T parts
     [~,B] = FPSA_FearGen('get_block',sim,1,1);
     [~,T] = FPSA_FearGen('get_block',sim,2,2);
@@ -1094,7 +1110,7 @@ elseif strcmp(varargin{1},'FPSA_CompareB2T'); %% element-wise analysis of the FP
 elseif strcmp(varargin{1},'numbers_fpsa_result')
     %% returns the coordinates and pvalue of the test comparing corresponding similarity entries of between baseline and generalization.
     %the full B and T similarity matrix;
-    sim = FPSA_FearGen('get_fpsa_fair',1:100,1:3);%
+    sim = FPSA_FearGen('get_fpsa_fair',{'fix',1:100},1:3);%
     %%we only want the B and T parts
     [~,B] = FPSA_FearGen('get_block',sim,1,1);
     [~,T] = FPSA_FearGen('get_block',sim,2,2);
