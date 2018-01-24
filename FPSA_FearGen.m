@@ -3060,29 +3060,31 @@ elseif strcmp(varargin{1},'figure_03')
     method   = 3;
     fs       = 13; %fontsize
     counts   = FPSA_FearGen('get_fixation_counts');
-    counts   = diff(counts,1,4);
+%     counts   = diff(counts,1,4);
     counts   = counts*100;
     m_counts = nanmean(counts,3);
     s_counts = std(counts,1,3)./sqrt(size(counts,3));
     
     
-    path_write = sprintf('%s/data/midlevel/ROI_fixcount_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
+    path_write = sprintf('%s/data/midlevel/ROI_fixcount_ph234_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
     
-    %% fit group
+    %% fit group for each phase
     X_fit = [];
     Y_fit = [];
-    for nroi = 1:4
-        data.y   = squeeze(counts(:,nroi,:))';
-        data.x   = repmat(-135:45:180,size(counts,3),1);
-        data.ids = [1:size(counts,3)]';
-        t        = [];
-        t        = Tuning(data);
-        t.GroupFit(method);
-        X_fit = [X_fit ;t.groupfit.x_HD];
-        if t.groupfit.pval > -log10(.05)
-            Y_fit = [Y_fit ;t.groupfit.fit_HD];
-        else
-            Y_fit = [Y_fit ;repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)])];
+    for ph = [1 3]
+        for nroi = 1:4
+            data.y   = squeeze(counts(:,nroi,:,ph))';
+            data.x   = repmat(-135:45:180,size(counts,3),1);
+            data.ids = [1:size(counts,3)]';
+            t        = [];
+            t        = Tuning(data);
+            t.GroupFit(method);
+            X_fit(ph,nroi,:) = t.groupfit.x_HD;
+            if t.groupfit.pval > -log10(.05)
+                Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
+            else
+                Y_fit(ph,nroi,:) = repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)]);
+            end
         end
     end
     %% plot the 4 count-profiles for whole group
@@ -3091,49 +3093,35 @@ elseif strcmp(varargin{1},'figure_03')
      if ispc
         set(gcf,'position',[120 1097 1000 550]);
     else
-        set(gcf,'position',[2176         705        1000        550]);
+        set(gcf,'position',[2176   705  1000   550]);
     end
     hold on;
     t={'Right Eye', 'Left Eye' 'Nose' 'Mouth'};
-    for n = 1:4
-        H(n) = subplot(2,4,n);
-        Project.plot_bar(-135:45:180,m_counts(:,n,1,1));
-        set(gca,'XTickLabel','');
-        hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
-        if n == 1
-            ylabel(sprintf('\\Delta%%\n(after-before)'));
+    cc = 0;
+    for ph = 1:3
+        for n = 1:4
+            cc = cc + 1;
+            H(cc) = subplot(3,4,cc);
+            Project.plot_bar(-135:45:180,m_counts(:,n,1,ph));
+            if ph == 1
+                hh=title(sprintf('%s',t{n}),'fontsize',fs,'fontweight','normal');
+            end
+            if n == 1
+                ylabel('Fixation count [%]');
+            end
+            hold on;
+            errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'k.');
+            try
+                plot(squeeze(X_fit(ph,n,:)),squeeze(Y_fit(ph,n,:)),'linewidth',4,'color',[0 0 0 .5]);
+            catch
+                plot(squeeze(X_fit(ph,n,:)),squeeze(Y_fit(ph,n,:)),'linewidth',4,'color',[0 0 0]);
+            end
+            hold off;
+            set(gca,'linewidth',1.2,'YTick',[0 25 50],'fontsize',fs)
+
+            ylim([0 50]);
+            set(gca,'XGrid','on','YGrid','off')
         end
-        hold on;
-        errorbar(-135:45:180,m_counts(:,n,1,1),s_counts(:,n,1,1),'ko');
-        try
-            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0 .5]);
-        catch
-            plot(X_fit(n,:),Y_fit(n,:),'linewidth',4,'color',[0 0 0]);
-        end
-        hold off;
-        set(gca,'linewidth',1.2,'YTick',[-8 -4 0 4 8],'fontsize',fs,'YTickLabel',{'-8' '' '0' '' '8'});
-        if n ~= 1;
-            set(gca,'xticklabel','');
-        end
-        if n == 2 | n == 4 | n == 3
-            set(gca,'yticklabel',[]);
-        end
-        ylim([-8 8]);
-        if n < 3
-            h = text(0,1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs);
-            h = text(180,1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs);
-            h = text(90,1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
-            h = text(-90,1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
-        else
-            h = text(0,-1.25,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs);
-            h = text(180,-1.25,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs);
-            h = text(90,-1.25,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
-            h = text(-90,-1.25,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs-4);
-        end
-        try
-            set(gca,'XAxisLocation','origin')
-        end
-        set(gca,'XGrid','on','YGrid','off')
     end
     subplotChangeSize(H,.025,.025);
     
@@ -3145,27 +3133,31 @@ elseif strcmp(varargin{1},'figure_03')
     params = [];
     if ~exist(path_write) || force==1
         for sub = 1:size(counts,3)
+            for ph = [1 3]
             for nroi = 1:4
-                data.y   = squeeze(counts(:,nroi,sub))';
+                data.y   = squeeze(counts(:,nroi,sub,ph))';
                 data.x   = repmat(-135:45:180,1);
                 data.ids = sub';
                 t        = [];
                 t        = Tuning(data);
                 t.SingleSubjectFit(method);
-                pval(nroi,sub) = 10.^-t.fit_results.pval;
-                params(nroi,sub,:) = t.fit_results.params;
-                X_fit(nroi,sub,:) = t.fit_results.x_HD;
+                pval(ph,nroi,sub) = 10.^-t.fit_results.pval;
+                params(ph,nroi,sub,:) = t.fit_results.params;
+                X_fit(ph,nroi,sub,:) = t.fit_results.x_HD;
                 if t.fit_results.pval > -log10(.05)
-                    Y_fit(nroi,sub,:) = t.fit_results.y_fitted_HD;
+                    Y_fit(ph,nroi,sub,:) = t.fit_results.y_fitted_HD;
                 else
-                    Y_fit(nroi,sub,:) = repmat(mean(t.y(:)),[1 length(t.fit_results.y_fitted_HD)]);
+                    Y_fit(ph,nroi,sub,:) = repmat(mean(t.y(:)),[1 length(t.fit_results.y_fitted_HD)]);
                 end
+            end
             end
         end
         save(path_write,'X_fit','Y_fit','params','pval')
     else
         load(path_write)
     end
+    %% LK worked up to this point
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %print summary
     fitvalid   = pval <.05;
     nvalidsubs = sum(fitvalid,2);
@@ -3377,8 +3369,12 @@ elseif strcmp(varargin{1},'figure_04A')
 elseif strcmp(varargin{1},'get_fixation_counts')
     %% Collects fixation counts and reports how they change with conditions on 4 different ROIs before and after learning.
     % these numbers are reported in the manuscript.
-    filename       = sprintf('counttuning_runs_%02d_%02d.mat',runs(1),runs(end));
-    fixmat         = FPSA_FearGen('get_fixmat');
+    filename       = sprintf('counttuning_ph234_runs_%02d_%02d.mat',runs(1),runs(end));
+    %     fixmat         = FPSA_FearGen('get_fixmat');
+    
+    % need to replace the get_fixmat bc this only runs phase 2 and 4
+    subjects = FPSA_FearGen('get_subjects',current_subject_pool);
+    fixmat      = Fixmat(subjects,[2 3 4]);%all SUBJECTS, PHASES and RUNS
     fixmat.unitize = 0;
     subjects       = unique(fixmat.subject);
     force          = 0;
@@ -3387,7 +3383,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
         fprintf('Counting fixations in subject: %03d.\n',ns);
         c = c+1;
         p = 0;
-        for phase = [2 4]
+        for phase = [2 3 4]
             p          = p + 1;
             path_write = sprintf('%s/data/sub%03d/p%02d/midlevel/%s.mat',path_project,ns,phase,filename);
             %
@@ -3413,6 +3409,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
         end
     end
     varargout{1} = count;
+    %these groups are for the venn plot later.
     groups.g1 = repmat([1:8]',[1 5 61 2]);
     groups.g2 = repmat(1:5,[8 1 61 2]);
     groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
@@ -3420,8 +3417,8 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     
     varargout{2} = groups;
     %% Compute fixation density and their change.
-    P = mean(mean(mean(count(:,:,:,1:2),4),3));
-    fprintf('Fixation density in percentage in Baseline + Generalization:\n')
+    P = mean(mean(mean(count(:,:,:,1:3),4),3));
+    fprintf('Fixation density in percentage in Baseline, Conditioning + Generalization:\n')
     fprintf('%25s %3.5g\n','Left Eye:', P(1))
     fprintf('%25s %3.5g\n','Right Eye:',P(2))
     fprintf('%25s %3.5g\n','Nose:',P(3))
@@ -3429,7 +3426,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     fprintf('%25s %3.5g\n','Mouth:',P(4))
     fprintf('%25s %3.5g\n','Other:',P(5))
     %
-    P = mean(mean(count(:,:,:,2),3))-mean(mean(count(:,:,:,1),3));
+    P = mean(mean(count(:,:,:,3),3))-mean(mean(count(:,:,:,1),3));
     fprintf('Change in Fixation Density in percentage (Generalization - Baseline):\n');
     fprintf('%25s %3.5g\n','Delta Left Eye:', P(1))
     fprintf('%25s %3.5g\n','Delta Right Eye:',P(2))
