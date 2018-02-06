@@ -3268,11 +3268,9 @@ elseif strcmp(varargin{1},'figure_03A')
     %
     cormatz = squareform(nanmean(sim.correlation));
     %     cormatz = CancelDiagonals(cormatz,NaN);
-    [d u]   = GetColorMapLimits(cormatz,2.5);
+    [d u]   = GetColorMapLimits(cormatz,1.5);
     labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
-    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
-    %     d       = .62;
-    %     u       = .85;
+    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };    
     fs      = 12;
     %
     set(gcf,'position',[0 0         995         426]);
@@ -3281,25 +3279,25 @@ elseif strcmp(varargin{1},'figure_03A')
     h = imagesc(cormatz(1:8,1:8),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(0,1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(0,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Baseline','fontweight','normal','fontsize',15);
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');    
+    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(0,2,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(0,6,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(2,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(6,9,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    title('Baseline','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
     %     subplot(9,6,[4 5 6 10 11 12 16 17 18]);
     H(2) = subplot(1,3,2);
     h=imagesc(cormatz(9:16,9:16),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Generalization','fontweight','normal','fontsize',15);
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(2,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(6,9,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    title('Generalization','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
     %
     [indices] = FPSA_FearGen('FPSA_CompareB2T');
     [Y X]     = ind2sub([8 8],indices(:,1));
@@ -3311,14 +3309,14 @@ elseif strcmp(varargin{1},'figure_03A')
         if X(N) > Y(N)
             if indices(N,2) < .05 & indices(N,2) > .01;
                 if Y(N) == 3.75;
-                    text(X(N),Y(N),'*','fontsize',fs,'color','k');
+                    text(X(N),Y(N),'*','fontsize',fs,'color','k','FontWeight','bold');
                 else
-                    text(X(N),Y(N),'*','fontsize',fs,'color','w');
+                    text(X(N),Y(N),'*','fontsize',fs,'color','k','FontWeight','bold');
                 end
             elseif indices(N,2) < .01 & indices(N,2) > .005;
-                text(X(N),Y(N),'**','fontsize',fs,'color','w');
+                text(X(N),Y(N),'**','fontsize',fs,'color','k','FontWeight','bold');
             elseif indices(N,2) < .005 & indices(N,2) > .001;
-                text(X(N),Y(N),'***','fontsize',fs,'color','w');
+                text(X(N),Y(N),'***','fontsize',fs,'color','k','FontWeight','bold');
             end
         end
     end
@@ -3329,8 +3327,8 @@ elseif strcmp(varargin{1},'figure_03A')
     h2.AxisLocation ='out';
     h2.Box          = 'off';
     h2.TickLength   = 0;
-    h2.Ticks        = [.62 .85];
-    h2.TickLabels   = {'.6' '.8'};
+    h2.Ticks        = [d u];
+    h2.TickLabels   = {'.6' '1.4'};
     %     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
     pos = get(gca,'position')
     try
@@ -3387,18 +3385,18 @@ elseif strcmp(varargin{1},'figure_03A')
     box off;axis square;axis off
     subplotChangeSize(H(3),.025,.025);
     %
-    % legend
-    plot(plotlims(1)+.06,plotlims(2),'ko','markersize',12)
-    text(plotlims(1)+.11,plotlims(2),'Baseline','fontsize',12);
+    %% legend
+    plot(plotlims(1),plotlims(2),'ko','markersize',12)
+    text(plotlims(1)+.05,plotlims(2),'Baseline','fontsize',12);
     hold on;
-    plot(plotlims(1)+.06,plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
-    text(plotlims(1)+.11,plotlims(2)-.08,'Generaliz.','fontsize',12)
+    plot(plotlims(1),plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
+    text(plotlims(1)+.05,plotlims(2)-.08,'Generaliz.','fontsize',12)
     hold off;
     %%
     %     subplotChangeSize(H,.025,.025);
     %subplot(9,6,[22 23 24 28 29 30])
     %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04A.png','-transparent');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
