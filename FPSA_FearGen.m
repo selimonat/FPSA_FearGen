@@ -396,30 +396,81 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     else
         load(filename);
     end
-    varargout{1}      = sim;
+    
+    C.t               = C.t + window_size;    
+    varargout{1}      = sim;    
     varargout{2}      = C;
+    
     %%
     model = C;
     subplot(2,2,1);
     hold off;%plot(model.t,squeeze(nanmean(model.w(:,1,1,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,1,1,:))),'r');
     shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,1,1,:)))',squeeze(nanSEM(model.w(:,1,1,1,:)))','lineprops','b');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);xlim([window_size 1500]);
     title('circular W model 1');
     
     subplot(2,2,2);hold off;
     shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),squeeze(nanSEM(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),'lineprops','r');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);
+    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);xlim([window_size 1500]);
     title('Generalization - Baseline');
     
-    subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r--');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b--');box off;axis tight;ylim([-.05 0.2]);
-    title('Baseline');
+    h(1)=subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    H2=shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;    
+    H1=shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b-');box off;axis tight;ylim([0 0.2]);xlim([window_size 1500]);
     
-    subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);    
-    title('Generalization');
+    H2.mainLine.LineWidth = 1.5;
+    H2.mainLine.LineWidth = 1.5;
+    H2.mainLine.Color = [1 0 0 .5];
+    H1.mainLine.LineWidth = 1.5;
+    H1.mainLine.Color = [0 0 1 .5];
+    title('Baseline');
+    hl = legend([H1.mainLine H2.mainLine],{'w_{specific}' 'w_{unspecific}'})
+    hl.FontSize = 12;
+    legend boxoff
+    xlabel('time (ms)');
+    ylabel('weight')
+    grid on
+    set(gca,'fontsize',12)
+    
+    h(2)=subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    H2=shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
+    H1=shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:))) ,squeeze(nanSEM(model.w(:,2,2,2,:))) ,'lineprops','b');box off;axis tight;ylim([0 0.2]);xlim([window_size 1500]);
+    H2.mainLine.LineWidth = 1.5;
+    H2.mainLine.LineWidth = 1.5;
+    H2.mainLine.Color = [1 0 0 .5];
+    H1.mainLine.LineWidth = 1.5;
+    H1.mainLine.Color = [0 0 1 .5];
+    set(gca,'yticklabels',[]);
+    title('Generalization');    
+    xlabel('time (ms)');
+    grid on
+    subplotChangeSize(h,.06,.06);
+    limits = get(gca,'xtick')
+    set(gca,'xtick',limits(2:end));
+    set(gca,'fontsize',12)
+    set(gcf,'position',[2034         402         711         628]);
+    %% find significant time points
+    whichtest = 'signrank';
+    alpha = 0.05;
+    %[subjects,phase,model,param,time]
+    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
+    if strcmp(whichtest,'signrank')
+        for i = 1:size(X,2)
+            [PP(i) HH(i)] = signrank(X(:,i));
+        end
+    elseif strcmp(whichtest,'ttest')
+        size(X)
+        [HH PP] = ttest(X,[]);
+        PP
+    end
+    hold on
+    h                 = plot(model.t(find(PP < alpha)),repmat(max(ylim),1,sum(PP < alpha)),'sk')
+    h.MarkerFaceColor = 'k';
+    sort(model.t(find(PP < alpha))-window_size)
+    %%
+    
+    
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_05.png','-transparent','-r300');
     
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%    
@@ -1302,7 +1353,7 @@ elseif strcmp(varargin{1},'searchlight_plot')
     M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
     M(:,:,:,:,3:end) = [];
     M(:,:,1,:,:)     = [];%remove the intercept
-    M                = mean(M,3);%compute the weight for the circular model.
+%     M                = mean(M,3);%compute the weight for the circular model.
     % plot the number of subjects present per pixel, get a mask
     figure(1);
     C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
@@ -1316,25 +1367,34 @@ elseif strcmp(varargin{1},'searchlight_plot')
     mask          = mask(:);
     M(mask,:,:,:) = NaN;
     M             = reshape(M,[500 500 2 74 2]);    
-    % plot specific and unspecific components
+    %% plot specific and unspecific components
     figure(2);
     N   = 0;
     clf;
-    d = 0;u = .1;F = @(x) nanmedian(x,4);
-    subplot(3,2,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;
-    subplot(3,2,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;
-    subplot(3,2,3);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;
-    subplot(3,2,4);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;
+    d = -.2;u = .2;F = @(x) nanmean(x,4);
+    subplot(4,2,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;
+    subplot(4,2,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;
+    subplot(4,2,3);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;
+    subplot(4,2,4);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;
+    subplot(4,2,5);imagesc(squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))));colorbar;
+    subplot(4,2,6);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2))));colorbar;
+    subplot(4,2,7);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2)))-squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))));colorbar;
+    
     %%
+%     figure;
+    F = @(x) nanmedian(x,4);
     fix             = Fixmat([],[]);
-    fix.cmap_limits = 5;
+    fix.cmap_limits = [-.05 .15];
     fix.maps        = squeeze(F(M));
     fix.plot;
+    hcs = get(gcf, 'children')
+    hcs(1).FontSize = 12;
     %%
     fix             = Fixmat([],[]);
-    fix.cmap_limits = 5;
+    fix.cmap_limits = 3;
     fix.maps        = squeeze(F(M(:,:,:,:,2)-M(:,:,:,:,1)));
     fix.plot;
+    
     %% count the beta values from 4 rois
     C = [];
     for np = 1:size(M,5)
@@ -1345,9 +1405,13 @@ elseif strcmp(varargin{1},'searchlight_plot')
         end
     end
     %%
-%     C       = C(:,1:4,1,2)-C(:,1:4,1,1);
+    C       = C(:,1:4,1,2)-C(:,1:4,1,1);
 %     C = C(:,:,1)-C(:,:,2);
-    figure;bar(nanmean(C),'k');hold on;errorbar(nanmean(C),nanstd(C)./sqrt(74),'or');hold off;
+    figure;
+    bar(nanmean(C),'k');
+    hold on;
+    errorbar(nanmean(C),nanstd(C)./sqrt(74),'or');
+    hold off;
     %%
     ttest((C(:,1:4,1,2)-C(:,1:4,1,1)),0,'alpha',.01)
     %%
