@@ -850,7 +850,8 @@ elseif strcmp(varargin{1},'figure_03C');
     ylim(ylims);
     h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1);
     h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1);
-    h= line([X(4)-bw/2 X(6)+bw/2],ast_line+.008);set(h,'color','k','linewidth',1);
+%     h= line([X(4)-bw/2 X(6)+bw/2],ast_line+.008);set(h,'color','k','linewidth',1); 
+%     %spec vs unspec model_2 testphase
     
     h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1);
     %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
@@ -859,7 +860,7 @@ elseif strcmp(varargin{1},'figure_03C');
     text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
     text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
     %     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
+%     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
     text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
     %     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
     %     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
@@ -942,72 +943,73 @@ elseif strcmp(varargin{1},'model2behavior')
     t         = FPSA_FearGen('get_table_behavior');
     
     
-    
+    % this is just playing around, add/remove models that are (not) wanted.
     stepwiselm([t.scr_test_parametric t.rating_test_parametric],t.beta1_diff)
     stepwiselm([t.scr_test_nonparam t.rating_test_nonparam],t.beta1_diff)
 
     fitlm(t,'beta1_test ~ 1 + scr_test_parametric')
     fitlm(t,'beta1_test ~ 1 + scr_test_nonparam')
+    
     fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam + rating_test_nonparam')
     
     fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam')
 
-    t.beta1_beta2 = t.beta1_diff - t.beta2_diff
+    t.beta1_beta2 = t.beta1_diff - t.beta2_diff;
     
-    
-    %
-    %normalize ellipsoid parameter by other parameter.
-    beta1 = C.model_02.w1(:,2);
-    beta2 = C.model_02.w2(:,2);
-    param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
-    
-    %if baseline corrected:
-    beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
-    beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
-    parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
-
-    %%
-    figure(1);
-    subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-    st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    figure(2);
-    subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-    subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-    st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    figure(3);
-    subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
-    subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
-    subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
-    subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
-    st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    figure(4);
-    subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
-    subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
-    subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
-    subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
-    st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    figure(5);
-    subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
-    subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
-    subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
-    subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
-    st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    figure(6);
-    subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
-    subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
-    subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
-    subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
-    st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    
-    names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
-    for a = 1:6;
-        export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
-    end
+%     
+%     
+%     normalize ellipsoid parameter by other parameter.
+%     beta1 = C.model_02.w1(:,2);
+%     beta2 = C.model_02.w2(:,2);
+%     param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
+%     
+%     if baseline corrected:
+%     beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+%     beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+%     parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
+% 
+%     %
+%     figure(1);
+%     subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+%     st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+%     figure(2);
+%     subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+%     subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+%     st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+%     figure(3);
+%     subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
+%     subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
+%     subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
+%     subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
+%     st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+%     figure(4);
+%     subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
+%     subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
+%     subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
+%     subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
+%     st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+%     figure(5);
+%     subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
+%     subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
+%     subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
+%     subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
+%     st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+%     figure(6);
+%     subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
+%     subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
+%     subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
+%     subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
+%     st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+%     
+%     names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
+%     for a = 1:6;
+%         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
+%     end
     
 elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the behaviral recordings
     %%
@@ -1015,7 +1017,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
     % Steps:
     % collect necessary data
     % set up table
-    force    = 1;
+    force    = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -2694,7 +2696,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %% plot SCR
     grayshade = [.8 .8 .8];
     
-    subplot(sps(1),sps(2),1);
+    subplot(sps(1),sps(2),1+4);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     set(gca,'ytick',[-.5 0 .5],'fontsize',fs)
@@ -2709,7 +2711,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylabel(sprintf('SCR\n(z-score)'))
     
     
-    subplot(sps(1),sps(2),2);
+    subplot(sps(1),sps(2),2+4);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,2)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
@@ -2719,7 +2721,7 @@ elseif strcmp(varargin{1},'figure_02B')
     set(gca,'YTick',0:2,'fontsize',fs)
     ylim([-.5 2.1])
 
-    subplot(sps(1),sps(2),3);
+    subplot(sps(1),sps(2),3+4);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,3)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
@@ -2732,7 +2734,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylim([-YLIM YLIM])
     
     % scatter plot of single subject SCR amplitude params
-    subplot(sps(1),sps(2),4)
+    subplot(sps(1),sps(2),4+4)
     hold off
     xscatter = linspace(1,2,63);
     sigfit   = 10.^-scr_pval < .05;
@@ -2804,7 +2806,7 @@ elseif strcmp(varargin{1},'figure_02B')
     
     %%
     for n = 1:3
-        sp = n+4;
+        sp = n;
         subplot(sps(1),sps(2),sp)
         if n > 1
             l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0 ],'LineWidth',flw);
@@ -2826,16 +2828,16 @@ elseif strcmp(varargin{1},'figure_02B')
         box off
     end
     %Gaussian Fits
-    subplot(sps(1),sps(2),5);ylabel(sprintf('Shock\nExpectancy'))
+    subplot(sps(1),sps(2),5-4);ylabel(sprintf('Shock\nExpectancy'))
     hold on;
     line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0],'LineWidth',flw); %null model in baseline
-    subplot(sps(1),sps(2),6);
+    subplot(sps(1),sps(2),6-4);
     plot(fit(2).x_HD,fit(2).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Cond
-    subplot(sps(1),sps(2),7);
+    subplot(sps(1),sps(2),7-4);
     plot(fit(3).x_HD,fit(3).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Test
     
     %%scatter plot for individual subjects' rating amplitudes
-    subplot(sps(1),sps(2),8)
+    subplot(sps(1),sps(2),8-4)
     hold off
     xscatter = linspace(.8,2.2,74);
     sigfit   = 10.^-rate_pval < .05;
@@ -2984,21 +2986,21 @@ elseif strcmp(varargin{1},'figure_02B')
         fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_02_3ROIs.png'])
         export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_02_3ROIs.png'],'-r400')
     end
-    %% plot rois;
-    fix = Fixmat([],[]);
-    roi = fix.GetFaceROIs;
-    roisen(:,:,1) = sum(roi(:,:,1:2),3);
-    roisen(:,:,2:3) = roi(:,:,3:4);
-    for nroi = 1:3
-        figure(nroi);clf;
-        imagesc(fix.stimulus);hold on;
-        axis off
-        axis square
-        contour(roisen(:,:,nroi),1,'k','LineWidth',3)
-%         if ispc
-%             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',nroi)],'-r400')
-%         end
-    end
+%     %% plot rois;
+%     fix = Fixmat([],[]);
+%     roi = fix.GetFaceROIs;
+%     roisen(:,:,1) = sum(roi(:,:,1:2),3);
+%     roisen(:,:,2:3) = roi(:,:,3:4);
+%     for nroi = 1:3
+%         figure(nroi);clf;
+%         imagesc(fix.stimulus);hold on;
+%         axis off
+%         axis square
+%         contour(roisen(:,:,nroi),1,'k','LineWidth',3)
+% %         if ispc
+% %             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',nroi)],'-r400')
+% %         end
+%     end
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
