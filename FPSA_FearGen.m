@@ -137,7 +137,7 @@ if strcmp(varargin{1},'download_project');
     cd ..
 elseif strcmp(varargin{1},'get_subjects'); %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
     %%
-    % For the paper we use current_pool = 1, which discards all subjects:
+    % For the paper we use current_pool = 0, which discards all subjects:
     % who are not calibrated good enough +
     % who did not get the CS+ - UCS association.
     % Results are cached, use FORCE = 1 to recache. Set
@@ -161,7 +161,7 @@ elseif strcmp(varargin{1},'get_subjects'); %% returns subject indices based on t
             valid    = (abs(p(:,3)) < 45) & pval > -log10(.05);%selection criteria
             fprintf('Found %03d valid subjects...\n',sum(valid));
             subjects = sub(valid);
-            %             save(filename,'subjects');
+            save(filename,'subjects');
         end
     else
         load(filename);
@@ -201,6 +201,7 @@ elseif strcmp(varargin{1},'get_fixmat'); %% load the fixation data in the form o
     %   to return the required run. For example FPSA_Fair uses this method
     %   to compute a separate FPSA on separate runs.
     %
+    %
     %   Use force = 1 to recache (defined at the top).
     %
     %   Example: fixmat = FPSA_FearGen('get_fixmat')
@@ -208,10 +209,11 @@ elseif strcmp(varargin{1},'get_fixmat'); %% load the fixation data in the form o
     filename = sprintf('%s/data/midlevel/fixmat_subjectpool_%03d_runs_%03d_%03d.mat',path_project,current_subject_pool,runs(1),runs(end));
     fix      = [];
     if exist(filename) == 0 | force
-        subjects = FPSA_FearGen('get_subjects',current_subject_pool);
+        subjects = FPSA_FearGen('current_subject_pool',current_subject_pool,'get_subjects');
         fix      = Fixmat(subjects,[2 4]);%all SUBJECTS, PHASES and RUNS
         %further split according to runs if wanted.
         valid    = zeros(1,length(fix.x));
+        runs
         for run = runs(:)'
             valid = valid + ismember(fix.trialid , (1:120)+120*(run-1))&ismember(fix.phase,4);%run selection opeates only for phase 4
         end
@@ -376,63 +378,130 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     %
     %model.w contains weights for the linear model as
     %[subjects,phase,model,param,time]
+    %
+    %Note:
+    % I hacked this routine to compute FPSA fixation by fixation.
+    % use it like: 
+    % [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',1,1);
+    % or [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',0,1);
+    
     
     
     %
     window_size    = varargin{2};
     window_overlap = varargin{3};%this is actually not an overlap, but distance between start points
     hash           = DataHash(varargin);
-    filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
-    if exist(filename) == 0 | force
+    
+    if window_size > 10
         t              = 0:1:(window_size-1);%running window
         start_times    = 1:window_overlap:1500-window_size+1;%in milliseconds
+        time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1)
+    else
+        t              = 0:1:(window_size);%running window
+        start_times    = 1:window_overlap:4;%in fixation indices
         time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
+    end
+    
+    
+    filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
+    if exist(filename) == 0 | force              
         fprintf('Has %d time windows in total...\n',size(time,1));
         %
-        fixmat          = FPSA_FearGen('get_fixmat');
+        fixmat          = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fixmat');
         sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));
         %
         tc = 0;
         for t = 1:size(time,1)
             fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
             tc                   = tc+1;
-            dummy                = FPSA_FearGen('get_fpsa_fair',{'start' time(t,:)},1:3);
+            if window_size > 10
+                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fpsa_fair',{'start' time(t,:)},1:3);
+            else
+                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fpsa_fair',{'fix' time(t,:)},1:3);
+            end
             sim.(method)(:,:,tc) = dummy.correlation;
             T                    = FPSA_FearGen('FPSA_sim2table',dummy);
             [~, C.w(:,:,:,:,tc)] = FPSA_FearGen('FPSA_model_singlesubject',T.t);
             
-        end
-        C.t               = start_times;
+        end        
         save(filename,'C','sim')
     else
         load(filename);
     end
-    varargout{1}      = sim;
+    
+    C.t               = time;
+    varargout{1}      = sim;    
     varargout{2}      = C;
     
     %%
+    figure;
     model = C;
-    subplot(2,2,1);
+    h(1)=subplot(2,2,1);
     hold off;%plot(model.t,squeeze(nanmean(model.w(:,1,1,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,1,1,:))),'r');
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,1,1,:)))',squeeze(nanSEM(model.w(:,1,1,1,:)))','lineprops','b');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);
+    H2= shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,1,1,:)))',squeeze(nanSEM(model.w(:,1,1,1,:)))','lineprops','b');hold on;
+    H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);    
+    xtick={};for ntik = 1:size(model.t,1);xtick = [xtick sprintf('%d-%d',min(model.t(ntik,:)),max(model.t(ntik,:)))];end
+    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on')
     title('circular W model 1');
-    
-    subplot(2,2,2);hold off;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),squeeze(nanSEM(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),'lineprops','r');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);
+    %
+    h(2)=subplot(2,2,2);hold off;
+    H2= shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),squeeze(nanSEM(model.w(:,2,2,1,:)-model.w(:,1,2,1,:))),'lineprops','r');hold on;
+    H1= shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:)-model.w(:,1,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     title('Generalization - Baseline');
+    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on')
+    H2.mainLine.LineWidth = 1.5;H2.mainLine.LineWidth = 1.5;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 1.5;H1.mainLine.Color = [0 0 1 .5];
+    %
+    h(3)=subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;    
+    H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b-');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
+    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on')
     
-    subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r--');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b--');box off;axis tight;ylim([-.05 0.2]);
+    H2.mainLine.LineWidth = 1.5;H2.mainLine.LineWidth = 1.5;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 1.5;H1.mainLine.Color = [0 0 1 .5];
+    
     title('Baseline');
+    hl = legend([H2.mainLine H1.mainLine],{'w_{specific}' 'w_{unspecific}'})
+    hl.FontSize = 12;
+    legend boxoff
+    xlabel('fix.');    
+    ylabel('weight')
+    grid on    
+    %
+    h(4)=subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
+    H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
+    H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,2,:))) ,squeeze(nanSEM(model.w(:,2,2,2,:))) ,'lineprops','b');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
+    H2.mainLine.LineWidth = 1.5;H2.mainLine.LineWidth = 1.5;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 1.5;H1.mainLine.Color = [0 0 1 .5];
+    set(gca,'yticklabels',[]);
+    title('Generalization');    
+    xlabel('fix.');    
     
-    subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
-    shadedErrorBar(model.t,squeeze(nanmean(model.w(:,2,2,2,:))),squeeze(nanSEM(model.w(:,2,2,2,:))),'lineprops','b');box off;axis tight;ylim([-.05 0.2]);
-    title('Generalization');
+    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on')
     
+%     subplotChangeSize(h,.06,.06);        
+    set(gca,'fontsize',12)
+    set(gcf,'position',[2034         402         711         628]);
+    %% find significant time points
+    whichtest = 'ttest';
+    alpha = 0.05;
+    %[subjects,phase,model,param,time]
+    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
+%     X = squeeze(   (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
+    if strcmp(whichtest,'signrank')
+        for i = 1:size(X,2)
+            [PP(i) HH(i)] = signrank(X(:,i));
+        end
+    elseif strcmp(whichtest,'ttest')
+        size(X)
+        [HH PP] = ttest(X,[]);
+        PP
+    end
+    hold on
+    h                 = plot(model.t(find(PP < alpha)),repmat(max(ylim),1,sum(PP < alpha)),'sk')
+    h.MarkerFaceColor = 'k';
+    sort(model.t(find(PP < alpha))-window_size)
+    %%
+        
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_05.png','-transparent','-r300');
+
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%
     % FPSA for the 3 test-phase runs are individually computed and averaged.
@@ -458,7 +527,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
         runc = 0;
         for run = runs
             runc     = runc+1;
-            fixmat   = FPSA_FearGen('get_fixmat','runs',run);
+            fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'runs',run,'get_fixmat');            
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
@@ -1337,7 +1406,7 @@ elseif strcmp(varargin{1},'searchlight_plot')
     M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
     M(:,:,:,:,3:end) = [];
     M(:,:,1,:,:)     = [];%remove the intercept
-    M                = mean(M,3);%compute the weight for the circular model.
+%     M                = mean(M,3);%compute the weight for the circular model.
     % plot the number of subjects present per pixel, get a mask
     figure(1);
     C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
@@ -1350,26 +1419,37 @@ elseif strcmp(varargin{1},'searchlight_plot')
     mask          = C < 50;
     mask          = mask(:);
     M(mask,:,:,:) = NaN;
+
+    %% plot specific and unspecific components
     M             = reshape(M,[500 500 2 74 2]);
     % plot specific and unspecific components
     figure(2);
     N   = 0;
     clf;
-    d = 0;u = .1;F = @(x) nanmedian(x,4);
-    subplot(3,2,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;
-    subplot(3,2,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;
-    subplot(3,2,3);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;
-    subplot(3,2,4);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;
+    d = -.2;u = .2;F = @(x) nanmean(x,4);
+    subplot(4,2,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;
+    subplot(4,2,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;
+    subplot(4,2,3);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;
+    subplot(4,2,4);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;
+    subplot(4,2,5);imagesc(squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))));colorbar;
+    subplot(4,2,6);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2))));colorbar;
+    subplot(4,2,7);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2)))-squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))));colorbar;
+    
     %%
+%     figure;
+    F = @(x) nanmedian(x,4);
     fix             = Fixmat([],[]);
-    fix.cmap_limits = 5;
+    fix.cmap_limits = [-.05 .15];
     fix.maps        = squeeze(F(M));
     fix.plot;
+    hcs = get(gcf, 'children')
+    hcs(1).FontSize = 12;
     %%
     fix             = Fixmat([],[]);
-    fix.cmap_limits = 5;
+    fix.cmap_limits = 3;
     fix.maps        = squeeze(F(M(:,:,:,:,2)-M(:,:,:,:,1)));
     fix.plot;
+    
     %% count the beta values from 4 rois
     C = [];
     for np = 1:size(M,5)
@@ -1380,9 +1460,14 @@ elseif strcmp(varargin{1},'searchlight_plot')
         end
     end
     %%
-    %     C       = C(:,1:4,1,2)-C(:,1:4,1,1);
-    %     C = C(:,:,1)-C(:,:,2);
-    figure;bar(nanmean(C),'k');hold on;errorbar(nanmean(C),nanstd(C)./sqrt(74),'or');hold off;
+    C       = C(:,1:4,1,2)-C(:,1:4,1,1);
+%     C = C(:,:,1)-C(:,:,2);
+    figure;
+    bar(nanmean(C),'k');
+    hold on;
+    errorbar(nanmean(C),nanstd(C)./sqrt(74),'or');
+    hold off;
+
     %%
     ttest((C(:,1:4,1,2)-C(:,1:4,1,1)),0,'alpha',.01)
     %%
@@ -3204,11 +3289,9 @@ elseif strcmp(varargin{1},'figure_03A')
     %
     cormatz = squareform(nanmean(sim.correlation));
     %     cormatz = CancelDiagonals(cormatz,NaN);
-    [d u]   = GetColorMapLimits(cormatz,2.5);
+    [d u]   = GetColorMapLimits(cormatz,1.5);
     labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
-    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
-    %     d       = .62;
-    %     u       = .85;
+    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };    
     fs      = 12;
     %
     set(gcf,'position',[0 0         995         426]);
@@ -3217,25 +3300,25 @@ elseif strcmp(varargin{1},'figure_03A')
     h = imagesc(cormatz(1:8,1:8),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(0,1,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(0,6,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Baseline','fontweight','normal','fontsize',15);
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');    
+    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(0,2,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(0,6,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(2,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(6,9,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    title('Baseline','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
     %     subplot(9,6,[4 5 6 10 11 12 16 17 18]);
     H(2) = subplot(1,3,2);
     h=imagesc(cormatz(9:16,9:16),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',12,'rotation',45);
-    h = text(2,9,sprintf('90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    h = text(6,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',8,'rotation',45);
-    title('Generalization','fontweight','normal','fontsize',15);
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(2,9,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    h = text(6,9,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
+    title('Generalization','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
     %
     [indices] = FPSA_FearGen('FPSA_CompareB2T');
     [Y X]     = ind2sub([8 8],indices(:,1));
@@ -3247,14 +3330,14 @@ elseif strcmp(varargin{1},'figure_03A')
         if X(N) > Y(N)
             if indices(N,2) < .05 & indices(N,2) > .01;
                 if Y(N) == 3.75;
-                    text(X(N),Y(N),'*','fontsize',fs,'color','k');
+                    text(X(N),Y(N),'*','fontsize',fs,'color','k','FontWeight','bold');
                 else
-                    text(X(N),Y(N),'*','fontsize',fs,'color','w');
+                    text(X(N),Y(N),'*','fontsize',fs,'color','k','FontWeight','bold');
                 end
             elseif indices(N,2) < .01 & indices(N,2) > .005;
-                text(X(N),Y(N),'**','fontsize',fs,'color','w');
+                text(X(N),Y(N),'**','fontsize',fs,'color','k','FontWeight','bold');
             elseif indices(N,2) < .005 & indices(N,2) > .001;
-                text(X(N),Y(N),'***','fontsize',fs,'color','w');
+                text(X(N),Y(N),'***','fontsize',fs,'color','k','FontWeight','bold');
             end
         end
     end
@@ -3265,8 +3348,8 @@ elseif strcmp(varargin{1},'figure_03A')
     h2.AxisLocation ='out';
     h2.Box          = 'off';
     h2.TickLength   = 0;
-    h2.Ticks        = [.62 .85];
-    h2.TickLabels   = {'.6' '.8'};
+    h2.Ticks        = [d u];
+    h2.TickLabels   = {'.6' '1.4'};
     %     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
     pos = get(gca,'position')
     try
@@ -3323,18 +3406,18 @@ elseif strcmp(varargin{1},'figure_03A')
     box off;axis square;axis off
     subplotChangeSize(H(3),.025,.025);
     %
-    % legend
-    plot(plotlims(1)+.06,plotlims(2),'ko','markersize',12)
-    text(plotlims(1)+.11,plotlims(2),'Baseline','fontsize',12);
+    %% legend
+    plot(plotlims(1),plotlims(2),'ko','markersize',12)
+    text(plotlims(1)+.05,plotlims(2),'Baseline','fontsize',12);
     hold on;
-    plot(plotlims(1)+.06,plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
-    text(plotlims(1)+.11,plotlims(2)-.08,'Generaliz.','fontsize',12)
+    plot(plotlims(1),plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
+    text(plotlims(1)+.05,plotlims(2)-.08,'Generaliz.','fontsize',12)
     hold off;
     %%
     %     subplotChangeSize(H,.025,.025);
     %subplot(9,6,[22 23 24 28 29 30])
     %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04A.png','-transparent');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
