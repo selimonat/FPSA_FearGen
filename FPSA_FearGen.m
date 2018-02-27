@@ -75,7 +75,7 @@ current_subject_pool = 0;                                                   % wh
 runs                 = 1:3;                                                 % which runs of the test phase to be used
 criterion            ='strain' ;                                            % criterion for the MDS analysis.
 force                = 0;                                                   % force recaching of results.
-kernel_fwhm          = 37*.8;                                               % size of the smoothing window (.8 degrees by default);
+kernel_fwhm          = 37*0.8;                                               % size of the smoothing window (.8 degrees by default);
 random_noise         = 1;                                                   % should fixation maps be slightly added with noise.
 url                  = 'https://www.dropbox.com/s/0wix64zy2dlwh8g/project_FPSA_FearGen.tar.gz?dl=1';
 %% overwrite default parameters with the input
@@ -398,16 +398,19 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1)
     else
         t              = 0:1:(window_size);%running window
-        start_times    = 1:window_overlap:4;%in fixation indices
+        if window_size == 0
+            start_times    = 1:window_overlap:5;%in fixation indices
+        else            
+            start_times    = 1:window_overlap:4;%in fixation indices
+        end
         time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
     end
-    
-    
-    filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
-    if exist(filename) == 0 | force              
+       
+    filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_kernel_fwhm_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,kernel_fwhm,mat2str(runs),hash);
+    if exist(filename) == 0 | force
         fprintf('Has %d time windows in total...\n',size(time,1));
         %
-        fixmat          = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fixmat');
+        fixmat          = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'kernel_fwhm',kernel_fwhm,'get_fixmat');
         sim.correlation = nan(length(unique(fixmat.subject)),120,size(time,1));
         %
         tc = 0;
@@ -415,9 +418,9 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
             fprintf('Processing window %d of %d time windows...\n',t,size(time,1));
             tc                   = tc+1;
             if window_size > 10
-                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fpsa_fair',{'start' time(t,:)},1:3);
+                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'kernel_fwhm',kernel_fwhm,'get_fpsa_fair',{'start' time(t,:)},1:3);
             else
-                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'get_fpsa_fair',{'fix' time(t,:)},1:3);
+                dummy                = FPSA_FearGen('current_subject_pool',current_subject_pool,'force',force,'kernel_fwhm',kernel_fwhm,'get_fpsa_fair',{'fix' time(t,:)},1:3);
             end
             sim.(method)(:,:,tc) = dummy.correlation;
             T                    = FPSA_FearGen('FPSA_sim2table',dummy);
@@ -454,7 +457,13 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     h(3)=subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
     H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;    
     H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b-');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
-    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+    if size(model.t(:,1),1) < 10
+        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+    else
+        xtick = {(model.t(1:5:end,end)+model.t(1:5:end,1)-1)/2};
+        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+    end
+    
     
     H2.mainLine.LineWidth = 2;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 2;H1.mainLine.Color = [0 0 1 .5];
     
@@ -462,7 +471,11 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     hl = legend([H2.mainLine H1.mainLine],{'w_{specific}' 'w_{unspecific}'})
     hl.FontSize = 12;
     legend boxoff
-    xlabel('fix.');    
+    if size(model.t(:,1),1) < 10
+        xlabel('fixations');    
+    else
+        xlabel('time window  (ms)');    
+    end
     ylabel('weight')
     grid on    
     %
@@ -472,18 +485,26 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     H2.mainLine.LineWidth = 2;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 2;H1.mainLine.Color = [0 0 1 .5];
     set(gca,'yticklabels',[]);
     title('Generalization');    
-    xlabel('fix.');    
+    if size(model.t(:,1),1) < 10
+        xlabel('fixations');    
+    else
+        xlabel('time window (ms)');    
+    end
     
-    set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
-    subplotChangeSize(h,.04,.04);        
+    if size(model.t(:,1),1) < 10
+        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+    else
+        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+    end
+    subplotChangeSize(h,.02,.02);        
     set(gca,'fontsize',16)
     set(gcf,'position',[2034         402 900 900]);
     %% find significant time points
     whichtest = 'ttest';
-    alpha = 0.05;
+    alpha = 0.001;
     %[subjects,phase,model,param,time]
     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
-%     X = squeeze(   (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
+%     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
     if strcmp(whichtest,'signrank')
         for i = 1:size(X,2)
             [PP(i) HH(i)] = signrank(X(:,i));
@@ -496,13 +517,13 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     hold on
     for n = 1:size(X,2)
         if PP(n) <= .05
-            text(n,max(ylim)-.01,pval2asterix(PP(n)),'HorizontalAlignment','center','fontsize',20);
+            text(model.t(n,1),max(ylim)-.01,pval2asterix(PP(n)),'HorizontalAlignment','center','fontsize',20);
         end
     end
     
     sort(model.t(find(PP < alpha))-window_size)
     %%        
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_05.png','-transparent','-r300');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04.png','-transparent','-r300');
 
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%
@@ -524,12 +545,12 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     hash
     fprintf('===================\n')
     %
-    filename     = sprintf('%s/data/midlevel/fpsa_fair_subjectpool_%03d_runs_%s_selector_%s.mat',path_project,current_subject_pool,mat2str(runs),hash);
+    filename     = sprintf('%s/data/midlevel/fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_runs_%s_selector_%s.mat',path_project,kernel_fwhm,current_subject_pool,mat2str(runs),hash);
     if exist(filename) ==0 | force;
         runc = 0;
         for run = runs
             runc     = runc+1;
-            fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'runs',run,'get_fixmat');            
+            fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'kernel_fwhm',kernel_fwhm,'runs',run,'get_fixmat');            
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
@@ -1403,10 +1424,13 @@ elseif strcmp(varargin{1},'searchlight_plot')
     %sine^2) weight combination term.
     
     
-    inputs = { {15 {}          'current_subject_pool' 0} {15 {}          'current_subject_pool' 1} ...        
-               {15 {'fix' 2:5} 'current_subject_pool' 0} {15 {'fix' 2:5} 'current_subject_pool' 1} ...
-               {30 {'fix' 2:5} 'current_subject_pool' 0} {30 {'fix' 2:5} 'current_subject_pool' 1}};
-               
+%     inputs = { {15 {}          'current_subject_pool' 0} {15 {}          'current_subject_pool' 1} ...        
+%                {15 {'fix' 2:5} 'current_subject_pool' 0} {15 {'fix' 2:5} 'current_subject_pool' 1} ...
+%                {30 {'fix' 2:5} 'current_subject_pool' 0} {30 {'fix' 2:5} 'current_subject_pool' 1}};
+
+inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
+
+
 %              };RERUN THIS INCLUDING THE COMPUTED SHIT AND RERUN WITH THE
 %              NEW ROIS
     F = @(x) nanmean(x,4);
@@ -1415,7 +1439,8 @@ elseif strcmp(varargin{1},'searchlight_plot')
              input{1}{:}
              current_title   = cell2str(input{1});
              filename        = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s.png',current_title,func2str(F));             
-             if exist(filename) == 0;
+             filename2       = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s_viafixmat.png',current_title,func2str(F));             
+             if (exist(filename) == 0) | (exist(filename2) == 0)
                  %to do
                  %(1) compare all fixations on all subjects;+
                  %(2) compare all fixations on selected subjects;+
@@ -1446,16 +1471,8 @@ elseif strcmp(varargin{1},'searchlight_plot')
                  M             = reshape(M,[500*500 2 size(Mori,4) 2]);
                  mask          = C < 25;
                  mask          = mask(:);
-                 M(mask,:,:,:) = NaN;
-                 % plot the same thing as below with Fixmat object
-                 %     F = @(x) nanmean(x,4);
-                 %     fix             = Fixmat([],[]);
-                 %     fix.cmap_limits = [-.12 .12];
-                 %     fix.maps = cat(3, squeeze(F(M(:,:,1,:,1))) ,squeeze(F(M(:,:,2,:,1))),squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))),squeeze(F(mean(M(:,:,1:2,:,1),3))),...
-                 %                       squeeze(F(M(:,:,1,:,2))),squeeze(F(M(:,:,2,:,2))),squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2))),squeeze(F(mean(M(:,:,1:2,:,2),3))),...
-                 %                       squeeze(F(M(:,:,1,:,2)-M(:,:,1,:,1))),squeeze(F(M(:,:,2,:,2)-M(:,:,2,:,1))),squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2)))  - squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1)))  , squeeze(F(mean(M(:,:,1:2,:,2),3)-mean(M(:,:,1:2,:,1),3))));
-                 %     fix.plot;
-                 % plot specific and unspecific components
+                 M(mask,:,:,:) = NaN;                 
+%                  plot specific and unspecific components
                  M             = reshape(M,[500 500 2 size(Mori,4) 2]);
                  % plot specific and unspecific components
                  ffigure;
@@ -1504,11 +1521,36 @@ elseif strcmp(varargin{1},'searchlight_plot')
                  barplot_deluxe(D,{'eye-left' 'eye-right' 'nose' 'mouth' 'eyes'});
                  
                  SaveFigure(filename,'-r300');
+                 
+                 %% plot the same thing as below with Fixmat object
+                 figure;
+                 fix             = Fixmat([],[]);
+                 fix.cmap_limits = [-.2 .2];
+                 %plot specific/unspecific Baseline and test as a 2x2
+                 %figure
+                 fix.maps        = cat(3,squeeze(F(M(:,:,2,:,1))),squeeze(F(M(:,:,2,:,2))),squeeze(F(M(:,:,1,:,1))),squeeze(F(M(:,:,1,:,2))))
+                 H = fix.plot;                                  
+                 for n = 1:length(H);
+                     axes(H(n));axis on;set(gca,'xticklabel','','yticklabel','','xgrid','on','ygrid','on');                        
+                 end
+                 set(gcf,'position',[ 2011         357         671         604])                 
+                 
+                 H(1).YLabel.String = 'Unspecific';
+                 H(1).YLabel.FontWeight = 'bold';
+                 H(3).YLabel.String = 'Specific';
+                 H(3).YLabel.FontWeight = 'bold';
+                 H(3).YLabel.FontSize   = 16;
+                 H(1).YLabel.FontSize   = 16;
+                 %%
+                 keyboard                 
+                 SaveFigure(filename2,'-r300');             
+                                                  
              else
                  fprintf('%s: Computed already',filename)
                  pause(4)                 
-             end
-             close all;
+             end                              
+             
+             
     end
     %%
 %     G       = [ repmat(Vectorize(repmat(1:4,74,1)),4,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1],74,1)),1,1) ];
@@ -3323,7 +3365,9 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     text(30,8.5,'***','FontSize',20)
     
 elseif strcmp(varargin{1},'figure_03A')
+    %FPSA_FearGen('figure_03A',FPSA_FearGen('get_fpsa_fair',{'fix' 1:100},1:3))
     %% observed similarity matrices
+    
     clf
     sim     = varargin{2};
     %
@@ -3382,7 +3426,8 @@ elseif strcmp(varargin{1},'figure_03A')
                 text(X(N),Y(N),'***','fontsize',fs,'color','k','FontWeight','bold');
             end
         end
-    end
+    end    
+    subplotChangeSize(H(1:2),.035,.035);
     pos = get(gca,'position');
     %% colorbar
     h2              = colorbar;
@@ -3392,15 +3437,17 @@ elseif strcmp(varargin{1},'figure_03A')
     h2.TickLength   = 0;
     h2.Ticks        = [d u];
     h2.TickLabels   = {regexprep(mat2str(round(d*10)/10),'0','') regexprep(mat2str(round(u*10)/10),'0','')};
-    %     pos             = [pos(1)+pos(3)-.1 .11 .1 .01];
-    pos = get(gca,'position')
+    
     try
-        set(h2,'Position',[pos(1)+pos(3)+.004 .268 .01 .25])
+        set(h2,'Position',[pos(1)+pos(3)+.004 pos(2)*2.45 .01 .25])
     end
+    h2.FontSize = 12;
+    h2.FontWeight='bold';
     % 	set(h2,'Position',pos)
     
     % plot the similarity to cs+
     %     subplot(9,6,[25:27 19:21])
+    %%
     H(3) = subplot(1,3,3);
     Y         = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
@@ -3446,7 +3493,7 @@ elseif strcmp(varargin{1},'figure_03A')
     xlim(plotlims);
     ylim(plotlims);
     box off;axis square;axis off
-    subplotChangeSize(H(3),.025,.025);
+    subplotChangeSize(H(3),.04,.04);
     %
     %% legend
     plot(plotlims(1),plotlims(2),'ko','markersize',12)
