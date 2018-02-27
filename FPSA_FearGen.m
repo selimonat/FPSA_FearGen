@@ -9,12 +9,10 @@ function [varargout]=FPSA_FearGen(varargin);
 % with fixation data. All dependencies can be installed by calling this
 % function with 'download_project' argument.
 %
-% Requirements:
-% A *nix system (tar, git, unzip, find), in case you want to download data
-% with matlab using FPSA_FearGen('download_project') command.
-% Matlab 2016.
-% In case this option doesn't work for you, you can also download the project as a bundle
-% from this link: https://osf.io/zud6h/
+% Requirements: A *nix system (tar, git, unzip, find), in case you want to
+% download data with matlab using FPSA_FearGen('download_project') command.
+% Matlab 2016. In case this option doesn't work for you, you can also
+% download the project as a bundle from this link: https://osf.io/zud6h/
 %
 %
 % Usage:
@@ -1109,7 +1107,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
     % Steps:
     % collect necessary data
     % set up table
-    force    = 0;
+    force    = 1;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -1129,6 +1127,8 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
         end
         scr_test_nonparam            = nan(length(subs),1); % the table needs same number of rows, so we just fill a column of nans with scr params.
         scr_test_nonparam(scrsubs,:) = mean(out.y(:,[21 22 23]),2)-mean(out.y(:,[25 26 19]),2); %% diff between CSP and CSN (IS THIS ZSCORED?) yes
+        scr_test_cspcsn              = nan(length(subs),1); % the table needs
+        scr_test_cspcsn(scrsubs,:)   = out.y(:,22)-out.y(:,26);
         
         %% scr data with fits
         ns = 0;
@@ -1152,6 +1152,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
             %             amp_test_nonparam(ns,1)   =
             rating_test_parametric(ns,1) = s.get_fit('rating',4).params(1);
             rating_test_nonparam(ns,1)   = mean(Y([3 4 5]))-mean(Y([1 7 8]));
+            rating_test_cspcsn(ns,1)     = Y(4)-Y(8);
         end
         %% get model parameters
         C          = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
@@ -1160,10 +1161,11 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
         beta1_test         = C.model_02.w1(:,2);
         beta2_test         = C.model_02.w2(:,2);
         beta1_diff         = C.model_02.w1(:,2)-C.model_02.w1(:,1);
-        beta2_diff         = C.model_02.w2(:,2)-C.model_02.w1(:,1);
-        beta1_beta2        = beta1_diff - beta2_diff; %how much does w1 increase more than w2 does? (Interaction)
+        beta2_diff         = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+        beta_diff_test     = beta1_test - beta2_test; 
+        beta_diffdiff      = (beta1_test - beta2_test) - (beta1_base - beta2_base);%how much does w1 increase more than w2 does? (Interaction)
         %% concatenate everything in the table
-        t = table(subs(:),rating_test_parametric,rating_test_nonparam,scr_test_parametric,scr_test_nonparam,beta1_base,beta2_base,beta1_test,beta2_test,beta1_diff,beta2_diff,beta1_beta2,'variablenames',{'subject_id' 'rating_test_parametric','rating_test_nonparam','scr_test_parametric','scr_test_nonparam','beta1_base','beta2_base','beta1_test','beta2_test','beta1_diff','beta2_diff','beta1_beta2'});
+        t = table(subs(:),rating_test_parametric,rating_test_nonparam,rating_test_cspcsn,scr_test_parametric,scr_test_nonparam,scr_test_cspcsn,beta1_base,beta2_base,beta1_test,beta2_test,beta1_diff,beta2_diff,beta_diff_test,beta_diffdiff,'variablenames',{'subject_id' 'rating_test_parametric','rating_test_nonparam','rating_test_cspcsn','scr_test_parametric','scr_test_nonparam','scr_test_cspcsn','beta1_base','beta2_base','beta1_test','beta2_test','beta1_diff','beta2_diff','beta_diff_test','beta_diffdiff'});
         save(path2table,'t');
     else
         fprintf('Found table at %s, loading it.\n',path2table)
