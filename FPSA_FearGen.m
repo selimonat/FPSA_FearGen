@@ -1086,7 +1086,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
     % Steps:
     % collect necessary data
     % set up table
-    force    = 1;
+    force    = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
     path2table = sprintf('%sdata/midlevel/table_predict_behavior_N%d.mat',path_project,length(subs));
@@ -2744,8 +2744,8 @@ elseif strcmp(varargin{1},'figure_02B')
     sps = [5 4]; %subplotsize rows x columns
     flw = 2; %fitline width
     scatmark = 's';
-    scatcol1 = repmat(.8,1,3);%[238,232,200]./255;
-    scatcol2 = repmat(.1,1,3);
+    scatcol1 = repmat(.5,1,3);%repmat(.8,1,3)
+%     scatcol2 = repmat(.1,1,3);
     mbc      = [.7 0 0]; %mean bar color for scatterplots
     web      = 1.5; %width errorbars
     
@@ -2823,13 +2823,14 @@ elseif strcmp(varargin{1},'figure_02B')
     %% plot SCR
     grayshade = [.8 .8 .8];
     
-    subplot(sps(1),sps(2),1+4);
+    subplot(sps(1),sps(2),1);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     set(gca,'ytick',[-.5 0 .5],'fontsize',fs)
     line([-180 225],repmat(mean(nulltrials(:,1)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));axis square;box off;hold on;
+    set(gca,'XTickLabel',{''})
     errorbar(-135:45:180,av(1:8),sem(1:8),'k.','LineWidth',web);
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)
     %     ylim([-1 1]);
@@ -2838,38 +2839,38 @@ elseif strcmp(varargin{1},'figure_02B')
     ylabel(sprintf('SCR\n(z-score)'))
     
     
-    subplot(sps(1),sps(2),2+4);
+    subplot(sps(1),sps(2),2);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,2)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
     errorbar(-135:45:180,av(10:17),sem(10:17),'k.','LineWidth',web);
-    set(gca,'YTick',0:2,'fontsize',fs)
+    set(gca,'XTickLabel',{''},'YTick',0:2,'fontsize',fs)
     ylim([-.5 2.1])
 
-    subplot(sps(1),sps(2),3+4);
+    subplot(sps(1),sps(2),3);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.9,'FaceColor',grayshade,'EdgeColor','none')
     line([-180 225],repmat(mean(nulltrials(:,3)),[1 2]),'Color',[.5 .5 .5],'LineWidth',1.5)
     hold on;
     Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
     errorbar(-135:45:180,av(19:26),sem(19:26),'k.','LineWidth',web);
-    set(gca,'ytick',[-.5 0 .5],'fontsize',fs)
+    set(gca,'XTickLabel',{''},'ytick',[-.5 0 .5],'fontsize',fs)
     x = -150:0.1:195;
     plot(test.groupfit.x_HD,test.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
     ylim([-YLIM YLIM])
     
     % scatter plot of single subject SCR amplitude params
-    subplot(sps(1),sps(2),4+4)
+    subplot(sps(1),sps(2),4)
     hold off
     xscatter = linspace(1,2,63);
     sigfit   = 10.^-scr_pval < .05;
-    scatter(xscatter,scr_ampl(:,2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
+    scatter(xscatter,scr_ampl(:,2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1,'MarkerFaceAlpha',.5);
     hold on;
-    scatter(xscatter+2,scr_ampl(:,4),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
-    scatter(xscatter(sigfit(:,2)),scr_ampl(sigfit(:,2),2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
-    scatter(xscatter(sigfit(:,4))+2,scr_ampl(sigfit(:,4),4),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+    scatter(xscatter+2,scr_ampl(:,4),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1,'MarkerFaceAlpha',.5);
+%     scatter(xscatter(sigfit(:,2)),scr_ampl(sigfit(:,2),2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+%     scatter(xscatter(sigfit(:,4))+2,scr_ampl(sigfit(:,4),4),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
 
     H=plot([1 2],[mean(scr_ampl(:,2)) mean(scr_ampl(:,2))],'b-',[3 4],[mean(scr_ampl(:,4)) mean(scr_ampl(:,4))],'b-');
     H(1).LineWidth = flw+1;
@@ -2883,7 +2884,7 @@ elseif strcmp(varargin{1},'figure_02B')
     xlim([0 5]);
     box off;
     set(gca,'color','none');
-    box off;axis square;drawnow;alpha(.5);
+    box off;axis square;drawnow;
     subplot(sps(1),sps(2),4)
     tt = title('\alpha single subject fit');set(tt,'fontweight','normal')
     ht = text(3,max(scr_ampl(:,4))+.4,'***','FontSize',fs+4);
@@ -2934,7 +2935,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %%
     for n = 1:3
         sp = n;
-        subplot(sps(1),sps(2),sp)
+        subplot(sps(1),sps(2),sp+4)
         if n > 1
             l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0 ],'LineWidth',flw);
             set(l,'LineStyle',':')
@@ -2943,38 +2944,35 @@ elseif strcmp(varargin{1},'figure_02B')
         Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
         hold on;
         e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
-        set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',fs)
+        set(gca,'XTick',-135:45:180,'XTickLabel',{''},'YTick',[0 5 10],'FontSize',fs)
         set(e,'LineWidth',web,'Color','k')
         hold on;
-        if n>1
-            
-        end
         ylim([0 10])
         xlim([-180 225])
         axis square
         box off
     end
     %Gaussian Fits
-    subplot(sps(1),sps(2),5-4);ylabel(sprintf('Shock\nExpectancy'))
+    subplot(sps(1),sps(2),5);ylabel(sprintf('Shock\nExpectancy'))
     hold on;
     line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0],'LineWidth',flw); %null model in baseline
-    subplot(sps(1),sps(2),6-4);
+    subplot(sps(1),sps(2),6);
     plot(fit(2).x_HD,fit(2).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Cond
-    subplot(sps(1),sps(2),7-4);
+    subplot(sps(1),sps(2),7);
     plot(fit(3).x_HD,fit(3).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Test
     
     %%scatter plot for individual subjects' rating amplitudes
-    subplot(sps(1),sps(2),8-4)
+    subplot(sps(1),sps(2),8)
     hold off
     xscatter = linspace(.8,2.2,74);
     sigfit   = 10.^-rate_pval < .05;
-    scatter(xscatter+4,rate_ampl(:,3),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
+    scatter(xscatter+4,rate_ampl(:,3),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1,'MarkerFaceAlpha',.5);
     hold on;
-    scatter(xscatter,rate_ampl(:,1),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
-    scatter(xscatter+2,rate_ampl(:,2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
-    scatter(xscatter(sigfit(:,1)),rate_ampl(sigfit(:,1),1),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
-    scatter(xscatter(sigfit(:,2))+2,rate_ampl(sigfit(:,2),2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
-    scatter(xscatter(sigfit(:,3))+4,rate_ampl(sigfit(:,3),3),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+    scatter(xscatter,rate_ampl(:,1),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1,'MarkerFaceAlpha',.5);
+    scatter(xscatter+2,rate_ampl(:,2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1,'MarkerFaceAlpha',.5);
+%     scatter(xscatter(sigfit(:,1)),rate_ampl(sigfit(:,1),1),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+%     scatter(xscatter(sigfit(:,2))+2,rate_ampl(sigfit(:,2),2),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+%     scatter(xscatter(sigfit(:,3))+4,rate_ampl(sigfit(:,3),3),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
     
     H=plot([.9,2.3],[mean(rate_ampl(:,1)) mean(rate_ampl(:,1))],'r-',[.9,2.3]+2,[mean(rate_ampl(:,2)) mean(rate_ampl(:,2))],'r-',[.9,2.3]+4,[mean(rate_ampl(:,3)) mean(rate_ampl(:,3))],'r-');
     H(1).LineWidth = flw;
@@ -2988,7 +2986,7 @@ elseif strcmp(varargin{1},'figure_02B')
     box off;
     set(gca,'xtick',[1.5 3.5 5.5],'XTickLabel',{'B','C' 'G'},'XTickLabelRotation',0,'fontsize',fs,'ytick',[-12 0 12],'xgrid','on');
     box off;
-    set(gca,'color','none');axis square;drawnow;alpha(.5);
+    set(gca,'color','none');axis square;drawnow;
     set(gcf,'Color',[1 1 1]);
     ht = text(2.8,max(rate_ampl(:))+1,'***','FontSize',fs+4);
     ht = text(4.8,max(rate_ampl(:))+1,'***','FontSize',fs+4);
@@ -2998,7 +2996,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
-    force    = 0;
+    force    = 1;
     method   = 3;
     counts   = FPSA_FearGen('get_fixation_counts');
     counts   = counts*100;
@@ -3038,6 +3036,9 @@ elseif strcmp(varargin{1},'figure_02B')
             ylim(ylimmi(n,:));
             set(gca,'fontsize',fs)
             set(gca,'XGrid','off','YGrid','off')
+            if n < 3 %turn off xticklabel for all but last row
+                set(gca,'XTickLabel',{''})
+            end
         end
         if ph ==3
             cc= cc + 1;
@@ -3068,46 +3069,46 @@ elseif strcmp(varargin{1},'figure_02B')
             [hypo(ph,nroi) pttest(ph,nroi)] = ttest(params(ph,nroi,:,1));
         end
     end
-    %% single subject fit scatter plot
-    subplothelp = [12 16 20];
-    xscatter = linspace(1,2,nsubs);
-    for nroi = 1:3
-        sigfit = squeeze(pval(:,nroi,:))' < .05;
-        subplot(sps(1),sps(2),subplothelp(nroi))
-        hold off;
-        scatter(xscatter,squeeze(params(1,nroi,:,1)),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
-        hold on;
-        scatter(xscatter+2,squeeze(params(3,nroi,:,1)),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
-        scatter(xscatter(sigfit(:,1)),squeeze(params(1,nroi,sigfit(:,1),1))',ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
-        scatter(xscatter(sigfit(:,3))+2,squeeze(params(3,nroi,sigfit(:,3),1))',ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
-        A=plot([min(xscatter),max(xscatter)],[mean(params(1,nroi,:,1),3) mean(params(1,nroi,:,1),3)],'k-',[min(xscatter),max(xscatter)]+2,[mean(params(3,nroi,:,1),3) mean(params(3,nroi,:,1),3)],'k-');
-        hold on;
-        A(1).LineWidth = flw+1;
-        A(2).LineWidth = flw+1;
-        A(1).Color = mbc;
-        A(2).Color = mbc;
-        axis tight
-        ylimmi = [-50 50];%[floor(min(min(params(:,nroi,:,1)))/25)*25 ceil(max(max(params(:,nroi,:,1)))/25)*25];
-        ylim(ylimmi);
-        set(gca,'xtick',[1.5 3.5],'XTickLabel',{'B','G'},'XTickLabelRotation',0,'fontsize',fs,'ytick',[-50 0 50],'xgrid','on');
-        box off;
-        set(gca,'color','none');
-        box off;axis square;drawnow;alpha(.5);
-        xlim([0 5]);
-    end
-    
-    subplot(sps(1),sps(2),max(subplothelp))
-   hold on;
-     ht = text(3.2,ceil(max(params(3,3,:,1))./10)*10,'**','FontSize',fs+4);
-     
-     
+%     %% single subject fit scatter plot
+%     subplothelp = [12 16 20];
+%     xscatter = linspace(1,2,nsubs);
+%     for nroi = 1:3
+%         sigfit = squeeze(pval(:,nroi,:))' < .05;
+%         subplot(sps(1),sps(2),subplothelp(nroi))
+%         hold off;
+%         scatter(xscatter,squeeze(params(1,nroi,:,1)),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
+%         hold on;
+%         scatter(xscatter+2,squeeze(params(3,nroi,:,1)),ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol1);
+%         scatter(xscatter(sigfit(:,1)),squeeze(params(1,nroi,sigfit(:,1),1))',ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+%         scatter(xscatter(sigfit(:,3))+2,squeeze(params(3,nroi,sigfit(:,3),1))',ms,'filled','Marker',scatmark,'MarkerFaceColor',scatcol2);
+%         A=plot([min(xscatter),max(xscatter)],[mean(params(1,nroi,:,1),3) mean(params(1,nroi,:,1),3)],'k-',[min(xscatter),max(xscatter)]+2,[mean(params(3,nroi,:,1),3) mean(params(3,nroi,:,1),3)],'k-');
+%         hold on;
+%         A(1).LineWidth = flw+1;
+%         A(2).LineWidth = flw+1;
+%         A(1).Color = mbc;
+%         A(2).Color = mbc;
+%         axis tight
+%         ylimmi = [-50 50];%[floor(min(min(params(:,nroi,:,1)))/25)*25 ceil(max(max(params(:,nroi,:,1)))/25)*25];
+%         ylim(ylimmi);
+%         set(gca,'xtick',[1.5 3.5],'XTickLabel',{'B','G'},'XTickLabelRotation',0,'fontsize',fs,'ytick',[-50 0 50],'xgrid','on');
+%         box off;
+%         set(gca,'color','none');
+%         box off;axis square;drawnow;alpha(.5);
+%         xlim([0 5]);
+%     end
+%     
+%     subplot(sps(1),sps(2),max(subplothelp))
+%    hold on;
+%      ht = text(3.2,ceil(max(params(3,3,:,1))./10)*10,'**','FontSize',fs+4);
+%      
+%      
      
     for sp = 1:[sps(1)*sps(2)]
         hold on;
         H(sp) = subplot(sps(1),sps(2),sp);
     end
-    
-    subplotChangeSize(H,.01,.01);
+    keyboard
+    subplotChangeSize(H,.008,.008);
     
     if ispc
         fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_02_3ROIs.png'])
@@ -3128,6 +3129,7 @@ elseif strcmp(varargin{1},'figure_02B')
 % %             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',nroi)],'-r400')
 % %         end
 %     end
+keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -3461,7 +3463,7 @@ elseif strcmp(varargin{1},'figure_03A')
     %     subplotChangeSize(H,.025,.025);
     %subplot(9,6,[22 23 24 28 29 30])
     %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-    SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent','-r300');
+%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent','-r300');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
@@ -3481,7 +3483,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
         load(path2fixmat);
     end
     
-    force          = 0;
+    force          = 1;
     c = 0;
     for ns = subjects(:)'
         fprintf('Counting fixations in subject: %03d.\n',ns);
@@ -3512,10 +3514,6 @@ elseif strcmp(varargin{1},'get_fixation_counts')
             count(:,:,c,p) = dummy_counts;%[faces organs subjects phases]
         end
     end
-    count_eyes_sep = count;
-    botheyes = sum(count(:,1:2,:,:),2);
-    count = count(:,2:end,:,:);
-    count(:,1,:,:) = botheyes;
     varargout{1} = count;
 %     %these groups are for the venn plot later.
 %     groups.g1 = repmat([1:8]',[1 5 61 2]);
@@ -3527,11 +3525,10 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     %% Compute fixation density and their change.
     P = nanmean(nanmean(nanmean(count(:,:,:,1:3),4),3));
     fprintf('Fixation density in percentage in Baseline, Conditioning + Generalization:\n')
-    fprintf('%25s %3.5g\n','Eyes:', P(1))
-    fprintf('%25s %3.5g\n','Nose:',P(2))
-    fprintf('%25s %3.5g\n','Eyes+Nose:',sum(P(1:2)))
-    fprintf('%25s %3.5g\n','Mouth:',P(3))
-    fprintf('%25s %3.5g\n','Other:',P(4))
+    fprintf('%25s %3.5g\n','Eyes:', P(5))
+    fprintf('%25s %3.5g\n','Nose:',P(3))
+    fprintf('%25s %3.5g\n','Eyes+Nose:',sum(P([3 5])))
+    fprintf('%25s %3.5g\n','Mouth:',P(4))
     %
     P = mean(mean(count(:,:,:,3),3))-mean(mean(count(:,:,:,1),3));
     fprintf('Change in Fixation Density in percentage (Generalization - Baseline):\n');
@@ -3539,7 +3536,6 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     fprintf('%25s %3.5g\n','Delta Nose:',P(2))
     fprintf('%25s %3.5g\n','Delta Eyes+Nose:',sum(P(1:2)))
     fprintf('%25s %3.5g\n','Delta Mouth:',P(3))
-    fprintf('%25s %3.5g\n','Delta Other:',P(4))
     
 elseif strcmp(varargin{1},'anova_count_tuning');
     %% will fit a model to the density changes.
@@ -3558,7 +3554,7 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
-    force = 0;
+    force = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     path2fit = fullfile(path_project,'data','midlevel',sprintf('groupfit_counts_ph1to3_N%02d.mat',length(subs)));
@@ -3594,7 +3590,7 @@ elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
     varargout{3} = t;
     
 elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
-    force = 0;
+    force = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     nsubs = length(subs);
