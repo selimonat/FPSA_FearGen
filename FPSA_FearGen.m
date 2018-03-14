@@ -2821,7 +2821,7 @@ elseif strcmp(varargin{1},'figure_02B')
     data.ids = NaN;
     base     = Tuning(data);
     base.GroupFit(3);
-    %same for test (cond not possiblef)
+    %same for test (cond not possible)
     data.y   = out.y(:,19:26);
     data.x   = repmat(-135:45:180,[length(scrsubs) 1]);
     data.ids = NaN;
@@ -2945,8 +2945,11 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         load(ratepath)
     end
+    %demean per phase
+    
     % check all three phases for tuning
     for ph = 1:3
+        ratings(:,:,ph) = demean(ratings(:,:,ph)')';
         data.y   = ratings(:,:,ph);
         data.x   = repmat(-135:45:180,[length(subs) 1]);
         data.ids = subs;
@@ -2974,34 +2977,38 @@ elseif strcmp(varargin{1},'figure_02B')
     end
     
     %%
-    for n = 1:3
+    for n = [2 3 1]
         sp = n;
         subplot(sps(1),sps(2),sp)
-        if n > 1
-            l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0 ],'LineWidth',flw);
-            set(l,'LineStyle',':')
-        end
-        hold on
+        hold off
+%         if n > 1
+%             l = line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0 ],'LineWidth',flw);
+%             set(l,'LineStyle',':')
+%         end
         Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
+
         hold on;
         e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'k.');
         set(gca,'XTick',-135:45:180,'XTickLabel',{''},'YTick',[0 5 10],'FontSize',fs)
         set(e,'LineWidth',web,'Color','k')
         hold on;
-        ylim([0 10])
+        h = gca;
+        ylim([-3 4])
+        Publication_NiceTicks(h,2)
         xlim([-180 225])
         axis square
         box off
-    end
+        if n == 1
+            ylabel(sprintf('Shock\nExpectancy'))
+        end
+        
     %Gaussian Fits
-    subplot(sps(1),sps(2),1);ylabel(sprintf('Shock\nExpectancy'))
-    hold on;
-    line([-150 195],repmat(mean(mean(ratings(:,:,1))),[1 2]),'Color',[0 0 0],'LineWidth',flw); %null model in baseline
-    subplot(sps(1),sps(2),2);
-    plot(fit(2).x_HD,fit(2).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Cond
-    subplot(sps(1),sps(2),3);
-    plot(fit(3).x_HD,fit(3).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line Test
+        hold on;
+        subplot(sps(1),sps(2),n);
+        plot(fit(n).x_HD,fit(n).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line
+    end
     
+      
     %%scatter plot for individual subjects' rating amplitudes
     subplot(sps(1),sps(2),4)
     hold off
@@ -3048,11 +3055,11 @@ elseif strcmp(varargin{1},'figure_02B')
     
     [Xgroupfit Ygroupfit pvalgroup] = FPSA_FearGen('get_groupfit_on_ROIcounts');
     [Xsubfit Ysubfit params pvalsingle]     = FPSA_FearGen('get_singlesubfits_on_ROIcounts');
-    amp = squeeze(params([1 3],:,:,1))*100; %amplitude in percent; params(ph,nroi,sub,[amp kappa offset])
+    amp = squeeze(params([1 3],:,:,1)); %amplitude in percent; params(ph,nroi,sub,[amp kappa offset])
     
     %% plot the 3 count-profiles for whole group
     
-    ylimmi = ceil([zeros(3,1) max(squeeze(nanmean(m_counts(:,1:3,:,:)))')'.*1.5]./10)*10;
+    ylimmi = min(min(m_counts(:));
 %     yticki = [0 30 60; 0 15 30; 0 3 6];
     figure(1002);
     t={'Eyes [%]' 'Nose [%]' 'Mouth [%]'};
@@ -3069,13 +3076,14 @@ elseif strcmp(varargin{1},'figure_02B')
             hold on;
             e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'k.');
             set(e,'LineWidth',web,'Color','k')
-            try
-                plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'LineWidth',flw,'color',[0 0 0]);
-            catch
-                plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'LineWidth',flw,'color',[0 0 0]);
-            end
+%             try
+%                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'LineWidth',flw,'color',[0 0 0]);
+%             catch
+%                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'LineWidth',flw,'color',[0 0 0]);
+%             end
             hold off;
-            ylim(ylimmi(n,:));
+            ylim([-2.5 2.5])
+            xlim([-180 225])
             set(gca,'fontsize',fs)
             set(gca,'XGrid','off','YGrid','off')
             if n < 3 %turn off xticklabel for all but last row
@@ -3519,6 +3527,8 @@ elseif strcmp(varargin{1},'figure_03A')
 elseif strcmp(varargin{1},'get_fixation_counts')
     %% Collects fixation counts and reports how they change with conditions on 4 different ROIs before and after learning.
     % these numbers are reported in the manuscript.
+    
+    meancorrect    = 1;
     filename       = sprintf('counttuning_ph234_runs_%02d_%02d.mat',runs(1),runs(end));
     
     % need to replace the get_fixmat option from before bc this only ran phase 2 and 4
@@ -3561,10 +3571,15 @@ elseif strcmp(varargin{1},'get_fixation_counts')
             else
                 load(path_write);
             end
-            count(:,:,c,p) = dummy_counts;%[faces organs subjects phases]
-        end
+                count_dm(:,:,c,p) = demean(dummy_counts);
+                count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them
+        end %
     end
-    varargout{1} = count;
+    if meancorrect == 1
+        varargout{1} = count_dm;
+    else
+        varargout{1} = count;
+    end
 %     %these groups are for the venn plot later.
 %     groups.g1 = repmat([1:8]',[1 5 61 2]);
 %     groups.g2 = repmat(1:5,[8 1 61 2]);
@@ -3645,7 +3660,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
     subs = FPSA_FearGen('get_subjects');
     nsubs = length(subs);
     counts = FPSA_FearGen('get_fixation_counts');
-    
+    counts = counts*100;
     path_write = sprintf('%s/data/midlevel/ROI_fixcount_ph234_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
     
     if ~exist(path_write) || force==1
