@@ -3135,7 +3135,7 @@ elseif strcmp(varargin{1},'figure_02B')
         set(h,'alphadata',roi(:,:,nroi));
         axis off
         axis square
-        [c,hc] = contour(roi(:,:,nroi),'k','LineWidth',.5);
+        rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
         if ispc
             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
         end
