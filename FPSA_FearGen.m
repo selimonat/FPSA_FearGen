@@ -3584,7 +3584,7 @@ elseif strcmp(varargin{1},'anova_count_tuning');
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
 
     force = 1;
-    onlywinnersgetacurve = 0;
+    onlywinnersgetacurve = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     path2fit = fullfile(path_project,'data','midlevel',sprintf('groupfit_counts_ph1to3_N%02d.mat',length(subs)));
@@ -3605,7 +3605,7 @@ elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
                 X_fit(ph,nroi,:) = t.groupfit.x_HD;
                 pval(ph,nroi)    = 10.^-t.groupfit.pval;
                 if onlywinnersgetacurve == 1
-                    if t.groupfit.pval > -log10(.05)
+                    if t.groupfit.pval > -log10(.001)
                         Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
                     else
                         Y_fit(ph,nroi,:) = repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)]);
@@ -3625,13 +3625,12 @@ elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
     varargout{4} = t;
     
 elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
-    force = 0;
+    force  = 0;
     method = 3;
-    subs = FPSA_FearGen('get_subjects');
-    nsubs = length(subs);
-    counts = FPSA_FearGen('get_fixation_counts');
-    counts = counts*100;
-    path_write = sprintf('%s/data/midlevel/ROI_fixcount_ph234_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
+    subs   = FPSA_FearGen('get_subjects');
+    nsubs        = length(subs);
+    [~,~,counts] = FPSA_FearGen('get_fixation_counts');    
+    path_write   = sprintf('%s/data/midlevel/ROI_fixcount_ph234_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
     
     if ~exist(path_write) || force==1
         
@@ -3643,7 +3642,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
         pval = nan(nphases,totalroi,nsubs);
         params = nan(nphases,totalroi,nsubs,3);
         for sub = 1:size(counts,3)
-            for ph = [1 3]
+            for ph = [3]
                 for nroi = 1:totalroi
                     data.y   = squeeze(counts(:,nroi,sub,ph))';
                     data.x   = repmat(-135:45:180,1);
@@ -3659,6 +3658,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
                     else
                         Y_fit(ph,nroi,sub,:) = repmat(mean(t.y(:)),[1 length(t.fit_results.y_fitted_HD)]);
                     end
+                    pause
                 end
             end
         end
