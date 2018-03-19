@@ -2869,8 +2869,13 @@ elseif strcmp(varargin{1},'figure_02B')
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none'); 
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));
-    hold on;    
+    hold on;  
+    try
     errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none','capsize',0);
+    catch
+        
+    errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none');
+    end
     line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)        
     
     ylabel(sprintf('SCR\n(z-score)'))
@@ -2887,7 +2892,12 @@ elseif strcmp(varargin{1},'figure_02B')
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none')
     hold on;
     Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
+    try
     errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none','capsize',0);
+    catch
+            errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none');
+
+    end
     
     axis square;axis tight;
     Publication_Ylim(gca,0,1);
@@ -2902,7 +2912,12 @@ elseif strcmp(varargin{1},'figure_02B')
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none')
     hold on;
     Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
+    try
     errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none','capsize',0);
+    catch
+        
+    errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none');
+    end
     x = -150:0.1:195;
     plot(test.groupfit.x_HD,test.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
     
@@ -2975,7 +2990,12 @@ elseif strcmp(varargin{1},'figure_02B')
         Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
 
         hold on;
+        try
         e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        catch
+            
+        e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
+        end
         set(e,'LineWidth',web,'Color','k')
         hold on;                                
         axis square;axis tight;
@@ -3016,7 +3036,7 @@ elseif strcmp(varargin{1},'figure_02B')
     s_counts  = std(counts,1,3)./sqrt(size(counts,3));
     nsubs     = length(FPSA_FearGen('get_subjects',current_subject_pool));
     
-    [Xgroupfit Ygroupfit pvalgroup]         = FPSA_FearGen('get_groupfit_on_ROIcounts');
+    [Xgroupfit Ygroupfit pvalgroup]         = FPSA_FearGen('get_groupfit_on_ROIcounts'); %[ph, nroi,100datapoints]
     [Xsubfit Ysubfit params pvalsingle]     = FPSA_FearGen('get_singlesubfits_on_ROIcounts');
     amp                                     = squeeze(params([1 2 3],:,:,1)); %amplitude in percent; params(ph,nroi,sub,[amp kappa offset])
     
@@ -3039,9 +3059,17 @@ elseif strcmp(varargin{1},'figure_02B')
                 ylabel(sprintf('%s',t{n}));
             end
             hold on;
-            e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none','capsize',0);
-            set(e,'LineWidth',web,'Color','k')            
-            
+
+            try
+                e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none','capsize',0);
+            catch
+                e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none');
+            end
+            set(e,'LineWidth',web,'Color','k')
+            if ismember(ph,[1 3])
+                plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
+            end
+
             hold off;            
 %             xlim([-180 225])            
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
@@ -3101,12 +3129,15 @@ elseif strcmp(varargin{1},'figure_02B')
     roi = Fixmat([],[]).GetFaceROIs;
     roi = double(roi);
     roi(roi==0) = .3;
+    coor = [[110 220 50 445];[221 375 250-90 250+90]; [376 485 250-150 250+150];[0 500 0 500]];%x and y coordinates for left eye (from my perspective), right eye, nose and mouth.             
+
     for nroi = 1:3
         figure(nroi);clf;
         h=imagesc(Fixmat([],[]).stimulus);hold on;
         set(h,'alphadata',roi(:,:,nroi));
         axis off
         axis square
+        rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
         if ispc
             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
         end
@@ -3195,8 +3226,6 @@ elseif strcmp(varargin{1},'figure_02B_get_params')
     line([5.5 10],[0 0],'Color','k')
     box off
     
-    
-    
 elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     
     figure(1);
@@ -3224,7 +3253,11 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
         Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
         %         Project.plot_bar(mean(ratings(:,:,sn)));
         hold on;
-        e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        try
+            e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        catch
+            e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');            
+        end
         set(gca,'XTick',-135:45:180,'YTick',[0 5 10],'FontSize',12)
         %         SetFearGenBarColors(b)
         set(e,'LineWidth',2,'Color','k')
@@ -3277,7 +3310,12 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
         Project.plot_bar(-135:45:180,mean(ratings(:,:,sn)));
         %         Project.plot_bar(mean(ratings(:,:,sn)));
         hold on;
-        e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        try %capsize is 2016b compatible.
+              e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        catch
+            e  =         errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
+        end
+%         e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
         set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
         %         SetFearGenBarColors(b)
         set(e,'LineWidth',2,'Color','k')
@@ -3544,7 +3582,9 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
-    force  = 1;
+
+    force = 1;
+    onlywinnersgetacurve = 0;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     path2fit = fullfile(path_project,'data','midlevel',sprintf('groupfit_counts_ph1to3_N%02d.mat',length(subs)));
@@ -3564,10 +3604,14 @@ elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
                 t.GroupFit(method);
                 X_fit(ph,nroi,:) = t.groupfit.x_HD;
                 pval(ph,nroi)    = 10.^-t.groupfit.pval;
-                if t.groupfit.pval > -log10(.05)
-                    Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
+                if onlywinnersgetacurve == 1
+                    if t.groupfit.pval > -log10(.05)
+                        Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
+                    else
+                        Y_fit(ph,nroi,:) = repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)]);
+                    end
                 else
-                    Y_fit(ph,nroi,:) = repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)]);
+                    Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
                 end
             end
         end
