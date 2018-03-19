@@ -2791,6 +2791,7 @@ elseif strcmp(varargin{1},'figure_02B')
     web      = 1; %width errorbars
     colors   = [repmat(0.3,3,3)];
     grayshade= [.5 .5 .5];
+    alpha_gf = .001;
     
     figure(1002);
     clf;
@@ -2863,64 +2864,65 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         load(path_scrampl)
     end
-    %% plot SCR        
+    %are amplitudes alpha diff from base to test?
+    [h,pval,ci,teststat] = ttest(scr_ampl(:,2),scr_ampl(:,4))
+    %% plot SCR 
+    %baseline
     subplot(sps(1),sps(2),5);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none'); 
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));
-    hold on;  
+    hold on;
     try
-    errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none','capsize',0);
+        errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none','capsize',0);
     catch
-        
-    errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none');
+        errorbar(-135:45:180,av(1:8),sem(1:8),'ok','LineWidth',web,'marker','none');
     end
-    line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)        
-    
+    if base.groupfit.pval > -log10(alpha_gf)
+        plot(base.groupfit.x_HD,base.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
+    else
+        line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)
+    end
     ylabel(sprintf('SCR\n(z-score)'))
     axis square;axis tight;box off
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1);
     Publication_RemoveXaxis(gca);
-    
-                    
     set(gca,'xlim',[-155 200],'xticklabel',[]);
-    %%
+    %% plot SCR (Cond)
     subplot(sps(1),sps(2),6);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))-CI(2) mean(nulltrials(:,2))+CI(2) mean(nulltrials(:,2))+CI(2)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none')
     hold on;
     Project.plot_bar(-135:45:180,av(10:17));axis square;box off;hold on;
     try
-    errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none','capsize',0);
+        errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none','capsize',0);
     catch
-            errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none');
-
+        errorbar(-135:45:180,av(10:17),sem(10:17),'ok','LineWidth',web,'marker','none');
     end
-    
     axis square;axis tight;
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1)
     Publication_RemoveXaxis(gca);
-    
     set(gca,'xlim',[-155 200],'xticklabel',[]);
-    
-    %%
+    %% plot SCR (test)
     subplot(sps(1),sps(2),7);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
     set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none')
     hold on;
     Project.plot_bar(-135:45:180,av(19:26));axis square;box off;hold on;
     try
-    errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none','capsize',0);
+        errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none','capsize',0);
     catch
-        
-    errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none');
+        errorbar(-135:45:180,av(19:26),sem(19:26),'ok','LineWidth',web,'marker','none');
     end
     x = -150:0.1:195;
-    plot(test.groupfit.x_HD,test.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
-    
+    if test.groupfit.pval > -log10(alpha_gf)
+        plot(test.groupfit.x_HD,test.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
+    else
+        line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)
+    end    
     axis square;axis tight;
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1)
@@ -2935,7 +2937,12 @@ elseif strcmp(varargin{1},'figure_02B')
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1);
     Publication_RemoveXaxis(gca);
-    Publication_Asterisks(mat,1:2:5);                        
+%     %paired ttest asterix b-t
+    line([1.4 4.6],repmat(max(ylim),1,2),'Color',[0 0 0])
+%     a=annotation(gcf,'line',[0.79 0.87],...
+%     [0.76 0.76]);
+    text(.47*max(xlim),max(ylim)+range(ylim)*.04,pval2asterix(pval),'HorizontalAlignment','center','fontsize',16);
+%     Publication_Asterisks(mat,1:2:5);                        
     
     %% plot ratings
     subs              = FPSA_FearGen('get_subjects');
@@ -2980,21 +2987,18 @@ elseif strcmp(varargin{1},'figure_02B')
         load(path_rateampl)
     end
     
-    %% RATINGS GRROUP DATA
+    %% RATINGS GROUP DATA
     tits = {'Baseline' 'Conditioning' 'Test'};
     for n = [2 3 1]
         sp = n;
         subplot(sps(1),sps(2),sp)
         hold off
-
         Project.plot_bar(-135:45:180,mean(ratings(:,:,n)));
-
         hold on;
         try
-        e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+            e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
         catch
-            
-        e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
+            e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
         end
         set(e,'LineWidth',web,'Color','k')
         hold on;                                
@@ -3003,10 +3007,13 @@ elseif strcmp(varargin{1},'figure_02B')
         if n == 1
             ylabel(sprintf('Shock\nExpectancy'))
         end
-        
         %Gaussian Fits
-        hold on;        
-        plot(fit(n).x_HD,fit(n).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line        
+        hold on;
+        if fit(n).pval > -log10(alpha_gf)
+            plot(fit(n).x_HD,fit(n).fit_HD,'Color',[0 0 0],'LineWidth',flw)%add Groupfit line
+        else
+            l = line([-150 195],repmat(mean(mean(ratings(:,:,n))),[1 2]),'Color','k','LineWidth',2);
+        end
 %         Publication_Ylim(gca,0,2)
         ylim([0 8])        
         Publication_NiceTicks(gca,1)
@@ -3024,7 +3031,13 @@ elseif strcmp(varargin{1},'figure_02B')
     Publication_Asterisks(mat,1:2:5);                
     tt  = title('Tuning Strength (\alpha)','Position',[min(xlim)+range(xlim)/2 max(ylim)+range(ylim)*.2],'horizontalalignment','center');
     
-      
+    for n = 2:size(mat,2)
+       [~, pval(n)] = ttest(mat(:,n),mat(:,1));
+    end
+%     a=annotation(gcf,'line',[0.79 0.87],...
+%     [0.93 .93]);
+%     text(.47*max(xlim),max(ylim)+range(ylim)*.1,pval2asterix(pval),'HorizontalAlignment','center','fontsize',16);
+
     %% previously figure 03 from here
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
@@ -3045,7 +3058,7 @@ elseif strcmp(varargin{1},'figure_02B')
     ylimmi = min(min(m_counts(:)));
 %     yticki = [0 30 60; 0 15 30; 0 3 6];
     figure(1002);
-    t={'Eyes (%)' 'Nose (%)' 'Mouth (%)'};
+    t={'Eyes (%,z)' 'Nose (%,z)' 'Mouth (%,z)'};
     cc = 0;
     %% Will equalize ylims of each row of subplots.
     for n = 1:size(Xsubfit,2)
@@ -3059,7 +3072,6 @@ elseif strcmp(varargin{1},'figure_02B')
                 ylabel(sprintf('%s',t{n}));
             end
             hold on;
-
             try
                 e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none','capsize',0);
             catch
@@ -3069,12 +3081,9 @@ elseif strcmp(varargin{1},'figure_02B')
             if ismember(ph,[1 3])
                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
             end
-
             hold off;            
 %             xlim([-180 225])            
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
-
-             
         end
         Publication_Ylim(sax,1,2);
         Publication_SymmetricYlim(sax);
@@ -3092,28 +3101,32 @@ elseif strcmp(varargin{1},'figure_02B')
     
     %%
     %t-tests
-    %are amplitudes > 0?
-    for ph = [1 2]
+    %are amplitudes in Test bigger than in Base?
         for nroi = 1:3
-            [hypo(ph,nroi) pttest(ph,nroi)] = ttest(amp(ph,nroi,:));
+            [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
         end
-    end
-    %% single subject fit scatter plot    
-    subplothelp = [12 16 20];
-    xscatter = linspace(1,2,nsubs);
-    for nroi = 1:3
-        subplot(sps(1),sps(2),subplothelp(nroi))
-        hold off;  
-        mat = squeeze(amp([1 2 3],nroi,:))';
-        dotplot(mat)                                
-        axis square;set(gca,'xticklabel',[]);
-        Publication_Ylim(gca,1,1);
-        Publication_NiceTicks(gca,1);                  
-        Publication_Asterisks(mat,1:2:5);        
-        drawnow;    
-        Publication_Asterisks(mat,1:2:5);        
-    end
-    set(gca,'xticklabels',{'B' 'C' 'G'})
+        %% single subject fit scatter plot
+        subplothelp = [12 16 20];
+        liney = [.58 .41 .26];
+        xscatter = linspace(1,2,nsubs);
+        for nroi = 1:3
+            subplot(sps(1),sps(2),subplothelp(nroi))
+            hold off;
+            mat = squeeze(amp([1 2 3],nroi,:))';
+            dotplot(mat)
+            axis square;set(gca,'xticklabel',[]);
+            Publication_Ylim(gca,1,1);
+            Publication_NiceTicks(gca,1);
+%             Publication_Asterisks(mat,1:2:5);
+            drawnow;
+%             Publication_Asterisks(mat,1:2:5);
+            if nroi == 3
+            set(gca,'xticklabels',{'B' 'C' 'G'})
+            end
+            line([1.4 4.6],repmat(max(ylim),1,2),'Color',[0 0 0])
+            text(.47*max(xlim),max(ylim)+range(ylim)*.04,pval2asterix(pttest(nroi)),'HorizontalAlignment','center','fontsize',16);
+            %     a=annotation(gcf,'line',[0.79 0.87],repmat(liney(nroi),1,2));
+        end
     %%
     set(GetSubplotHandles(gcf),'fontsize',12);%set all fontsizes to 12
     for i = get(GetSubplotHandles(gcf),'ylabel')';
@@ -3142,6 +3155,7 @@ elseif strcmp(varargin{1},'figure_02B')
             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
         end
     end
+    keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -3583,7 +3597,7 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
 
-    force = 1;
+    force = 0;
     onlywinnersgetacurve = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
@@ -3642,7 +3656,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
         pval = nan(nphases,totalroi,nsubs);
         params = nan(nphases,totalroi,nsubs,3);
         for sub = 1:size(counts,3)
-            for ph = [3]
+            for ph = [1 3]
                 for nroi = 1:totalroi
                     data.y   = squeeze(counts(:,nroi,sub,ph))';
                     data.x   = repmat(-135:45:180,1);
@@ -3658,7 +3672,6 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
                     else
                         Y_fit(ph,nroi,sub,:) = repmat(mean(t.y(:)),[1 length(t.fit_results.y_fitted_HD)]);
                     end
-                    pause
                 end
             end
         end
