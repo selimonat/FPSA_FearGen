@@ -3009,9 +3009,9 @@ elseif strcmp(varargin{1},'figure_02B')
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
-    method    = 3;
-    counts    = FPSA_FearGen('get_fixation_counts');
-    counts    = counts*100;
+    method          = 3;
+    [~,~,counts]    = FPSA_FearGen('get_fixation_counts');
+
     m_counts  = nanmean(counts,3);
     s_counts  = std(counts,1,3)./sqrt(size(counts,3));
     nsubs     = length(FPSA_FearGen('get_subjects',current_subject_pool));
@@ -3040,15 +3040,15 @@ elseif strcmp(varargin{1},'figure_02B')
             end
             hold on;
             e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none','capsize',0);
-            set(e,'LineWidth',web,'Color','k')
-
+            set(e,'LineWidth',web,'Color','k')            
+            
             hold off;            
 %             xlim([-180 225])            
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
 
              
         end
-        Publication_Ylim(sax,1,5);
+        Publication_Ylim(sax,1,2);
         Publication_SymmetricYlim(sax);
         Publication_NiceTicks(sax,1);
         Publication_RemoveXaxis(sax);        
@@ -3456,7 +3456,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     %% Collects fixation counts and reports how they change with conditions on 4 different ROIs before and after learning.
     % these numbers are reported in the manuscript.
     
-    meancorrect    = 1;
+    
     filename       = sprintf('counttuning_ph234_runs_%02d_%02d.mat',runs(1),runs(end));
     
     % need to replace the get_fixmat option from before bc this only ran phase 2 and 4
@@ -3499,15 +3499,14 @@ elseif strcmp(varargin{1},'get_fixation_counts')
             else
                 load(path_write);
             end
+                count_z(:,:,c,p)  = nanzscore(dummy_counts);
                 count_dm(:,:,c,p) = demean(dummy_counts);
                 count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them
         end %
     end
-    if meancorrect == 1
-        varargout{1} = count_dm;
-    else
         varargout{1} = count;
-    end
+        varargout{2} = count_dm;
+        varargout{3} = count_z;
 %     %these groups are for the venn plot later.
 %     groups.g1 = repmat([1:8]',[1 5 61 2]);
 %     groups.g2 = repmat(1:5,[8 1 61 2]);
@@ -3545,20 +3544,19 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
-    force = 0;
+    force  = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     path2fit = fullfile(path_project,'data','midlevel',sprintf('groupfit_counts_ph1to3_N%02d.mat',length(subs)));
     
     if ~exist(path2fit) || force == 1
-        counts   = FPSA_FearGen('get_fixation_counts');
-        counts   = counts*100;
+        [~,~,counts]   = FPSA_FearGen('get_fixation_counts');
         %% fit group for each phase
         X_fit = [];
         Y_fit = [];
         for ph = [1 3]
             for nroi = 1:size(counts,2)-1
-                data.y   = squeeze(counts(:,nroi,:,ph))';
+                data.y   =zscore(squeeze(counts(:,nroi,:,ph)))';
                 data.x   = repmat(-135:45:180,size(counts,3),1);
                 data.ids = [1:size(counts,3)]';
                 t        = [];
