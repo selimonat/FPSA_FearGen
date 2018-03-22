@@ -456,50 +456,49 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;    
     H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b-');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     if size(model.t(:,1),1) < 10
-        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
     else
         xtick = {(model.t(1:5:end,end)+model.t(1:5:end,1)-1)/2};
-        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
     end
     
     
     H2.mainLine.LineWidth = 2;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 2;H1.mainLine.Color = [0 0 1 .5];
     
-    title('Baseline');
+    title('Baseline','fontsize',18);
     hl = legend([H2.mainLine H1.mainLine],{'w_{specific}' 'w_{unspecific}'})
     hl.FontSize = 12;
     legend boxoff
     if size(model.t(:,1),1) < 10
-        xlabel('fixations');    
+        xlabel('fixations','fontweight','bold','fontsize',16);    
     else
-        xlabel('time window  (ms)');    
+        xlabel('time window  (ms)','fontweight','bold','fontsize',16);    
     end
-    ylabel('weight')
+    ylabel('weight','fontweight','bold','fontsize',16)
     grid on    
     %
     h(4)=subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
     H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
     H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,2,:))) ,squeeze(nanSEM(model.w(:,2,2,2,:))) ,'lineprops','b');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     H2.mainLine.LineWidth = 2;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 2;H1.mainLine.Color = [0 0 1 .5];
-    set(gca,'yticklabels',[]);
-    title('Generalization');    
-    if size(model.t(:,1),1) < 10
-        xlabel('fixations');    
-    else
-        xlabel('time window (ms)');    
-    end
+    set(gca,'yticklabels',[]);    
     
     if size(model.t(:,1),1) < 10
-        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+        set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
     else
-        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',16,'fontweight','bold');
+        set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
     end
-    subplotChangeSize(h,.02,.02);        
-    set(gca,'fontsize',16)
+    if size(model.t(:,1),1) < 10
+        xlabel('fixations','fontweight','bold','fontsize',16);    
+    else
+        ggg=xlabel('time window (ms)','fontweight','bold','fontsize',16);    
+    end
+    subplotChangeSize(h,.02,.02);           
+    title('Generalization','fontsize',18);        
     set(gcf,'position',[2034         402 900 900]);
     %% find significant time points
     whichtest = 'ttest';
-    alpha = 0.001;
+    alpha = 0.05;
     %[subjects,phase,model,param,time]
     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
 %     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
@@ -515,7 +514,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     hold on
     for n = 1:size(X,2)
         if PP(n) <= .05
-            text(model.t(n,1),max(ylim)-.01,pval2asterix(PP(n)),'HorizontalAlignment','center','fontsize',20);
+            text(model.t(n,1),max(ylim)-.01,'*','HorizontalAlignment','center','fontsize',20);
         end
     end
     
@@ -1442,7 +1441,7 @@ inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
              current_title   = cell2str(input{1});
              filename        = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s.png',current_title,func2str(F));             
              filename2       = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s_viafixmat.png',current_title,func2str(F));             
-             if (exist(filename) == 0) | (exist(filename2) == 0)
+             if (exist(filename) == 0) | (exist(filename2) == 0) | 1
                  %to do
                  %(1) compare all fixations on all subjects;+
                  %(2) compare all fixations on selected subjects;+
@@ -1498,43 +1497,49 @@ inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
                  supertitle(current_title,1,'fontsize',16,'fontweight','bold','interpreter','none');
                  % count the beta values from 4 rois
                  C = [];
+                 r = Fixmat([],[]).GetFaceROIs;
+                 r = sum(reshape(r,250000,4));
                  for np = 1:size(M,5)
                      for ns = 1:size(M,4)
                          for w = 1:size(M,3)
-                             C(ns,:,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0);%(pixel,pixel,regressor,subject,phase)
+                             C(ns,:,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0)./r;%(pixel,pixel,regressor,subject,phase)
                              %[subject, roi, predictor, phase]
                          end
                      end
-                 end
-                 C(:,end,:,:) = mean(C(:,1:2,:,:),2);
+                 end                 
+                 C(:,4,:,:) = [];
                  %%
-                 
+                 labels = {'eyes' 'nose' 'mouth'};
                  %C = [subject roi predictor phase]
-                 subplot(4,4,13)
+                 subplot(4,4,13);                 
                  D  = (C(:,:,1,2)-C(:,:,1,1));%Specific Test - Specific Baseline
-                 barplot_deluxe(D,{'eye-left' 'eye-right' 'nose' 'mouth' 'eyes'});
+                 barplot_deluxe(D,labels);
                  
                  subplot(4,4,14)
                  D  = (C(:,:,2,2)-C(:,:,2,1));%Unspecific Test  - Unspecific Baseline
-                 barplot_deluxe(D,{'eye-left' 'eye-right' 'nose' 'mouth' 'eyes'});
+                 barplot_deluxe(D,labels );
                  
                  subplot(4,4,15);
                  D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
-                 barplot_deluxe(D,{'eye-left' 'eye-right' 'nose' 'mouth' 'eyes'});
+                 barplot_deluxe(D,labels );
                  
-                 SaveFigure(filename,'-r300');
+%                  SaveFigure(filename,'-r300');
                  
                  %% plot the same thing as below with Fixmat object
                  figure;
                  fix             = Fixmat([],[]);
                  fix.cmap_limits = [-.2 .2];
+                                  
                  %plot specific/unspecific Baseline and test as a 2x2
                  %figure
                  fix.maps        = cat(3,squeeze(F(M(:,:,2,:,1))),squeeze(F(M(:,:,2,:,2))),squeeze(F(M(:,:,1,:,1))),squeeze(F(M(:,:,1,:,2))))
                  H = fix.plot;                                  
                  for n = 1:length(H);
-                     axes(H(n));axis on;set(gca,'xticklabel','','yticklabel','','xgrid','on','ygrid','on');                        
+                     axes(H(n));axis on;set(gca,'xticklabel','','yticklabel','','xgrid','on','ygrid','on');                                             
+                     Publication_RemoveXaxis(gca);
+                     Publication_RemoveYaxis(gca)                     
                  end
+                 subplotChangeSize(H,.04,.04)
                  set(gcf,'position',[ 2011         357         671         604])                 
                  
                  H(1).YLabel.String = 'Unspecific';
@@ -1542,7 +1547,17 @@ inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
                  H(3).YLabel.String = 'Specific';
                  H(3).YLabel.FontWeight = 'bold';
                  H(3).YLabel.FontSize   = 16;
-                 H(1).YLabel.FontSize   = 16;
+                 H(1).YLabel.FontSize   = 16;        
+                 %%  
+                 figure;                 
+                 D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
+                 barplot_deluxe(D,labels );
+                 Publication_Ylim(gca,2,1)
+                 Publication_NiceTicks(gca,2);
+                 Publication_FancyYticks(gca,.05)
+                 Publication_RemoveXaxis(gca);
+                 set(gca,'xlim',[0.25 max(xlim)])
+                 ylabel('\Delta_{test} - \Delta_{baseline}','fontsize',16)
                  %%
                  keyboard                 
                  SaveFigure(filename2,'-r300');             
@@ -2796,7 +2811,7 @@ elseif strcmp(varargin{1},'figure_02B')
     figure(1002);
     clf;
     h = gcf;
-    h.Position = [899 796 700 793];
+    h.Position = [806          58         793        1036];
     %% old figure 02 from here
     force_scr      = 0;
     force_scrfit   = 0;
@@ -2864,8 +2879,7 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         load(path_scrampl)
     end
-    %are amplitudes alpha diff from base to test?
-    [h,pval,ci,teststat] = ttest(scr_ampl(:,2),scr_ampl(:,4))
+    
     %% plot SCR 
     %baseline
     subplot(sps(1),sps(2),5);
@@ -2906,6 +2920,10 @@ elseif strcmp(varargin{1},'figure_02B')
     Publication_NiceTicks(gca,1)
     Publication_RemoveXaxis(gca);
     set(gca,'xlim',[-155 200],'xticklabel',[]);
+    
+    line([0 180],repmat(max(ylim),1,2),'Color',[0 0 0])
+    text(90,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+    
     %% plot SCR (test)
     subplot(sps(1),sps(2),7);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))-CI(3) mean(nulltrials(:,3))+CI(3) mean(nulltrials(:,3))+CI(3)],'r','EdgeColor','none');
@@ -2938,10 +2956,12 @@ elseif strcmp(varargin{1},'figure_02B')
     Publication_NiceTicks(gca,1);
     Publication_RemoveXaxis(gca);
 %     %paired ttest asterix b-t
-    line([1.4 4.6],repmat(max(ylim),1,2),'Color',[0 0 0])
-%     a=annotation(gcf,'line',[0.79 0.87],...
-%     [0.76 0.76]);
-    text(.47*max(xlim),max(ylim)+range(ylim)*.04,pval2asterix(pval),'HorizontalAlignment','center','fontsize',16);
+    line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+    %are amplitudes alpha diff from base to test?
+    [h,pval,ci,teststat] = ttest(scr_ampl(:,2),scr_ampl(:,4))
+    if pval < .001
+        text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+    end
 %     Publication_Asterisks(mat,1:2:5);                        
     
     %% plot ratings
@@ -3028,23 +3048,25 @@ elseif strcmp(varargin{1},'figure_02B')
     axis square;set(gca,'xticklabel',[]);
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1);          
-    Publication_Asterisks(mat,1:2:5);                
-    tt  = title('Tuning Strength (\alpha)','Position',[min(xlim)+range(xlim)/2 max(ylim)+range(ylim)*.2],'horizontalalignment','center');
+%     Publication_Asterisks(mat,1:2:5);                
+    tt  = title(sprintf('Tuning\nStrength (\\alpha)'),'Position',[min(xlim)+range(xlim)/2 max(ylim)+range(ylim)*.2],'horizontalalignment','center');
+    
     
     for n = 2:size(mat,2)
-       [~, pval(n)] = ttest(mat(:,n),mat(:,1));
+       [~, pval] = ttest(mat(:,1),mat(:,n));
+        if pval < .001
+            text(n*2-1,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+        end       
     end
-%     a=annotation(gcf,'line',[0.79 0.87],...
-%     [0.93 .93]);
-%     text(.47*max(xlim),max(ylim)+range(ylim)*.1,pval2asterix(pval),'HorizontalAlignment','center','fontsize',16);
+
 
     %% previously figure 03 from here
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
     method          = 3;
-    [~,~,counts]    = FPSA_FearGen('get_fixation_counts');
-
+    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');    
+    %counts => [faces, rois, subjects, phases]
     m_counts  = nanmean(counts,3);
     s_counts  = std(counts,1,3)./sqrt(size(counts,3));
     nsubs     = length(FPSA_FearGen('get_subjects',current_subject_pool));
@@ -3053,14 +3075,13 @@ elseif strcmp(varargin{1},'figure_02B')
     [Xsubfit Ysubfit params pvalsingle]     = FPSA_FearGen('get_singlesubfits_on_ROIcounts');
     amp                                     = squeeze(params([1 2 3],:,:,1)); %amplitude in percent; params(ph,nroi,sub,[amp kappa offset])
     
-    %% plot the 3 count-profiles for whole group
+    % plot the 3 count-profiles for whole group
     
     ylimmi = min(min(m_counts(:)));
-%     yticki = [0 30 60; 0 15 30; 0 3 6];
-    figure(1002);
-    t={'Eyes (%,z)' 'Nose (%,z)' 'Mouth (%,z)'};
+%     yticki = [0 30 60; 0 15 30; 0 3 6];    
+    t={'Eyes\n(%%)' 'Nose\n(%%)' 'Mouth\n(%%)'};
     cc = 0;
-    %% Will equalize ylims of each row of subplots.
+    % Will equalize ylims of each row of subplots.
     for n = 1:size(Xsubfit,2)
         sax=[];
         for ph = 1:3
@@ -3069,7 +3090,7 @@ elseif strcmp(varargin{1},'figure_02B')
             sax = [sax subplot(sps(1),sps(2),cc+8)];
             Project.plot_bar(-135:45:180,m_counts(:,n,1,ph));
             if ph == 1
-                ylabel(sprintf('%s',t{n}));
+                ylabel(sprintf(t{n}));
             end
             hold on;
             try
@@ -3081,12 +3102,17 @@ elseif strcmp(varargin{1},'figure_02B')
             if ismember(ph,[1 3])
                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
             end
-            hold off;            
-%             xlim([-180 225])            
+            hold off;             
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
+%             if ph == 2
+%                 if pttest(nroi) < 0.001                    
+%                     text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+%                     line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])                    
+%                 end
+%             end
         end
-        Publication_Ylim(sax,1,2);
-        Publication_SymmetricYlim(sax);
+        Publication_Ylim(sax,0,10);
+%         Publication_SymmetricYlim(sax);
         Publication_NiceTicks(sax,1);
         Publication_RemoveXaxis(sax);        
 %         Publication_RemoveYaxis(sax(2:3));
@@ -3115,17 +3141,18 @@ elseif strcmp(varargin{1},'figure_02B')
             mat = squeeze(amp([1 2 3],nroi,:))';
             dotplot(mat)
             axis square;set(gca,'xticklabel',[]);
-            Publication_Ylim(gca,1,1);
+            Publication_Ylim(gca,0,1);
             Publication_NiceTicks(gca,1);
-%             Publication_Asterisks(mat,1:2:5);
+
             drawnow;
-%             Publication_Asterisks(mat,1:2:5);
+
             if nroi == 3
             set(gca,'xticklabels',{'B' 'C' 'G'})
             end
-            line([1.4 4.6],repmat(max(ylim),1,2),'Color',[0 0 0])
-            text(.47*max(xlim),max(ylim)+range(ylim)*.04,pval2asterix(pttest(nroi)),'HorizontalAlignment','center','fontsize',16);
-            %     a=annotation(gcf,'line',[0.79 0.87],repmat(liney(nroi),1,2));
+            if pttest(nroi) < 0.001
+                text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            end            
         end
     %%
     set(GetSubplotHandles(gcf),'fontsize',12);%set all fontsizes to 12
@@ -3138,24 +3165,24 @@ elseif strcmp(varargin{1},'figure_02B')
         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_02_3ROIs.png'])
         export_fig([homedir 'Documents\Documents\manuscript_selim\figure_02_3ROIs.png'],'-r400')
     end
-    %% plot rois;
-    roi = Fixmat([],[]).GetFaceROIs;
-    roi = double(roi);
-    roi(roi==0) = .3;
-    coor = [[110 220 50 445];[221 375 250-90 250+90]; [376 485 250-150 250+150];[0 500 0 500]];%x and y coordinates for left eye (from my perspective), right eye, nose and mouth.             
-
-    for nroi = 1:3
-        figure(nroi);clf;
-        h=imagesc(Fixmat([],[]).stimulus);hold on;
-        set(h,'alphadata',roi(:,:,nroi));
-        axis off
-        axis square
-        rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
-        if ispc
-            export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
-        end
-    end
-    keyboard
+%     %% plot rois;
+%     roi = Fixmat([],[]).GetFaceROIs;
+%     roi = double(roi);
+%     roi(roi==0) = .3;
+%     coor = [[110 220 50 445];[221 375 250-90 250+90]; [376 485 250-150 250+150];[0 500 0 500]];%x and y coordinates for left eye (from my perspective), right eye, nose and mouth.             
+% 
+%     for nroi = 1:3
+%         figure(nroi);clf;
+%         h=imagesc(Fixmat([],[]).stimulus);hold on;
+%         set(h,'alphadata',roi(:,:,nroi));
+%         axis off
+%         axis square
+%         rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
+%         if ispc
+%             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
+%         end
+%     end
+%     keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -3509,6 +3536,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     % these numbers are reported in the manuscript.
     
     
+    
     filename       = sprintf('counttuning_ph234_runs_%02d_%02d.mat',runs(1),runs(end));
     
     % need to replace the get_fixmat option from before bc this only ran phase 2 and 4
@@ -3517,18 +3545,20 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     
     if exist(path2fixmat)==0 | force;
         fixmat      = Fixmat(subjects,[2 3 4]);%all SUBJECTS, PHASES and RUNS
-        fixmat.unitize = 0;
+        fixmat.unitize = 1;
         save(path2fixmat,'fixmat')
     else
         load(path2fixmat);
     end
     
+    
     force          = 0;
-    c = 0;
+    c              = 0;    
     for ns = subjects(:)'
         fprintf('Counting fixations in subject: %03d.\n',ns);
         c = c+1;
         p = 0;
+        dummy_dummy = [];
         for phase = [2 3 4]
             p          = p + 1;
             path_write = sprintf('%s/data/sub%03d/p%02d/midlevel/%s.mat',path_project,ns,phase,filename);
@@ -3545,18 +3575,24 @@ elseif strcmp(varargin{1},'get_fixation_counts')
                 fixmat.getmaps(v{:});
                 %
                 for iii = 1:size(fixmat.maps,3)
-                    dummy_counts(iii,:) = fixmat.EyeNoseMouth(fixmat.maps(:,:,iii),1);
+                    dummy_counts(iii,:) = fixmat.EyeNoseMouth(fixmat.maps(:,:,iii),0);
                 end
                 save(path_write,'dummy_counts');
             else
                 load(path_write);
-            end
-                count_z(:,:,c,p)  = nanzscore(dummy_counts);
+            end                
                 count_dm(:,:,c,p) = demean(dummy_counts);
-                count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them
-        end %
+                count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them                
+                dummy_dummy = [ dummy_dummy ; dummy_counts];
+        end %                
+        dummy_dummy([9 10 11 13 14 15],:) = NaN; 
+        dummy_dummy                       = nanzscore(dummy_dummy);
+        %[face rois subjects phases]
+        count_z(:,:,c,1)                  = dummy_dummy(1:8,:);
+        count_z(:,:,c,2)                  = dummy_dummy(9:16,:);
+        count_z(:,:,c,3)                  = dummy_dummy(17:24,:);
     end
-        varargout{1} = count;
+        varargout{1} = count*100;
         varargout{2} = count_dm;
         varargout{3} = count_z;
 %     %these groups are for the venn plot later.
@@ -3597,20 +3633,20 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
 
-    force = 0;
+    force = 1;
     onlywinnersgetacurve = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
     path2fit = fullfile(path_project,'data','midlevel',sprintf('groupfit_counts_ph1to3_N%02d.mat',length(subs)));
     
     if ~exist(path2fit) || force == 1
-        [~,~,counts]   = FPSA_FearGen('get_fixation_counts');
+        [counts]   = FPSA_FearGen('get_fixation_counts');
         %% fit group for each phase
         X_fit = [];
         Y_fit = [];
         for ph = [1 3]
             for nroi = 1:size(counts,2)-1
-                data.y   =zscore(squeeze(counts(:,nroi,:,ph)))';
+                data.y   = squeeze(counts(:,nroi,:,ph))';
                 data.x   = repmat(-135:45:180,size(counts,3),1);
                 data.ids = [1:size(counts,3)]';
                 t        = [];
@@ -3619,7 +3655,7 @@ elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
                 X_fit(ph,nroi,:) = t.groupfit.x_HD;
                 pval(ph,nroi)    = 10.^-t.groupfit.pval;
                 if onlywinnersgetacurve == 1
-                    if t.groupfit.pval > -log10(.001)
+                    if t.groupfit.pval > -log10(.05)
                         Y_fit(ph,nroi,:) = t.groupfit.fit_HD;
                     else
                         Y_fit(ph,nroi,:) = repmat(mean(t.y(:)),[1 length(t.groupfit.fit_HD)]);
