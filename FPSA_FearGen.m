@@ -1551,7 +1551,7 @@ inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
                  %%  
                  figure;                 
                  D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
-                 barplot_deluxe(D,labels );
+                 [h p] =barplot_deluxe(D,labels );
                  Publication_Ylim(gca,2,1)
                  Publication_NiceTicks(gca,2);
                  Publication_FancyYticks(gca,.05)
@@ -1559,7 +1559,6 @@ inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
                  set(gca,'xlim',[0.25 max(xlim)])
                  ylabel('\Delta_{test} - \Delta_{baseline}','fontsize',16)
                  %%
-                 keyboard                 
                  SaveFigure(filename2,'-r300');             
                                                   
              else
