@@ -545,7 +545,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     filename     = sprintf('%s/data/midlevel/fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_runs_%s_selector_%s.mat',path_project,kernel_fwhm,current_subject_pool,mat2str(runs),hash);
     if exist(filename) ==0 | force;
         runc = 0;
-        for run = runs
+        for run = runs %these are parts of phase 4 runs (1-2-3), not phases per se 
             runc     = runc+1;
             fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'kernel_fwhm',kernel_fwhm,'runs',run,'get_fixmat');            
             subc     = 0;
@@ -864,11 +864,15 @@ elseif strcmp(varargin{1},'figure_03C');
     [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
     [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
     [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
-    %%anova on interaction of Time x Parameter
-    y = [C.model_02.w1;C.model_02.w2];
-    reps = length(C.model_02.w1);
-    p = anova2(y,reps);
-
+%     %%anova on interaction of Time x Parameter
+%     y = [C.model_02.w1;C.model_02.w2];
+%     reps = length(C.model_02.w1);
+%     p = anova2(y,reps);
+%     %matlab can't deal with the repeated measures ANOVA, using Jasp instead
+    
+    spec   = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    unspec = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    [hIA,pIA,ciIA,statsIA] = ttest(spec,unspec);
     %%
     %%
     figure;
@@ -937,17 +941,21 @@ elseif strcmp(varargin{1},'figure_03C');
     ast_line = repmat(max(Y+Y2)+.002,1,2);
     hold on
     ylim(ylims);
-    h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1);
-    h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1);
-%     h= line([X(4)-bw/2 X(6)+bw/2],ast_line+.008);set(h,'color','k','linewidth',1); 
-%     %spec vs unspec model_2 testphase
-    
-    h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T model 01
+    h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, spec comp model 02
+    h= line([mean(X(3:4)) mean(X(5:6))],ast_line+.015);set(h,'color','k','linewidth',1); %delta spec vs delta unspec model_2 testphase
+    h= line(repmat(mean(X(3:4)),1,2),ast_line + [.01 .015]);set(h,'color','k','linewidth',1); %vertical miniline to show delta
+    h = line(repmat(mean(X(5:6)),1,2),ast_line + [.00 .015]);set(h,'color','k','linewidth',1);  %vertical miniline to show delta
+    h= line([X(5)-bw/2 X(6)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, unspec comp model 02 (serves the delta spec vs delta unspec thing)
+
+    h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T spec model_03
     %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
     %     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
     %
     text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
     text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
+    
+    text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',16); %diff B vs T spec vs unspec model_02
     %     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
 %     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
     text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
@@ -957,7 +965,7 @@ elseif strcmp(varargin{1},'figure_03C');
     ylim(ylims)
     %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
-    text(mean(X(1:2)),ast_line(1)+.04,sprintf('Arousal\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    text(mean(X(1:2)),ast_line(1)+.03,sprintf('Bottom-up\nSaliency\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
@@ -970,8 +978,8 @@ elseif strcmp(varargin{1},'figure_03C');
     %
     set(gcf,'Color',[1 1 1]);
     if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04C.png'])
-        export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\figure_04C.png'],'-r600')
+        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
+        export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
     end
     %
     keyboard %otherwise everything is gone
@@ -1019,10 +1027,10 @@ elseif strcmp(varargin{1},'figure_04D')
     EqualizeSubPlotYlim(gcf)
     varargout{1} = sim;
     varargout{2} = model;
-    if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
-        export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
-    end
+%     if ispc
+%         fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
+%         export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
+%     end
     keyboard
 elseif strcmp(varargin{1},'model2behavior')
     %% this is used to see whether the found model parameters for model 2 correspond to any subject "behavior" such as ratings or SCR.
@@ -1099,7 +1107,50 @@ elseif strcmp(varargin{1},'model2behavior')
 %     for a = 1:6;
 %         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
 %     end
+
+elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata for fpsa on SCR
+    subs = FPSA_FearGen('get_subjects');
+    scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
+    out_raw = nan(78,27,length(scrsubs));
     
+    path2data = sprintf('%sdata/midlevel/scr_singletrials_N%2d.mat',path_project,length(scrsubs));
+    if  ~exist(path2data)||force == 1
+        sc= 0;
+        for sub = scrsubs(:)'
+            sc= sc+1;
+            [~,raw] = Subject(sub).scr.ledalab_summary;
+            out_raw(:,:,sc) = raw;
+        end
+        save(path2data,'out_raw')
+    else
+        load(path2data)
+    end
+    varargout{1} = out_raw;
+    
+elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to fixations, also considers 3 runs in testphase seperately, just like FPSA 'fair'
+ 
+    subs = FPSA_FearGen('get_subjects');
+    scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
+    out_raw = FPSA_FearGen('get_scr_singletrials');
+    
+    wickedselector = [1 11;12 22; 23 33];
+    runs = 1:3;
+    filename     = sprintf('%s/data/midlevel/fpsa_fair_SCR_subjectpool_N%02d_runs_%s_sim_%s.mat',path_project,length(scrsubs),mat2str(runs),method);
+    if ~exist(filename)||force ==1
+        runc = 0;
+        for run = runs(:)'
+            runc = runc+1;
+            for sc = 1:numel(scrsubs);
+                data = cat(2,out_raw(1:11,1:8,sc),out_raw(wickedselector(run,1):wickedselector(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
+                sim.(method)(sc,:,runc) = pdist(data',method);
+            end
+        end
+        sim.(method) = mean(sim.(method),3);
+        save(filename,'sim');
+    else
+        load(filename);
+    end
+    varargout{1} = sim;
 elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the behaviral recordings
     %%
     % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
@@ -2851,8 +2902,8 @@ elseif strcmp(varargin{1},'figure_02B')
     CI = 1.96*std(nulltrials)./sqrt(length(nulltrials)); %2times because in two directions (MEAN plusminus) % this is for plotting nulltrial CI later
     
     %are SCRS CS+ vs CS- sign. different?
-    [h,pval,ci,teststat] = ttest(out.y(:,13),out.y(:,17))
-    [h,pval,ci,teststat] = ttest(out.y(:,22),out.y(:,26))
+    [h,pval(2),ci,teststat] = ttest(out.y(:,13),out.y(:,17))
+    [h,pval(3),ci,teststat] = ttest(out.y(:,22),out.y(:,26))
     % get the numbers for the text
     differ = (out.y(:,13)-out.y(:,17))./out.y(:,17);
     mean(differ)
@@ -2921,7 +2972,14 @@ elseif strcmp(varargin{1},'figure_02B')
     set(gca,'xlim',[-155 200],'xticklabel',[]);
     
     line([0 180],repmat(max(ylim),1,2),'Color',[0 0 0])
-    text(90,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+    if pval(2) < .001
+        text(90,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+    elseif pval(2) < .01
+        text(90,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+    elseif pval(2) < .05
+        text(90,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+    end
+    
     
     %% plot SCR (test)
     subplot(sps(1),sps(2),7);
@@ -2959,6 +3017,10 @@ elseif strcmp(varargin{1},'figure_02B')
     %are amplitudes alpha diff from base to test?
     [h,pval,ci,teststat] = ttest(scr_ampl(:,2),scr_ampl(:,4))
     if pval < .001
+        text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+    elseif pval < .01
+        text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+    elseif pval < .05
         text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
     end
 %     Publication_Asterisks(mat,1:2:5);                        
@@ -3054,6 +3116,10 @@ elseif strcmp(varargin{1},'figure_02B')
     for n = 2:size(mat,2)
        [~, pval] = ttest(mat(:,1),mat(:,n));
         if pval < .001
+            text(n*2-1,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+        elseif pval < .01
+            text(n*2-1,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+        elseif pval < .05
             text(n*2-1,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
         end       
     end
@@ -3103,6 +3169,9 @@ elseif strcmp(varargin{1},'figure_02B')
             end
             hold off;             
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
+            if n==3
+                set(gca,'XTick',[0 180],'XTickLabels',{'CS+','CS-'});
+            end
 %             if ph == 2
 %                 if pttest(nroi) < 0.001                    
 %                     text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
@@ -3144,12 +3213,17 @@ elseif strcmp(varargin{1},'figure_02B')
             Publication_NiceTicks(gca,1);
 
             drawnow;
-
             if nroi == 3
             set(gca,'xticklabels',{'B' 'C' 'G'})
             end
             if pttest(nroi) < 0.001
-                text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+                text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            elseif pttest(nroi) < .01
+                  text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            elseif pttest(nroi) < .05
+                  text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
                 line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
             end            
         end
@@ -3161,8 +3235,8 @@ elseif strcmp(varargin{1},'figure_02B')
     subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
     %%
     if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_02_3ROIs.png'])
-        export_fig([homedir 'Documents\Documents\manuscript_selim\figure_02_3ROIs.png'],'-r400')
+        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_02_barplot.png'])
+        export_fig([homedir 'Documents\Documents\manuscript_selim\figure_02_barplot.png'],'-r400')
     end
 %     %% plot rois;
 %     roi = Fixmat([],[]).GetFaceROIs;
@@ -3181,7 +3255,7 @@ elseif strcmp(varargin{1},'figure_02B')
 %             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
 %         end
 %     end
-%     keyboard
+    keyboard
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -3632,7 +3706,7 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
 
-    force = 1;
+    force = 0;
     onlywinnersgetacurve = 1;
     method = 3;
     subs = FPSA_FearGen('get_subjects');
@@ -3714,7 +3788,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
     else
         load(path_write)
     end
-       varargout{1} = X_fit;
+    varargout{1} = X_fit;
     varargout{2} = Y_fit;
     varargout{3} = params;
     varargout{4} = pval;
