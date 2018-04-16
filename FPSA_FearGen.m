@@ -94,40 +94,7 @@ end
 varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have clean varargin cellarray we can continue
 
 %%
-if strcmp(varargin{1},'download_project');
-    %%
-    if ~exist(path_project)
-        mkdir(path_project);
-        mkdir([path_project 'tmp/'])
-    end
-    cd(path_project)
-    %downloads the data and stimuli, download the code from github, and add
-    %them to matlab path.
-    %download data
-    fprintf('Downloading data (this will take a while)...\n');
-    tarfile              = ['/tmp/dummy.tar.gz'];
-    s                    = urlwrite(url,tarfile);%download the data
-    fprintf('Untarring the data...\n');
-    untar(tarfile,'/tmp/');%untar it to the same location
-    fprintf('Moving data to PATH_PROJECT...\n');
-    movefile('/tmp/project_FPSA_FearGen/*',regexprep(path_project,'/$',''));%copy the contents of the file to PATH_PROJECT
-    
-    
-    %download 3 other repositories, which we depend on here.
-    fprintf('Downloading the analysis code and adding it to path...\n');
-    cd(path_project);
-    mkdir code
-    cd code
-    system(['git clone https://github.com/selimonat/fancycarp.git']);
-    cd('./fancycarp');
-    system(['git checkout FPSA_FearGen']);
-    addpath(pwd)
-    cd('..');
-    system(['git clone https://github.com/selimonat/globalfunctions.git']);
-    cd('./globalfunctions');
-    addpath(pwd)
-    cd ..
-elseif strcmp(varargin{1},'get_subjects'); %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
+if strcmp(varargin{1},'get_subjects'); %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
     %%
     % For the paper we use current_pool = 0, which discards all subjects:
     % who are not calibrated good enough +
