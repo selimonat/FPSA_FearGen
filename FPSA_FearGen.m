@@ -1,28 +1,28 @@
 function [varargout]=FPSA_FearGen(varargin);
 % [varargout]=FPSA_FearGen(varargin);
 %
-% Complete analysis and figure generation pipeline for the FPSA manuscript,
-% first version in Biorxiv located at http://biorxiv.org/content/early/2017/04/15/125682
+% Complete analysis and figure generation pipeline for the 
+% Fixation-Pattern Similarity Analysis (FPSA) manuscript. Initial versions can be 
+% found in Biorxiv at http://biorxiv.org/content/early/2017/04/15/125682
 %
-% Using this code, it is possible to generate all the results and figures
-% presented in the manuscript. Relies on Fancycarp toolbox (1), for dealing
-% with fixation data. All dependencies can be installed by calling this
-% function with 'download_project' argument.
+% Using this code, one can generate all results and figures presented in the manuscript.
 %
-% Requirements: A *nix system (tar, git, unzip, find), in case you want to
-% download data with matlab using FPSA_FearGen('download_project') command.
-% Matlab 2016. In case this option doesn't work for you, you can also
-% download the project as a bundle from this link: https://osf.io/zud6h/
+% Requirements:
+% ..* Matlab 2018, even though previous versions of Matlab should also work.
+% ..* Relies on Fancycarp toolbox (1) for dealing with fixation data. All dependencies as 
+% well as raw data can be easily downloaded as a bundle from Open Science Framework 
+% following this link: https://osf.io/zud6h/
+% 
 %
+% Initial Setup:
+% ..* First download the data from the project's OSF webpage.
+% ..* After downloading the project folder from OSF, change below the PATH_PROJECT variable.
 %
 % Usage:
 % VARARGIN sets an action related to an analysis, figure preparation or
 % simple house keeping routines, such as data getters. For example,
-% FPSA_FearGen('get_subjects') would return the subjects used for this
-% manuscript. By analyzing that piece of code you can see how the selection
-% procedure detailed in the manuscript is actually implemented.
-% Some actions require inputs, these can be provided with 2nd, 3rd, so
-% forth VARARGIN. For example, 'get_fpsa_fair' action requires two
+% Some actions require input(s), these can be provided with 2nd, 3rd, and so
+% forth VARARGINs. For example, 'get_fpsa_fair' action requires two
 % additional input arguments i/ fixations and ii/ runs. FIXATIONS
 % determines which fixations to use to compute a dissimilarity matrix and
 % RUNS determine pre- or post-learning phases. By convention baseline phase
@@ -54,12 +54,6 @@ function [varargout]=FPSA_FearGen(varargin);
 %   are averaged later.
 %
 %
-% INITIAL SETUP:
-% Use FPSA_FearGen('download_project') to give it a start with it.
-% Remember you will need basic unix tools for that such tar, git,
-% unzip. This will download the data and the necessary scripts to your local
-% machine and will add paths. Before starting you need to set the
-% PATH_PROJECT variable below for your own liking.
 %
 % Contact: sonat@uke.de; l.kampermann@uke.de
 
