@@ -159,7 +159,7 @@ fixmat = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2)
 This places a set of dots in such a way that the distances between each dot corresponds to the dissimilarity between the FDMs. Therefore, it is nice visual tool that summarizes the complex disssimilarity matrice, which is sometimes hard to digest.
 <img src="https://github.com/selimonat/FPSA_FearGen/blob/master/figures/06.png" height="300">
 
-Taking it together, with the following piece of code, the upper part of the figure 03 of the manuscript can be produced.
+With the following piece of code, the upper part of the figure 03 of the manuscript can be produced summing up bundling previous figures.
 
 ```matlab
 FPSA_FearGen('figure_03A',FPSA_FearGen('get_fpsa_fair',{'fix' 1:100},1:3))
@@ -221,14 +221,9 @@ ans =
     w2: [74×2 double]
 ```
 
-The results of this analysis can be plotted with the following code, reproducing thereby bottom panels of the figure 03.
+The results of this analysis can be plotted with the following code, reproducing bottom panels of the figure 03.
 
 ```matlab
 FPSA_FearGen('figure_03C',{'fix' 1:100})
 ```
 <img src="https://github.com/selimonat/FPSA_FearGen/blob/master/figures/08.png" height="300">
-
-
-
-
-
