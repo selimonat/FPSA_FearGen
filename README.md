@@ -164,6 +164,8 @@ Taking it together, with the following piece of code, the upper part of the figu
 ```matlab
 FPSA_FearGen('figure_03A',FPSA_FearGen('get_fpsa_fair',{'fix' 1:100},1:3))
 ```
+<img src="https://github.com/selimonat/FPSA_FearGen/blob/master/figures/07.png" height="300">
+
 
 ### Analysis of dissimilarity matrices
 One major aim in our paper was to understand how the similarity relationships between the FDMs changed with aversive learning. We take a linear modelling approach:
@@ -224,7 +226,7 @@ The results of this analysis can be plotted with the following code, reproducing
 ```matlab
 FPSA_FearGen('figure_03C',{'fix' 1:100})
 ```
-
+<img src="https://github.com/selimonat/FPSA_FearGen/blob/master/figures/08.png" height="300">
 
 
 
