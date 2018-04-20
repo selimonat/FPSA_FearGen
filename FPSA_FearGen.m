@@ -359,7 +359,7 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         contour(rois(:,:,n),'k-','linewidth',4);
         hold off;
         if ispc
-            export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
+%             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
         else
             SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
         end
@@ -1142,7 +1142,11 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
             runc = runc+1;
             for sc = 1:numel(scrsubs);
                 data = cat(2,out_raw(1:11,1:8,sc),out_raw(wickedselector(run,1):wickedselector(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
-                sim.(method)(sc,:,runc) = pdist(data',method);
+                if sc == 38 && run == 1 %there is a NaN there...
+                    sim.(method)(sc,:,runc) = 1-corr(data,'rows','pairwise');
+                else
+                    sim.(method)(sc,:,runc) = pdist(data',method);
+                end
             end
         end
         sim.(method) = mean(sim.(method),3);
@@ -1151,6 +1155,214 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
         load(filename);
     end
     varargout{1} = sim;
+elseif strcmp(varargin{1},'fpsa_scr_plot')
+    f=figure;
+    set(f,'Position',[548 828 995 949]);
+    %% get similarity matrix
+    sim = FPSA_FearGen('get_fpsa_scr');
+    cormatz = squareform(nanmean(sim.correlation));
+    %% plot similarity matrices
+    [d u]   = GetColorMapLimits(cormatz,.9);
+    labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
+    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
+    fs      = 12;
+    H(1) = subplot(3,3,1);
+    h = imagesc(cormatz(1:8,1:8),[d u]);
+    axis square;axis off;
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold')   ;
+    title('Baseline','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+    H(2) = subplot(3,3,2);
+    h=imagesc(cormatz(9:16,9:16),[d u]);
+    axis square;axis off;
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    title('Generalization','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+    %% plot MDS
+    subplot(3,3,3)
+    FPSA_FearGen('get_mdscale',cormatz,2);
+    axis square
+    set(gca,'XTick',[],'YTick',[])
+    ll = findobj(gca,'Type','Line');
+    set(ll,'MarkerSize',50,'LineWidth',2)
+    tt = findobj(gca,'Type','Text');
+    set(tt,'FontSize',13);
+    title('MDS','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+
+    %%%%%%%%
+    %%%%%%%%
+    %% prepare table for fitting FPSA
+    B         = FPSA_FearGen('get_block',sim,1,1);
+    T         = FPSA_FearGen('get_block',sim,2,2);
+    for n = 1:size(sim.correlation,1)
+        BB(n,:) = squareform(B(:,:,n));
+        TT(n,:) = squareform(T(:,:,n));
+    end
+    BB       = BB';
+    TT       = TT';
+    % some indicator variables for phase, subject identities.
+    phase    = repmat([repmat(1,size(BB,1)/2,1); repmat(2,size(BB,1)/2,1)],1,size(BB,2));
+    subject  = repmat(1:size(sim.correlation,1),size(BB,1),1);
+    S        = subject(:);
+    P        = phase(:);
+    %% our models:
+    %MODEL1: perfectly circular similarity model;
+    %MODEL2: flexible circular similarity model;
+    %MODEL3: Model2 + a Gaussian.
+    % a circular FPSA matrix for B and T replicated by the number of subjects
+    x          = [pi/4:pi/4:2*pi];
+    w          = [cos(x);sin(x)];
+    model1     = repmat(repmat(squareform_force(w'*w),1,1),1,size(subject,2));%we use squareform_force as the w'*w is not perfectly positive definite matrix due to rounding errors.
+    %
+    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),1,1),1,size(subject,2));%
+    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
+    %
+    %getcorrmat(amp_circ, amp_gau, amp_const, amp_diag, varargin)
+    [cmat]     = getcorrmat(0,3,1,1);%see model_rsa_testgaussian_optimizer
+    model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
+    %% add all this to a TABLE object.
+    t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
+    %% get FPSA model from this table
+    C =  FPSA_FearGen('FPSA_model_singlesubject',t);
+    
+    %% plots the main model comparison figure;
+    %%
+    % circular model
+    M         = mean(C.model_01.w1);
+    SEM       = std(C.model_01.w1)./sqrt(length(C.model_01.w1));
+    %flexible model
+    Mc        = mean(C.model_02.w1);
+    SEMc      = std(C.model_02.w1)./sqrt(length(C.model_01.w1));
+    Ms        = mean(C.model_02.w2);
+    SEMs      = std(C.model_02.w2)./sqrt(length(C.model_01.w1));
+    %gaussian model
+    Mcg       = mean(C.model_03.w1);
+    SEMcg     = std(C.model_03.w1)./sqrt(length(C.model_01.w1));
+    Msg       = mean(C.model_03.w2);
+    SEMsg     = std(C.model_03.w2)./sqrt(length(C.model_01.w1));
+    Mg        = mean(C.model_03.w3);
+    SEMg      = std(C.model_03.w3)./sqrt(length(C.model_01.w1));
+    
+    %% get the p-values
+    [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
+    
+    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares cosine before to after
+    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares sine before to after
+    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares cosine after to sine after
+    % same as before
+    [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
+    [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
+    [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
+    %     %%anova on interaction of Time x Parameter
+    %     y = [C.model_02.w1;C.model_02.w2];
+    %     reps = length(C.model_02.w1);
+    %     p = anova2(y,reps);
+    %     %matlab can't deal with the repeated measures ANOVA, using Jasp instead
+    
+    spec   = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    unspec = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    [hIA,pIA,ciIA,statsIA] = ttest(spec,unspec);
+    
+    %
+    subplot(3,3,4:9)
+    X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
+    Y    = [M Mc Ms Mcg Msg Mg];
+    Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
+    ylims = [floor(min(Y-Y2)*100)./100 ceil(max(Y+Y2)*100)./100+.07];
+    bw   = .5;
+    hold off;
+    for n = 1:size(Y,2)
+        h       = bar(X(n),Y(n));
+        legh(n) = h;
+        hold on
+        try %capsize is 2016b compatible.
+            errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5,'capsize',10);
+        catch
+            errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5);
+        end
+        if ismember(n,[1 3 5 7 9 11])
+            try %2016b compatibility.
+                set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+            catch
+                set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+            end
+        else
+            try
+                set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            catch
+                set(h,'FaceColor',[0 0 0],'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            end
+        end
+    end
+    %
+    box off;
+    L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
+    try
+        L.Position = L.Position + [0.1/2 0 0 0];
+        L.FontSize = 12;
+    end
+    set(gca,'linewidth',1.8);
+    % xticks
+    xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)+.1) ];
+    label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
+    for nt = 1:length(xtick)
+        h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
+    end
+    try
+        set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
+    catch
+        set(gca,'xtick',[3 8]./1.5,'color','none','XGrid','on','fontsize',16);
+    end
+    %
+    text(-.5,ylims(2),'\beta','fontsize',28,'fontweight','bold');
+    
+    
+    ylim(ylims);
+    set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
+    axis normal
+    % asteriks
+    ast_line = repmat(max(Y+Y2)+.002,1,2);
+    hold on
+    ylim(ylims);
+    h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T model 01
+    h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, spec comp model 02
+    h= line([mean(X(3:4)) mean(X(5:6))],ast_line+.015);set(h,'color','k','linewidth',1); %delta spec vs delta unspec model_2 testphase
+    h= line(repmat(mean(X(3:4)),1,2),ast_line + [.01 .015]);set(h,'color','k','linewidth',1); %vertical miniline to show delta
+    h = line(repmat(mean(X(5:6)),1,2),ast_line + [.00 .015]);set(h,'color','k','linewidth',1);  %vertical miniline to show delta
+    h= line([X(5)-bw/2 X(6)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, unspec comp model 02 (serves the delta spec vs delta unspec thing)
+    
+    h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T spec model_03
+    %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
+    %     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
+    %
+    text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
+    text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
+    
+    text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',16); %diff B vs T spec vs unspec model_02
+    %     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
+    %     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
+    text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
+    %     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
+    %     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+    % model names
+    ylim(ylims)
+    %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(1:2)),ast_line(1)+.03,sprintf('Bottom-up\nSaliency\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    
+    %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
+    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    set(gcf,'Color',[1 1 1]);
+    
+    
+    
+    keyboard;
 elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the behaviral recordings
     %%
     % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
