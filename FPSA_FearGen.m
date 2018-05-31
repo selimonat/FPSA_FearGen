@@ -461,7 +461,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     whichtest = 'ttest';
     alpha = 0.05;
     %[subjects,phase,model,param,time]
-    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
+    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )     %difference between curves
 %     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
     if strcmp(whichtest,'signrank')
         for i = 1:size(X,2)
@@ -469,12 +469,13 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         end
     elseif strcmp(whichtest,'ttest')
         size(X)
-        [HH PP] = ttest(X,[]);
+        [HH PP] = ttest(X,[]); %tests difference spec > unspec
         PP
     end
     hold on
     for n = 1:size(X,2)
         if PP(n) <= .05
+            n
             text(model.t(n,1),max(ylim)-.01,'*','HorizontalAlignment','center','fontsize',20);
         end
     end
@@ -818,9 +819,9 @@ elseif strcmp(varargin{1},'figure_03C');
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
-    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares cosine before to after
-    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares sine before to after
-    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares cosine after to sine after
+    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares spec before to after
+    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares unspec before to after
+    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares spec > unspec after
     % same as before
     [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
     [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
@@ -1094,7 +1095,7 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = FPSA_FearGen('get_scr_singletrials');
     
-    wickedselector = [1 11;12 22; 23 33];
+    phsel = [1 11;12 22; 23 33];
     runs = 1:3;
     filename     = sprintf('%s/data/midlevel/fpsa_fair_SCR_subjectpool_N%02d_runs_%s_sim_%s.mat',path_project,length(scrsubs),mat2str(runs),method);
     if ~exist(filename)||force ==1
@@ -1102,7 +1103,7 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
         for run = runs(:)'
             runc = runc+1;
             for sc = 1:numel(scrsubs);
-                data = cat(2,out_raw(1:11,1:8,sc),out_raw(wickedselector(run,1):wickedselector(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
+                data = cat(2,out_raw(1:11,1:8,sc),out_raw(phsel(run,1):phsel(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
                 if sc == 38 && run == 1 %there is a NaN there...
                     sim.(method)(sc,:,runc) = 1-corr(data,'rows','pairwise');
                 else
@@ -1116,11 +1117,46 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
         load(filename);
     end
     varargout{1} = sim;
-elseif strcmp(varargin{1},'fpsa_scr_plot')
+elseif strcmp(varargin{1},'get_fpsa_rate'); %%  FPSA on SCR data, just analog to fixations, also considers 3 runs in testphase seperately, just like FPSA 'fair'
+    
+    subs = FPSA_FearGen('get_subjects');
+    method = 'euclidean';
+    filename     = sprintf('%s/data/midlevel/fpsa_Rate_subjectpool_N%02d_sim_%s.mat',path_project,length(subs),method);
+    if ~exist(filename)||force ==1
+        clear sim
+        for sc = 1:numel(subs)
+            s = Subject(subs(sc));
+            
+            cc= 0;
+            for ph = [2 4]
+                clear rating
+                rating = s.get_rating(ph);
+                for c = unique(rating.x)
+                    cc = cc+1;
+                    M(cc) = nanmean(rating.y(rating.x==c));
+                end
+            end
+            sim.(method)(sc,:) = pdist(M',method);
+        end
+        save(filename,'sim');
+    else
+        load(filename);
+    end
+    varargout{1} = sim;
+
+elseif strcmp(varargin{1},'fpsa_plot_scrrate')
+    modality = varargin{2};
+    if strcmp(modality,'scr')
+        sim = FPSA_FearGen('get_fpsa_scr');
+    elseif strcmp(modality,'rate')
+         sim = FPSA_FearGen('get_fpsa_rate');
+         sim.correlation = sim.euclidean; %only to be able to use existing code.
+    else
+        fprintf('enter valid modality as second input (''scr'' or ''rate'')')
+    end
     f=figure;
     set(f,'Position',[548 828 995 949]);
     %% get similarity matrix
-    sim = FPSA_FearGen('get_fpsa_scr');
     cormatz = squareform(nanmean(sim.correlation));
     %% plot similarity matrices
     [d u]   = GetColorMapLimits(cormatz,.9);
@@ -1155,6 +1191,10 @@ elseif strcmp(varargin{1},'fpsa_scr_plot')
     %%%%%%%%
     %%%%%%%%
     %% prepare table for fitting FPSA
+    clear B
+    clear T
+    clear BB
+    clear TT
     B         = FPSA_FearGen('get_block',sim,1,1);
     T         = FPSA_FearGen('get_block',sim,2,2);
     for n = 1:size(sim.correlation,1)
@@ -1190,21 +1230,22 @@ elseif strcmp(varargin{1},'fpsa_scr_plot')
     
     %% plots the main model comparison figure;
     %%
+    Nmodelled = sum(~isnan(C.model_01.w1(:,1)));
     % circular model
-    M         = mean(C.model_01.w1);
-    SEM       = std(C.model_01.w1)./sqrt(length(C.model_01.w1));
+    M         = nanmean(C.model_01.w1);
+    SEM       = nanstd(C.model_01.w1)./sqrt(Nmodelled);
     %flexible model
-    Mc        = mean(C.model_02.w1);
-    SEMc      = std(C.model_02.w1)./sqrt(length(C.model_01.w1));
-    Ms        = mean(C.model_02.w2);
-    SEMs      = std(C.model_02.w2)./sqrt(length(C.model_01.w1));
+    Mc        = nanmean(C.model_02.w1);
+    SEMc      = nanstd(C.model_02.w1)./sqrt(Nmodelled);
+    Ms        = nanmean(C.model_02.w2);
+    SEMs      = nanstd(C.model_02.w2)./sqrt(Nmodelled);
     %gaussian model
-    Mcg       = mean(C.model_03.w1);
-    SEMcg     = std(C.model_03.w1)./sqrt(length(C.model_01.w1));
-    Msg       = mean(C.model_03.w2);
-    SEMsg     = std(C.model_03.w2)./sqrt(length(C.model_01.w1));
-    Mg        = mean(C.model_03.w3);
-    SEMg      = std(C.model_03.w3)./sqrt(length(C.model_01.w1));
+    Mcg       = nanmean(C.model_03.w1);
+    SEMcg     = nanstd(C.model_03.w1)./sqrt(Nmodelled);
+    Msg       = nanmean(C.model_03.w2);
+    SEMsg     = nanstd(C.model_03.w2)./sqrt(Nmodelled);
+    Mg        = nanmean(C.model_03.w3);
+    SEMg      = nanstd(C.model_03.w3)./sqrt(Nmodelled);
     
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
@@ -1281,7 +1322,13 @@ elseif strcmp(varargin{1},'fpsa_scr_plot')
     
     
     ylim(ylims);
+    if strcmp(modality,'scr')
     set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
+    else
+        ylims(2) = -ylims(1);
+        ylim(ylims)
+    end
+    
     axis normal
     % asteriks
     ast_line = repmat(max(Y+Y2)+.002,1,2);
@@ -1290,34 +1337,29 @@ elseif strcmp(varargin{1},'fpsa_scr_plot')
     h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T model 01
     h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, spec comp model 02
     h= line([mean(X(3:4)) mean(X(5:6))],ast_line+.015);set(h,'color','k','linewidth',1); %delta spec vs delta unspec model_2 testphase
-    h= line(repmat(mean(X(3:4)),1,2),ast_line + [.01 .015]);set(h,'color','k','linewidth',1); %vertical miniline to show delta
-    h = line(repmat(mean(X(5:6)),1,2),ast_line + [.00 .015]);set(h,'color','k','linewidth',1);  %vertical miniline to show delta
     h= line([X(5)-bw/2 X(6)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, unspec comp model 02 (serves the delta spec vs delta unspec thing)
     
     h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T spec model_03
-    %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
-    %     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
-    %
-    text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',16);
-    text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',16);
+    h= line([X(9)-bw/2 X(10)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    h= line([X(11)-bw/2 X(12)+bw/2],ast_line);set(h,'color','k','linewidth',1);
     
-    text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',16); %diff B vs T spec vs unspec model_02
-    %     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
-    %     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
-    text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
-    %     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
-    %     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
-    % model names
+    text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',12); %diff B vs T spec vs unspec model_02
+    
+     text(mean(X(5:6))  ,ast_line(1)+.0025, pval2asterix(Ps),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([9 10])),ast_line(1)+.0025     , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([11 12])),ast_line(1)+.0025      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+%     model names
     ylim(ylims)
-    %     h = line([X(1)-bw/2 X(2)+bw/2],[-.022 -.022],'linestyle','--');
-    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+        set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(1:2)),ast_line(1)+.03,sprintf('Bottom-up\nSaliency\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-    %     h = line([X(3)-bw/2 X(6)+bw/2],[-.022 -.022],'linestyle','--');
-    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+
+        set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     
-    %     h = line([X(7)-bw/2 X(end)+bw/2],[-.022 -.022],'linestyle','--');
-    %     set(h(1),'color','k','linewidth',1,'clipping','off');
+        set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     set(gcf,'Color',[1 1 1]);
     
