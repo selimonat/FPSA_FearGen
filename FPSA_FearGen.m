@@ -43,7 +43,6 @@ function [varargout]=FPSA_FearGen(varargin);
 % FPSA_FearGen('get_fixmap',fixmat,{'subject' subjects 'fix' 1:100}) returns FDMs for
 %   SUBJECTS and fixations from 1 to 100 (well, basically all the
 %   fixations). Each FDM is a column vector.
-% FPSA_FearGen('plot_fdm',maps) plots FDMs similar to Fig 3A.
 % FPSA_FearGen('plot_ROIs') plots the ROIs.
 % FPSA_FearGen('get_fpsa',1:100) would return the dissimilarity matrix
 %   computed with exploration patterns containing all the fixations
@@ -149,6 +148,9 @@ elseif strcmp(varargin{1},'get_trialcount') %% Sanity check for number of trials
     end
     varargout{1} = C;
     imagesc(C(:,1:8));
+    ylabel('participants')
+    xlabel('conditions')
+    title(sprintf('Number of trials for phase %d',phase));
     colorbar;
 elseif strcmp(varargin{1},'get_fixmat'); %% load the fixation data in the form of a Fixmat.
     %%
@@ -229,103 +231,25 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a FDMs i.
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
     end
     varargout{1} = maps;
-elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the paper in a similar way to Figure 3A.
-    %%
-    % Use the second VARARGIN to plot ROIs on top.
-    % VARARGIN{1} contains fixation maps in the form of [x,y,condition].
-    % The output of FPSA_FearGen('get_fixmap',...) has to be accordingly
-    % reshaped. size(VARARGIN{1},3) must be a multiple of 8.
-    maps          = varargin{2};
-    tsubject      = size(maps,3)/8;
-    contour_lines = 1;%FACIAL ROIs Plot or not.
-    fs            = 18;%fontsize;
-    if nargin == 3
-        contour_lines = varargin{3};
-    end
-    %     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
-    %     [d u]         = GetColorMapLimits(maps(:),2.5);
-    %     grids         = [linspace(d,u,5)];
-    t             = repmat(circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]),1,tsubject);
-    colors        = GetFearGenColors;
-    colors        = repmat(circshift(colors(1:8,:),0),tsubject,1);
-    colormap jet;
-    %%
-    for n = 1:size(maps,3)
-        if mod(n-1,8)+1 == 1;
-            figure;set(gcf,'position',[1952 361 1743 714]);
-        end
-        hhhh(n)=subplot(1,8,mod(n-1,8)+1);
-        imagesc(Fixmat([],[]).stimulus);
-        hold on
-        grids         = linspace(min(Vectorize(maps(:))),max(Vectorize(maps(:))),21);
-        [a,h2]        = contourf(maps(:,:,n),grids,'color','none');
-        caxis([grids(2) grids(end)]);
-        %if n == 8
-        %h4 = colorbar;
-        %set(h4,'box','off','ticklength',0,'ticks',[[grids(4) grids(end-4)]],'fontsize',fs);
-        %end
-        hold off
-        axis image;
-        axis off;
-        if strcmp(t{mod(n-1,8)+1}(1),'+') | strcmp(t{mod(n-1,8)+1}(1),'-')
-            h= title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs,'fontweight','normal');
-        else
-            h= title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs,'fontweight','normal');
-        end
-        try
-            h.Position = h.Position + [0 -50 0];
-        end
-        %
-        drawnow;
-        pause(.5);
-        %
-        try
-            %%
-            %             I      = find(ismember(a(1,:),h2.LevelList));
-            %             [~,i]  = max(a(2,I));
-            %             alphas = [repmat(.5,1,length(I))];
-            %             alphas(i) = 0;
-            contourf_transparency(h2,.75);
-        end
-        %%
-        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(mod(n-1,8)+1,:),'linewidth',7);
-    end
-    pause(1);
-    for n = 1:size(maps,3);
-        subplotChangeSize(hhhh(n),.01,.01);
-    end
-    
-    if contour_lines
-        hold on;
-        rois = Fixmat([],[]).GetFaceROIs;
-        for n = 1:4
-            contour(rois(:,:,n),'k--','linewidth',1);
-        end
-    end
-elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
-    %%
-    fix = Fixmat([],[]);
-    rois = fix.GetFaceROIs;
-    rois(:,:,1) = sum(rois(:,:,1:2),3);
-    rois(:,:,2:3) = rois(:,:,3:4);
-    rois(:,:,end) = [];
-    for n = 1:3
-        figure(n);
-        imagesc(fix.stimulus);
-        axis image;
-        axis off;
-        hold on;
-%         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
-%         h.AlphaData =rois(:,:,n)./2;
-        contour(rois(:,:,n),'k-','linewidth',4);
-        hold off;
-        if ispc
-            export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
-        else
-            SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
-        end
-    end
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+
+% elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
+%     %%
+%     fix = Fixmat([],[]);
+%     rois = fix.GetFaceROIs;
+%     rois(:,:,1) = sum(rois(:,:,1:2),3);
+%     rois(:,:,2:3) = rois(:,:,3:4);
+%     rois(:,:,end) = [];
+%     for n = 1:3
+%         figure(n);
+%         imagesc(fix.stimulus);
+%         axis image;
+%         axis off;
+%         hold on;
+% %         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
+% %         h.AlphaData =rois(:,:,n)./2;
+%         contour(rois(:,:,n),'k-','linewidth',4);
+%         hold off;        
+%     end    
 elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -595,6 +519,9 @@ elseif strcmp(varargin{1},'plot_mdscale') %% Routine to plot the results of the 
 elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for FPSA modelling with fitlm, fitglm, etc.
     %%
     %
+    % This action returns all dependent and independent variables
+    % necessary for the modelling in a neat table format.
+    %
     % the table object contains the following variable names:
     % FPSA_B     : similarity matrices from baseline.
     % FPSA_G     : similarity matrices from test.
@@ -610,7 +537,7 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
     % phase      : indicator variable for baseline and generalizaation
     % phases.
     %
-    % Example: FPSA_FearGen('FPSA_get_table',1:100)
+    % Example: FPSA_FearGen('FPSA_get_table',{'fix' 1:100})
     selector  = varargin{2};
     hash      = DataHash(selector);
     filename  = sprintf('%s/data/midlevel/fpsa_modelling_table_subjectpool_%03d_runs_%02d_%02d_selector_%s.mat',path_project,current_subject_pool,runs(1),runs(end),hash);
@@ -1070,6 +997,7 @@ elseif strcmp(varargin{1},'model2behavior')
 %     end
 
 elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata for fpsa on SCR
+    %%
     subs = FPSA_FearGen('get_subjects');
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = nan(78,27,length(scrsubs));
@@ -1089,7 +1017,7 @@ elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata fo
     varargout{1} = out_raw;
     
 elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to fixations, also considers 3 runs in testphase seperately, just like FPSA 'fair'
- 
+    %%
     subs = FPSA_FearGen('get_subjects');
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = FPSA_FearGen('get_scr_singletrials');
