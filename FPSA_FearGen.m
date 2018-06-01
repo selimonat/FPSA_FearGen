@@ -232,24 +232,104 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a FDMs i.
     end
     varargout{1} = maps;
 
-% elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
-%     %%
-%     fix = Fixmat([],[]);
-%     rois = fix.GetFaceROIs;
-%     rois(:,:,1) = sum(rois(:,:,1:2),3);
-%     rois(:,:,2:3) = rois(:,:,3:4);
-%     rois(:,:,end) = [];
-%     for n = 1:3
-%         figure(n);
-%         imagesc(fix.stimulus);
-%         axis image;
-%         axis off;
-%         hold on;
-% %         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
-% %         h.AlphaData =rois(:,:,n)./2;
-%         contour(rois(:,:,n),'k-','linewidth',4);
-%         hold off;        
-%     end    
+elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the paper in a similar way to Figure 3A.
+    %%
+    % Use the second VARARGIN to plot ROIs on top.
+    % VARARGIN{1} contains fixation maps in the form of [x,y,condition].
+    % The output of FPSA_FearGen('get_fixmap',...) has to be accordingly
+    % reshaped. size(VARARGIN{1},3) must be a multiple of 8.
+    maps          = varargin{2};
+    tsubject      = size(maps,3)/8;
+    contour_lines = 1;%FACIAL ROIs Plot or not.
+    fs            = 18;%fontsize;
+    if nargin == 3
+        contour_lines = varargin{3};
+    end
+    %     grids         = [linspace(prctile(fixmat.maps(:),0),prctile(fixmat.maps(:),10),10) linspace(prctile(fixmat.maps(:),90),prctile(fixmat.maps(:),100),10)];
+    %     [d u]         = GetColorMapLimits(maps(:),2.5);
+    %     grids         = [linspace(d,u,5)];
+    t             = repmat(circshift({'CS+' '+45' '+90' '+135' ['CS' char(8211)] '-135' '-90' '-45'},[1 3]),1,tsubject);
+    colors        = GetFearGenColors;
+    colors        = repmat(circshift(colors(1:8,:),0),tsubject,1);
+    colormap jet;
+    %%
+    for n = 1:size(maps,3)
+        if mod(n-1,8)+1 == 1;
+            figure;set(gcf,'position',[1952 361 1743 714]);
+        end
+        hhhh(n)=subplot(1,8,mod(n-1,8)+1);
+        imagesc(Fixmat([],[]).stimulus);
+        hold on
+        grids         = linspace(min(Vectorize(maps(:))),max(Vectorize(maps(:))),21);
+        [a,h2]        = contourf(maps(:,:,n),grids,'color','none');
+        caxis([grids(2) grids(end)]);
+        %if n == 8
+        %h4 = colorbar;
+        %set(h4,'box','off','ticklength',0,'ticks',[[grids(4) grids(end-4)]],'fontsize',fs);
+        %end
+        hold off
+        axis image;
+        axis off;
+        if strcmp(t{mod(n-1,8)+1}(1),'+') | strcmp(t{mod(n-1,8)+1}(1),'-')
+            h= title(sprintf('%s%c',t{mod(n-1,8)+1},char(176)),'fontsize',fs,'fontweight','normal');
+        else
+            h= title(sprintf('%s',t{mod(n-1,8)+1}),'fontsize',fs,'fontweight','normal');
+        end
+        try
+            h.Position = h.Position + [0 -50 0];
+        end
+        %
+        drawnow;
+        pause(.5);
+        %
+        try
+            %%
+            %             I      = find(ismember(a(1,:),h2.LevelList));
+            %             [~,i]  = max(a(2,I));
+            %             alphas = [repmat(.5,1,length(I))];
+            %             alphas(i) = 0;
+            contourf_transparency(h2,.75);
+        end
+        %%
+        rectangle('position',[0 0 diff(xlim) diff(ylim)],'edgecolor',colors(mod(n-1,8)+1,:),'linewidth',7);
+    end
+    pause(1);
+    for n = 1:size(maps,3);
+        subplotChangeSize(hhhh(n),.01,.01);
+    end
+    
+    if contour_lines
+        hold on;
+        rois = Fixmat([],[]).GetFaceROIs;
+        for n = 1:4
+            contour(rois(:,:,n),'k--','linewidth',1);
+        end
+    end
+elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
+    %%
+    fix = Fixmat([],[]);
+    rois = fix.GetFaceROIs;
+    rois(:,:,1) = sum(rois(:,:,1:2),3);
+    rois(:,:,2:3) = rois(:,:,3:4);
+    rois(:,:,end) = [];
+    for n = 1:3
+        figure(n);
+        imagesc(fix.stimulus);
+        axis image;
+        axis off;
+        hold on;
+%         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
+%         h.AlphaData =rois(:,:,n)./2;
+        contour(rois(:,:,n),'k-','linewidth',4);
+        hold off;
+        if ispc
+%             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
+        else
+            SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+        end
+    end
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+>>>>>>> 6fb43b3b748bcaf6d38c2539ac5f9831349316cd
 elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -385,7 +465,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     whichtest = 'ttest';
     alpha = 0.05;
     %[subjects,phase,model,param,time]
-    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )    
+    X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )     %difference between curves
 %     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
     if strcmp(whichtest,'signrank')
         for i = 1:size(X,2)
@@ -393,12 +473,13 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         end
     elseif strcmp(whichtest,'ttest')
         size(X)
-        [HH PP] = ttest(X,[]);
+        [HH PP] = ttest(X,[]); %tests difference spec > unspec
         PP
     end
     hold on
     for n = 1:size(X,2)
         if PP(n) <= .05
+            n
             text(model.t(n,1),max(ylim)-.01,'*','HorizontalAlignment','center','fontsize',20);
         end
     end
@@ -745,9 +826,9 @@ elseif strcmp(varargin{1},'figure_03C');
     %% get the p-values
     [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
     
-    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares cosine before to after
-    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares sine before to after
-    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares cosine after to sine after
+    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares spec before to after
+    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares unspec before to after
+    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares spec > unspec after
     % same as before
     [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
     [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
@@ -1022,7 +1103,7 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = FPSA_FearGen('get_scr_singletrials');
     
-    wickedselector = [1 11;12 22; 23 33];
+    phsel = [1 11;12 22; 23 33];
     runs = 1:3;
     filename     = sprintf('%s/data/midlevel/fpsa_fair_SCR_subjectpool_N%02d_runs_%s_sim_%s.mat',path_project,length(scrsubs),mat2str(runs),method);
     if ~exist(filename)||force ==1
@@ -1030,8 +1111,12 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
         for run = runs(:)'
             runc = runc+1;
             for sc = 1:numel(scrsubs);
-                data = cat(2,out_raw(1:11,1:8,sc),out_raw(wickedselector(run,1):wickedselector(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
-                sim.(method)(sc,:,runc) = pdist(data',method);
+                data = cat(2,out_raw(1:11,1:8,sc),out_raw(phsel(run,1):phsel(run,2),19:26,sc)); %11trials x 2x8 conds (2 phases, 8 conds)
+                if sc == 38 && run == 1 %there is a NaN there...
+                    sim.(method)(sc,:,runc) = 1-corr(data,'rows','pairwise');
+                else
+                    sim.(method)(sc,:,runc) = pdist(data',method);
+                end
             end
         end
         sim.(method) = mean(sim.(method),3);
@@ -1040,6 +1125,255 @@ elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to 
         load(filename);
     end
     varargout{1} = sim;
+elseif strcmp(varargin{1},'get_fpsa_rate'); %%  FPSA on SCR data, just analog to fixations, also considers 3 runs in testphase seperately, just like FPSA 'fair'
+    
+    subs = FPSA_FearGen('get_subjects');
+    method = 'euclidean';
+    filename     = sprintf('%s/data/midlevel/fpsa_Rate_subjectpool_N%02d_sim_%s.mat',path_project,length(subs),method);
+    if ~exist(filename)||force ==1
+        clear sim
+        for sc = 1:numel(subs)
+            s = Subject(subs(sc));
+            
+            cc= 0;
+            for ph = [2 4]
+                clear rating
+                rating = s.get_rating(ph);
+                for c = unique(rating.x)
+                    cc = cc+1;
+                    M(cc) = nanmean(rating.y(rating.x==c));
+                end
+            end
+            sim.(method)(sc,:) = pdist(M',method);
+        end
+        save(filename,'sim');
+    else
+        load(filename);
+    end
+    varargout{1} = sim;
+
+elseif strcmp(varargin{1},'fpsa_plot_scrrate')
+    modality = varargin{2};
+    if strcmp(modality,'scr')
+        sim = FPSA_FearGen('get_fpsa_scr');
+    elseif strcmp(modality,'rate')
+         sim = FPSA_FearGen('get_fpsa_rate');
+         sim.correlation = sim.euclidean; %only to be able to use existing code.
+    else
+        fprintf('enter valid modality as second input (''scr'' or ''rate'')')
+    end
+    f=figure;
+    set(f,'Position',[548 828 995 949]);
+    %% get similarity matrix
+    cormatz = squareform(nanmean(sim.correlation));
+    %% plot similarity matrices
+    [d u]   = GetColorMapLimits(cormatz,.9);
+    labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
+    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
+    fs      = 12;
+    H(1) = subplot(3,3,1);
+    h = imagesc(cormatz(1:8,1:8),[d u]);
+    axis square;axis off;
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold')   ;
+    title('Baseline','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+    H(2) = subplot(3,3,2);
+    h=imagesc(cormatz(9:16,9:16),[d u]);
+    axis square;axis off;
+    h = text(4,9,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    h = text(8,9,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
+    title('Generalization','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+    %% plot MDS
+    subplot(3,3,3)
+    FPSA_FearGen('get_mdscale',cormatz,2);
+    axis square
+    set(gca,'XTick',[],'YTick',[])
+    ll = findobj(gca,'Type','Line');
+    set(ll,'MarkerSize',50,'LineWidth',2)
+    tt = findobj(gca,'Type','Text');
+    set(tt,'FontSize',13);
+    title('MDS','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
+
+    %%%%%%%%
+    %%%%%%%%
+    %% prepare table for fitting FPSA
+    clear B
+    clear T
+    clear BB
+    clear TT
+    B         = FPSA_FearGen('get_block',sim,1,1);
+    T         = FPSA_FearGen('get_block',sim,2,2);
+    for n = 1:size(sim.correlation,1)
+        BB(n,:) = squareform(B(:,:,n));
+        TT(n,:) = squareform(T(:,:,n));
+    end
+    BB       = BB';
+    TT       = TT';
+    % some indicator variables for phase, subject identities.
+    phase    = repmat([repmat(1,size(BB,1)/2,1); repmat(2,size(BB,1)/2,1)],1,size(BB,2));
+    subject  = repmat(1:size(sim.correlation,1),size(BB,1),1);
+    S        = subject(:);
+    P        = phase(:);
+    %% our models:
+    %MODEL1: perfectly circular similarity model;
+    %MODEL2: flexible circular similarity model;
+    %MODEL3: Model2 + a Gaussian.
+    % a circular FPSA matrix for B and T replicated by the number of subjects
+    x          = [pi/4:pi/4:2*pi];
+    w          = [cos(x);sin(x)];
+    model1     = repmat(repmat(squareform_force(w'*w),1,1),1,size(subject,2));%we use squareform_force as the w'*w is not perfectly positive definite matrix due to rounding errors.
+    %
+    model2_c   = repmat(repmat(squareform_force(cos(x)'*cos(x)),1,1),1,size(subject,2));%
+    model2_s   = repmat(repmat(squareform_force(sin(x)'*sin(x)),1,1),1,size(subject,2));%
+    %
+    %getcorrmat(amp_circ, amp_gau, amp_const, amp_diag, varargin)
+    [cmat]     = getcorrmat(0,3,1,1);%see model_rsa_testgaussian_optimizer
+    model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
+    %% add all this to a TABLE object.
+    t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
+    %% get FPSA model from this table
+    C =  FPSA_FearGen('FPSA_model_singlesubject',t);
+    
+    %% plots the main model comparison figure;
+    %%
+    Nmodelled = sum(~isnan(C.model_01.w1(:,1)));
+    % circular model
+    M         = nanmean(C.model_01.w1);
+    SEM       = nanstd(C.model_01.w1)./sqrt(Nmodelled);
+    %flexible model
+    Mc        = nanmean(C.model_02.w1);
+    SEMc      = nanstd(C.model_02.w1)./sqrt(Nmodelled);
+    Ms        = nanmean(C.model_02.w2);
+    SEMs      = nanstd(C.model_02.w2)./sqrt(Nmodelled);
+    %gaussian model
+    Mcg       = nanmean(C.model_03.w1);
+    SEMcg     = nanstd(C.model_03.w1)./sqrt(Nmodelled);
+    Msg       = nanmean(C.model_03.w2);
+    SEMsg     = nanstd(C.model_03.w2)./sqrt(Nmodelled);
+    Mg        = nanmean(C.model_03.w3);
+    SEMg      = nanstd(C.model_03.w3)./sqrt(Nmodelled);
+    
+    %% get the p-values
+    [H   P]     = ttest(C.model_01.w1(:,1)-C.model_01.w1(:,2));%compares baseline vs test the circular model parameters
+    
+    [Hc Pc]     = ttest(C.model_02.w1(:,1)-C.model_02.w1(:,2));%compares cosine before to after
+    [Hs Ps]     = ttest(C.model_02.w2(:,1)-C.model_02.w2(:,2));%compares sine before to after
+    [Hcs Pcs]   = ttest(C.model_02.w1(:,2)-C.model_02.w2(:,2));%compares cosine after to sine after
+    % same as before
+    [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
+    [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
+    [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
+    %     %%anova on interaction of Time x Parameter
+    %     y = [C.model_02.w1;C.model_02.w2];
+    %     reps = length(C.model_02.w1);
+    %     p = anova2(y,reps);
+    %     %matlab can't deal with the repeated measures ANOVA, using Jasp instead
+    
+    spec   = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    unspec = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    [hIA,pIA,ciIA,statsIA] = ttest(spec,unspec);
+    
+    %
+    subplot(3,3,4:9)
+    X    = [1 2 4 5 6 7  9 10 11 12 13 14]/1.5;
+    Y    = [M Mc Ms Mcg Msg Mg];
+    Y2   = [SEM SEMc SEMs SEMcg SEMsg SEMg];
+    ylims = [floor(min(Y-Y2)*100)./100 ceil(max(Y+Y2)*100)./100+.07];
+    bw   = .5;
+    hold off;
+    for n = 1:size(Y,2)
+        h       = bar(X(n),Y(n));
+        legh(n) = h;
+        hold on
+        try %capsize is 2016b compatible.
+            errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5,'capsize',10);
+        catch
+            errorbar(X(n),Y(n),Y2(n),'k.','marker','none','linewidth',1.5);
+        end
+        if ismember(n,[1 3 5 7 9 11])
+            try %2016b compatibility.
+                set(h,'FaceAlpha',.1,'FaceColor','w','EdgeAlpha',1,'EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+            catch
+                set(h,'FaceColor','w','EdgeColor',[0 0 0],'LineWidth',1.5,'BarWidth',bw,'LineStyle','-');
+            end
+        else
+            try
+                set(h,'FaceAlpha',.5,'FaceColor',[0 0 0],'EdgeAlpha',0,'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            catch
+                set(h,'FaceColor',[0 0 0],'EdgeColor',[.4 .4 .4],'LineWidth',1,'BarWidth',bw,'LineStyle','-');
+            end
+        end
+    end
+    %
+    box off;
+    L          = legend(legh(1:2),{'Baseline' 'Generaliz.'},'box','off');
+    try
+        L.Position = L.Position + [0.1/2 0 0 0];
+        L.FontSize = 12;
+    end
+    set(gca,'linewidth',1.8);
+    % xticks
+    xtick = [mean(X(1:2)) mean(X(3:4)) mean(X(5:6)) mean(X(7:8)) mean(X(9:10)) mean(X(11:12)+.1) ];
+    label = {'\itw_{\rmcircle}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmspec.}' '\itw_{\rmunspec.}' '\itw_{\rmGaus.}' };
+    for nt = 1:length(xtick)
+        h = text(xtick(nt),-.02,label{nt},'horizontalalignment','center','fontsize',20,'rotation',45,'fontangle','italic','fontname','times new roman');
+    end
+    try
+        set(gca,'xtick',[3 8]./1.5,'xcolor','none','color','none','XGrid','on','fontsize',16);
+    catch
+        set(gca,'xtick',[3 8]./1.5,'color','none','XGrid','on','fontsize',16);
+    end
+    %
+    text(-.5,ylims(2),'\beta','fontsize',28,'fontweight','bold');
+    
+    
+    ylim(ylims);
+    if strcmp(modality,'scr')
+    set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
+    else
+        ylims(2) = -ylims(1);
+        ylim(ylims)
+    end
+    
+    axis normal
+    % asteriks
+    ast_line = repmat(max(Y+Y2)+.002,1,2);
+    hold on
+    ylim(ylims);
+    h= line([X(1)-bw/2 X(2)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T model 01
+    h= line([X(3)-bw/2 X(4)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, spec comp model 02
+    h= line([mean(X(3:4)) mean(X(5:6))],ast_line+.015);set(h,'color','k','linewidth',1); %delta spec vs delta unspec model_2 testphase
+    h= line([X(5)-bw/2 X(6)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, unspec comp model 02 (serves the delta spec vs delta unspec thing)
+    
+    h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T spec model_03
+    h= line([X(9)-bw/2 X(10)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    h= line([X(11)-bw/2 X(12)+bw/2],ast_line);set(h,'color','k','linewidth',1);
+    
+    text(mean(X(1:2))  ,ast_line(1)+.0025, pval2asterix(P),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',12); %diff B vs T spec vs unspec model_02
+    
+     text(mean(X(5:6))  ,ast_line(1)+.0025, pval2asterix(Ps),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([9 10])),ast_line(1)+.0025     , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',12);
+        text(mean(X([11 12])),ast_line(1)+.0025      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+%     model names
+    ylim(ylims)
+        set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(1:2)),ast_line(1)+.03,sprintf('Bottom-up\nSaliency\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+
+        set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    
+        set(h(1),'color','k','linewidth',1,'clipping','off');
+    text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
+    set(gcf,'Color',[1 1 1]);
+    
+    
+    
+    keyboard;
 elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the behaviral recordings
     %%
     % Target: relate model betas (representing ellipsoidness) to subject's ratings and scr 'behavior'.
