@@ -3284,7 +3284,7 @@ elseif strcmp(varargin{1},'figure_02B')
     end
     
     %% RATINGS GROUP DATA
-    tits = {'Baseline' 'Conditioning' 'Test'};
+    tits = {'Baseline' 'Conditioning' 'Generalization'};
     for n = [2 3 1]
         sp = n;
         subplot(sps(1),sps(2),sp)
