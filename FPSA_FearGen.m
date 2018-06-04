@@ -43,7 +43,6 @@ function [varargout]=FPSA_FearGen(varargin);
 % FPSA_FearGen('get_fixmap',fixmat,{'subject' subjects 'fix' 1:100}) returns FDMs for
 %   SUBJECTS and fixations from 1 to 100 (well, basically all the
 %   fixations). Each FDM is a column vector.
-% FPSA_FearGen('plot_fdm',maps) plots FDMs similar to Fig 3A.
 % FPSA_FearGen('plot_ROIs') plots the ROIs.
 % FPSA_FearGen('get_fpsa',1:100) would return the dissimilarity matrix
 %   computed with exploration patterns containing all the fixations
@@ -149,6 +148,9 @@ elseif strcmp(varargin{1},'get_trialcount') %% Sanity check for number of trials
     end
     varargout{1} = C;
     imagesc(C(:,1:8));
+    ylabel('participants')
+    xlabel('conditions')
+    title(sprintf('Number of trials for phase %d',phase));
     colorbar;
 elseif strcmp(varargin{1},'get_fixmat'); %% load the fixation data in the form of a Fixmat.
     %%
@@ -229,6 +231,7 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a FDMs i.
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
     end
     varargout{1} = maps;
+
 elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the paper in a similar way to Figure 3A.
     %%
     % Use the second VARARGIN to plot ROIs on top.
@@ -326,6 +329,7 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         end
     end
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
+>>>>>>> 6fb43b3b748bcaf6d38c2539ac5f9831349316cd
 elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -596,6 +600,9 @@ elseif strcmp(varargin{1},'plot_mdscale') %% Routine to plot the results of the 
 elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for FPSA modelling with fitlm, fitglm, etc.
     %%
     %
+    % This action returns all dependent and independent variables
+    % necessary for the modelling in a neat table format.
+    %
     % the table object contains the following variable names:
     % FPSA_B     : similarity matrices from baseline.
     % FPSA_G     : similarity matrices from test.
@@ -611,7 +618,7 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
     % phase      : indicator variable for baseline and generalizaation
     % phases.
     %
-    % Example: FPSA_FearGen('FPSA_get_table',1:100)
+    % Example: FPSA_FearGen('FPSA_get_table',{'fix' 1:100})
     selector  = varargin{2};
     hash      = DataHash(selector);
     filename  = sprintf('%s/data/midlevel/fpsa_modelling_table_subjectpool_%03d_runs_%02d_%02d_selector_%s.mat',path_project,current_subject_pool,runs(1),runs(end),hash);
@@ -1071,6 +1078,7 @@ elseif strcmp(varargin{1},'model2behavior')
 %     end
 
 elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata for fpsa on SCR
+    %%
     subs = FPSA_FearGen('get_subjects');
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = nan(78,27,length(scrsubs));
@@ -1090,7 +1098,7 @@ elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata fo
     varargout{1} = out_raw;
     
 elseif strcmp(varargin{1},'get_fpsa_scr'); %%  FPSA on SCR data, just analog to fixations, also considers 3 runs in testphase seperately, just like FPSA 'fair'
- 
+    %%
     subs = FPSA_FearGen('get_subjects');
     scrsubs  = subs(ismember(subs,Project.subjects(Project.subjects_scr)));
     out_raw = FPSA_FearGen('get_scr_singletrials');
