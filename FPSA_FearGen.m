@@ -329,7 +329,6 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         end
     end
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
->>>>>>> 6fb43b3b748bcaf6d38c2539ac5f9831349316cd
 elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -705,7 +704,7 @@ elseif strcmp(varargin{1},'FPSA_predictortable');
 elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and fixed models.
     %%
     selector   = varargin{2};
-    t          = FPSA_FearGen('FPSA_get_table',selector);
+    t          = FPSA_FearGen('runs',runs,'FPSA_get_table',selector);
     % MIXED EFFECT MODEL
     % null model
     out.baseline.model_00_mixed          = fitlme(t,'FPSA_B ~ 1 + (1|subject)');
@@ -740,7 +739,7 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
     if ~istable(varargin{2})
         fprintf('VARARGIN interpreted as SELECTOR cell.\n')
         selector   = varargin{2};
-        t          = FPSA_FearGen('FPSA_get_table',selector);
+        t          = FPSA_FearGen('runs',runs,'FPSA_get_table',selector);
     else fprintf('VARARGIN interpreted as a TABLE.\n')
         t       = varargin{2};
     end
@@ -946,10 +945,10 @@ elseif strcmp(varargin{1},'figure_03C');
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
     set(gcf,'Color',[1 1 1]);
-    if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
-        export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
-    end
+%     if ispc
+%         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
+%         export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
+%     end
     %
     keyboard %otherwise everything is gone
 elseif strcmp(varargin{1},'figure_04D')
@@ -1984,7 +1983,8 @@ elseif strcmp(varargin{1},'searchlight_beta_counts')
     fixmat      = FPSA_FearGen('get_fixmat');
     b1          = 1;
     b2          = 15;
-    out         = FPSA_FearGen('searchlight',fixmat,b1,b2);
+%     out         = FPSA_FearGen('searchlight',fixmat,b1,b2)
+    out         = FPSA_FearGen('searchlight',b1,b2);
     for np = 1:2
         for ns = 1:size(out,4);
             for beta = 2%1:size(out,3)
@@ -3171,7 +3171,7 @@ elseif strcmp(varargin{1},'figure_02B')
     else
         line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)
     end
-    ylabel(sprintf('SCR\n(z-score)'))
+    ylabel(sprintf('SCR\n(z-score)'),'fontsize',fs)
     axis square;axis tight;box off
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1);
@@ -3309,7 +3309,7 @@ elseif strcmp(varargin{1},'figure_02B')
         axis square;axis tight;
         box off
         if n == 1
-            ylabel(sprintf('Shock\nExpectancy'))
+            ylabel(sprintf('Shock\nExpectancy'),'fontsize',fs)
         end
         %Gaussian Fits
         hold on;
@@ -3451,15 +3451,15 @@ elseif strcmp(varargin{1},'figure_02B')
             end            
         end
     %%
-    set(GetSubplotHandles(gcf),'fontsize',12);%set all fontsizes to 12
+    set(GetSubplotHandles(gcf),'fontsize',fs+1);%set all fontsizes to 12
     for i = get(GetSubplotHandles(gcf),'ylabel')';
-        set(i{1},'fontweight','bold','VerticalAlignment','bottom','fontsize',16);
+        set(i{1},'fontweight','bold','VerticalAlignment','bottom','fontsize',fs+2);
     end    
     subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
     %%
     if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_02_barplot.png'])
-        export_fig([homedir 'Documents\Documents\manuscript_selim\figure_02_barplot.png'],'-r400')
+        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figures\figure_02AB_barplot.png'])
+        export_fig([homedir 'Documents\Documents\manuscript_selim\figures\figure_02AB_barplot.png'],'-r400')
     end
 %     %% plot rois;
 %     roi = Fixmat([],[]).GetFaceROIs;
@@ -3479,6 +3479,141 @@ elseif strcmp(varargin{1},'figure_02B')
 %         end
 %     end
     keyboard
+elseif strcmp(varargin{1},'SFig_03')
+    %% if Fig 2 gets cut into Fig 2 and SFig 3
+    %% Produces the figure with fixation counts on 8 faces at different ROIs.
+    %Draw the winning model on these count profiles (e.g. Gaussian or null
+    %model).
+        % general layout business.
+    fs       = 11; %fontsize
+    ms       = 18;  %markersize
+    sps      = [3 4]; %subplotsize rows x columns
+    flw      = 2; %fitline width
+    scatmark = 's';
+    scatcol1 = repmat(.5,1,3);%repmat(.8,1,3)
+    mbc      = [.7 0 0]; %mean bar color for scatterplots
+    web      = 1; %width errorbars
+    colors   = [repmat(0.3,3,3)];
+    grayshade= [.5 .5 .5];
+    alpha_gf = .001;
+    
+    
+ 
+    current_subject_pool = 0;
+    method          = 3;
+    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');    
+    %counts => [faces, rois, subjects, phases]
+    m_counts  = nanmean(counts,3);
+    s_counts  = std(counts,1,3)./sqrt(size(counts,3));
+    nsubs     = length(FPSA_FearGen('get_subjects',current_subject_pool));
+    
+    [Xgroupfit Ygroupfit pvalgroup]         = FPSA_FearGen('get_groupfit_on_ROIcounts'); %[ph, nroi,100datapoints]
+    [Xsubfit Ysubfit params pvalsingle]     = FPSA_FearGen('get_singlesubfits_on_ROIcounts');
+    amp                                     = squeeze(params([1 2 3],:,:,1)); %amplitude in percent; params(ph,nroi,sub,[amp kappa offset])
+    
+    % plot the 3 count-profiles for whole group
+    
+    ylimmi = min(min(m_counts(:)));
+%     yticki = [0 30 60; 0 15 30; 0 3 6];    
+    t={'Eyes\n(%%)' 'Nose\n(%%)' 'Mouth\n(%%)'};
+    titls = {'Baseline','Conditioning','Generalization'};
+    cc = 0;
+    % Will equalize ylims of each row of subplots.
+    for n = 1:size(Xsubfit,2)
+        sax=[];
+        for ph = 1:3
+            cc = cc + 1;
+            hold off;
+            sax = [sax subplot(sps(1),sps(2),cc)];
+            Project.plot_bar(-135:45:180,m_counts(:,n,1,ph));
+            if ph == 1
+                ylabel(sprintf(t{n}),'fontsize',fs);
+            end
+            hold on;
+            try
+                e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none','capsize',0);
+            catch
+                e=errorbar(-135:45:180,m_counts(:,n,1,ph),s_counts(:,n,1,ph),'ok','LineWidth',web,'marker','none');
+            end
+            set(e,'LineWidth',web,'Color','k')
+            if ismember(ph,[1 3])
+                plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
+            end
+            hold off;             
+            set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
+            if n==3
+                set(gca,'XTick',[0 180],'XTickLabels',{'CS+','CS-'});
+            end
+            if n == 1
+             th(ph) =  title(titls{ph},'fontsize',fs);
+            end
+        end
+        Publication_Ylim(sax,0,10);
+%         Publication_SymmetricYlim(sax);
+        Publication_NiceTicks(sax,1);
+        Publication_RemoveXaxis(sax);        
+%         Publication_RemoveYaxis(sax(2:3));
+        
+        %%
+        if ph ==3
+            cc= cc + 1;
+        end        
+    end
+    
+            
+    
+    %%
+    %t-tests
+    %are amplitudes in Test bigger than in Base?
+        for nroi = 1:3
+            [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
+        end
+        %% single subject fit scatter plot
+        subplothelp = [4 8 12];
+        liney = [.58 .41 .26];
+        xscatter = linspace(1,2,nsubs);
+        for nroi = 1:3
+            subplot(sps(1),sps(2),subplothelp(nroi))
+            hold off;
+            mat = squeeze(amp([1 2 3],nroi,:))';
+            dotplot(mat)
+            axis square;set(gca,'xticklabel',[]);
+            Publication_Ylim(gca,0,1);
+            ylim([-4 4])
+            Publication_NiceTicks(gca,1);
+            drawnow;
+            if nroi == 3
+            set(gca,'xticklabels',{'B' 'C' 'G'})
+            elseif nroi ==1
+                th(4)=title('Tuning Strength (\alpha)','fontsize',fs);
+            end
+            if pttest(nroi) < 0.001
+                text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            elseif pttest(nroi) < .01
+                  text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            elseif pttest(nroi) < .05
+                  text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            end            
+        end
+    %%
+    set(GetSubplotHandles(gcf),'fontsize',12);%set all fontsizes to 12
+    for i = get(GetSubplotHandles(gcf),'ylabel')';
+        set(i{1},'fontweight','bold','VerticalAlignment','bottom','fontsize',16);
+    end    
+    subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
+    %%
+    if ispc
+        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figures\SFig_03_barplot_withttitles.png'])
+        export_fig([homedir 'Documents\Documents\manuscript_selim\figures\SFig_03_barplot_withttitles.png'],'-r400')
+    end
+    
+%     %% plot rois;
+%     roi = Fixmat([],[]).GetFaceROIs;
+%     roi = double(roi);
+
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -4092,12 +4227,69 @@ elseif strcmp(varargin{1},'behavior_correlation');
     elsel
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
     %
+elseif strcmp(varargin{1},'models_run1_run3')
+    filename     = sprintf('%s/data/midlevel/REVISION_fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_run_1vs3.mat',path_project,kernel_fwhm,current_subject_pool);
+    C1 =  FPSA_FearGen('runs',1,'FPSA_model_singlesubject',{'fix',1:100});
+    C2 =  FPSA_FearGen('runs',2,'FPSA_model_singlesubject',{'fix',1:100});
+    C3 =  FPSA_FearGen('runs',3,'FPSA_model_singlesubject',{'fix',1:100});
+    
+    
+    spec_base = C1.model_02.w1(:,1); %=C3.model_02.w1(:,1);
+    spec_test1 = C1.model_02.w1(:,2);
+    spec_test3 = C3.model_02.w1(:,2);
+    unspec_base    = C1.model_02.w1(:,1); %=C3.model_02.w1(:,1);
+    unspec_test1 =  C1.model_02.w2(:,2);
+    unspec_test3 =  C3.model_02.w2(:,2);
+    spec = [spec_base spec_test1 spec_test3];
+    unspec = [unspec_base unspec_test1 unspec_test3];
+    
+    figure;
+    errorbar([.95 1.95 2.95],mean(spec),std(spec)./sqrt(length(spec)),'r','LineWidth',2)
+    hold on;
+    errorbar([1.05 2.05 3.05],mean(unspec),std(unspec)./sqrt(length(unspec)),'k','LineWidth',2)
+    legend('spec','unspec')
+    set(gca,'XTick',1:3,'XTickLabel',{'Base','Test1','Test3'});
+    
+     keyboard
+    save(filename,'spec','unspec');
+elseif strcmp(varargin{1},'corr_with_rate_scr')
+    t = FPSA_FearGen('get_table_behavior');
+    
+    [rhoR pvalR] = corr(t.beta_diff_test,t.rating_test_parametric);
+    [rhoS pvalS] = corr(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
+  %%
+  figure;
+    subplot(1,2,1);
+    hold on;
+    scatter(t.beta_diff_test,t.rating_test_parametric,'filled');
+    lsl = lsline;set(lsl,'LineWidth',2);
+    xlabel('Anisotropy (spec-unspec)')
+    ylabel('Rating Tuning Amplitude')
+    ylimmi = ylim;
+    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoR,pvalR));set(tt,'FontSize',14)
+    subplot(1,2,2);
+     hold on;
+    scatter(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
+      lsl = lsline;set(lsl,'LineWidth',2);
+    xlabel('Anisotropy (spec-unspec)')
+    ylabel('SCR Tuning Amplitude')
+      ylimmi = ylim;
+    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoS,pvalS));set(tt,'FontSize',14)
+    for ns = 1:2;
+        subplot(1,2,ns);
+        set(gca,'FontSize',16)
+        axis square
+    end
+    
+
 elseif strcmp(varargin{1},'get_path_project');
     varargout{1} = path_project;
+    
 else
     fprintf('No action with this name %s is present...\n',varargin{1});
     varargout ={};
     return;
+    
 end
 
 %% References:
