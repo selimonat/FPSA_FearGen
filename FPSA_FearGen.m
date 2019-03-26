@@ -1,18 +1,18 @@
 function [varargout]=FPSA_FearGen(varargin);
 % [varargout]=FPSA_FearGen(varargin);
 %
-% Complete analysis and figure generation pipeline for the 
-% Fixation-Pattern Similarity Analysis (FPSA) manuscript. Initial versions can be 
+% Complete analysis and figure generation pipeline for the
+% Fixation-Pattern Similarity Analysis (FPSA) manuscript. Initial versions can be
 % found in Biorxiv at http://biorxiv.org/content/early/2017/04/15/125682
 %
 % Using this code, one can generate all results and figures presented in the manuscript.
 %
 % Requirements:
 % ..* Matlab 2018, even though previous versions of Matlab should also work.
-% ..* Relies on Fancycarp toolbox (1) for dealing with fixation data. All dependencies as 
-% well as raw data can be easily downloaded as a bundle from Open Science Framework 
+% ..* Relies on Fancycarp toolbox (1) for dealing with fixation data. All dependencies as
+% well as raw data can be easily downloaded as a bundle from Open Science Framework
 % following this link: https://osf.io/zud6h/
-% 
+%
 %
 % Initial Setup:
 % ..* First download the data from the project's OSF webpage.
@@ -231,7 +231,7 @@ elseif  strcmp(varargin{1},'get_fixmap') %% General routine to compute a FDMs i.
         maps = cat(2,maps,demean(fixmat.vectorize_maps')');%within phase mean subtraction
     end
     varargout{1} = maps;
-
+    
 elseif strcmp(varargin{1},'plot_fdm'); %% plot routine for FDMs used in the paper in a similar way to Figure 3A.
     %%
     % Use the second VARARGIN to plot ROIs on top.
@@ -318,12 +318,12 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         axis image;
         axis off;
         hold on;
-%         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
-%         h.AlphaData =rois(:,:,n)./2;
+        %         h = imagesc(ones(size(fix.stimulus,1),size(fix.stimulus,1)),[0 1]);
+        %         h.AlphaData =rois(:,:,n)./2;
         contour(rois(:,:,n),'k-','linewidth',4);
         hold off;
         if ispc
-%             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
+            %             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
         else
             SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
         end
@@ -343,7 +343,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     %
     %Note:
     % I hacked this routine to compute FPSA fixation by fixation.
-    % use it like: 
+    % use it like:
     % [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',1,1);
     % or [sim,model] = FPSA_FearGen('get_fpsa_timewindowed',0,1);
     
@@ -362,12 +362,12 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         t              = 0:1:(window_size);%running window
         if window_size == 0
             start_times    = 1:window_overlap:5;%in fixation indices
-        else            
+        else
             start_times    = 1:window_overlap:4;%in fixation indices
         end
         time           = repmat(start_times',1,length(t)) + repmat(t,length(start_times),1);
     end
-       
+    
     filename       = sprintf('%s/data/midlevel/fpsa_timewindowed_subjectpool_%03d_kernel_fwhm_%03d_runs_%s_input_%s.mat',path_project,current_subject_pool,kernel_fwhm,mat2str(runs),hash);
     if exist(filename) == 0 | force
         fprintf('Has %d time windows in total...\n',size(time,1));
@@ -388,14 +388,14 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
             T                    = FPSA_FearGen('FPSA_sim2table',dummy);
             [~, C.w(:,:,:,:,tc)] = FPSA_FearGen('FPSA_model_singlesubject',T.t);
             
-        end        
+        end
         save(filename,'C','sim')
     else
         load(filename);
     end
     
     C.t               = time;
-    varargout{1}      = sim;    
+    varargout{1}      = sim;
     varargout{2}      = C;
     
     %%
@@ -404,7 +404,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     h(1)=subplot(2,2,1);
     hold off;%plot(model.t,squeeze(nanmean(model.w(:,1,1,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,1,1,:))),'r');
     H2= shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,1,1,:)))',squeeze(nanSEM(model.w(:,1,1,1,:)))','lineprops','b');hold on;
-    H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);    
+    H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,1,1,:))),squeeze(nanSEM(model.w(:,2,1,1,:))),'lineprops','r');box off;axis tight;ylim([-.05 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     xtick={};for ntik = 1:size(model.t,1);xtick = [xtick sprintf('%d-%d',min(model.t(ntik,:)),max(model.t(ntik,:)))];end
     set(gca,'xtick',model.t(:,1),'xticklabel',{''},'XTickLabelRotation',45,'fontsize',12,'xgrid','on','ygrid','on')
     title('circular W model 1');
@@ -417,7 +417,7 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     H2.mainLine.LineWidth = 1.5;H2.mainLine.LineWidth = 1.5;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 1.5;H1.mainLine.Color = [0 0 1 .5];
     %
     h(3)=subplot(2,2,3);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
-    H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;    
+    H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,1,:)))',squeeze(nanSEM(model.w(:,1,2,1,:)))','lineprops','r-');hold on;
     H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,1,2,2,:))),squeeze(nanSEM(model.w(:,1,2,2,:))),'lineprops','b-');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     if size(model.t(:,1),1) < 10
         set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
@@ -434,18 +434,18 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     hl.FontSize = 12;
     legend boxoff
     if size(model.t(:,1),1) < 10
-        xlabel('fixations','fontweight','bold','fontsize',16);    
+        xlabel('fixations','fontweight','bold','fontsize',16);
     else
-        xlabel('time window  (ms)','fontweight','bold','fontsize',16);    
+        xlabel('time window  (ms)','fontweight','bold','fontsize',16);
     end
     ylabel('weight','fontweight','bold','fontsize',16)
-    grid on    
+    grid on
     %
     h(4)=subplot(2,2,4);hold off;%plot(model.t,squeeze(nanmean(model.w(:,2,2,1,:))),'b',model.t,squeeze(nanmean(model.w(:,2,2,2,:))),'r',model.t,squeeze(nanmean(model.w(:,1,2,1,:))),'b--',model.t,squeeze(nanmean(model.w(:,1,2,2,:))),'r--');
     H2=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,1,:)))',squeeze(nanSEM(model.w(:,2,2,1,:)))','lineprops','r');hold on;
     H1=shadedErrorBar(model.t(:,1),squeeze(nanmean(model.w(:,2,2,2,:))) ,squeeze(nanSEM(model.w(:,2,2,2,:))) ,'lineprops','b');box off;axis tight;ylim([-0.02 0.2]);xlim([min(C.t(:,1)) max(C.t(:,1))]);
     H2.mainLine.LineWidth = 2;H2.mainLine.Color = [1 0 0 .5];H1.mainLine.LineWidth = 2;H1.mainLine.Color = [0 0 1 .5];
-    set(gca,'yticklabels',[]);    
+    set(gca,'yticklabels',[]);
     
     if size(model.t(:,1),1) < 10
         set(gca,'xtick',model.t(:,1),'xticklabel',xtick,'XTickLabelRotation',0,'fontsize',12,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
@@ -453,19 +453,19 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
         set(gca,'xtick',model.t(1:5:end,1),'xticklabel',xtick(1:5:end),'XTickLabelRotation',0,'xgrid','on','ygrid','on','ytick',[0 .1 .2],'fontsize',12,'fontweight','normal');
     end
     if size(model.t(:,1),1) < 10
-        xlabel('fixations','fontweight','bold','fontsize',16);    
+        xlabel('fixations','fontweight','bold','fontsize',16);
     else
-        ggg=xlabel('time window (ms)','fontweight','bold','fontsize',16);    
+        ggg=xlabel('time window (ms)','fontweight','bold','fontsize',16);
     end
-    subplotChangeSize(h,.02,.02);           
-    title('Generalization','fontsize',18);        
+    subplotChangeSize(h,.02,.02);
+    title('Generalization','fontsize',18);
     set(gcf,'position',[2034         402 900 900]);
     %% find significant time points
     whichtest = 'ttest';
     alpha = 0.05;
     %[subjects,phase,model,param,time]
     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) - (model.w(:,1,2,1,:)-model.w(:,1,2,2,:)) )     %difference between curves
-%     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )    
+    %     X = squeeze(   (model.w(:,2,2,1,:)-model.w(:,2,2,2,:)) )
     if strcmp(whichtest,'signrank')
         for i = 1:size(X,2)
             [PP(i) HH(i)] = signrank(X(:,i));
@@ -484,9 +484,9 @@ elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for
     end
     
     sort(model.t(find(PP < alpha))-window_size)
-    %%        
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04.png','-transparent','-r300');
-
+    %%
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_04.png','-transparent','-r300');
+    
 elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each run and single subjects
     %%
     % FPSA for the 3 test-phase runs are individually computed and averaged.
@@ -510,9 +510,9 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     filename     = sprintf('%s/data/midlevel/fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_runs_%s_selector_%s.mat',path_project,kernel_fwhm,current_subject_pool,mat2str(runs),hash);
     if exist(filename) ==0 | force;
         runc = 0;
-        for run = runs %these are parts of phase 4 runs (1-2-3), not phases per se 
+        for run = runs %these are parts of phase 4 runs (1-2-3), not phases per se
             runc     = runc+1;
-            fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'kernel_fwhm',kernel_fwhm,'runs',run,'get_fixmat');            
+            fixmat   = FPSA_FearGen('current_subject_pool',current_subject_pool,'kernel_fwhm',kernel_fwhm,'runs',run,'get_fixmat');
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
@@ -732,6 +732,29 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.baseline.model_03_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;
+elseif strcmp(varargin{1},'FPSA_model_kfold')
+
+    selector   = {'fix',1:100};
+    t          = FPSA_FearGen('runs',runs,'FPSA_get_table',selector);
+    tab = FPSA_FearGen('FPSA_model_singlesubject');
+    CVO = cvpartition(t.subject_id,'KFold',5);
+    
+  
+    for i = 1:CVO.NumTestSets
+        trIds = CVO.training(i);
+        teIds = CVO.test(i);
+        model_00_mixed    = fitlme(t,'FPSA_G ~ 1 + (1|subject)');
+        model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');
+        model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
+        model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+           
+    out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    end
+    
+    
+    
+    
+    
     
 elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject FPSA matrices.
     %% same as FPSA_model, but on gathers a model parameter for single subjects.
@@ -832,11 +855,11 @@ elseif strcmp(varargin{1},'figure_03C');
     [Hgc Pgc]   = ttest(C.model_03.w1(:,1)-C.model_03.w1(:,2));%compares cosine before to after
     [Hgcs Pgcs] = ttest(C.model_03.w1(:,2)-C.model_03.w2(:,2));%compares cosine after to sine after
     [Hgg Pgg]   = ttest(C.model_03.w3(:,1)-C.model_03.w3(:,2));%compares sine before to after
-%     %%anova on interaction of Time x Parameter
-%     y = [C.model_02.w1;C.model_02.w2];
-%     reps = length(C.model_02.w1);
-%     p = anova2(y,reps);
-%     %matlab can't deal with the repeated measures ANOVA, using Jasp instead
+    %     %%anova on interaction of Time x Parameter
+    %     y = [C.model_02.w1;C.model_02.w2];
+    %     reps = length(C.model_02.w1);
+    %     p = anova2(y,reps);
+    %     %matlab can't deal with the repeated measures ANOVA, using Jasp instead
     
     spec   = C.model_02.w1(:,2)-C.model_02.w1(:,1);
     unspec = C.model_02.w2(:,2)-C.model_02.w2(:,1);
@@ -915,7 +938,7 @@ elseif strcmp(varargin{1},'figure_03C');
     h= line(repmat(mean(X(3:4)),1,2),ast_line + [.01 .015]);set(h,'color','k','linewidth',1); %vertical miniline to show delta
     h = line(repmat(mean(X(5:6)),1,2),ast_line + [.00 .015]);set(h,'color','k','linewidth',1);  %vertical miniline to show delta
     h= line([X(5)-bw/2 X(6)+bw/2],ast_line);set(h,'color','k','linewidth',1); % B vs T, unspec comp model 02 (serves the delta spec vs delta unspec thing)
-
+    
     h= line([X(7)-bw/2 X(8)+bw/2],ast_line);set(h,'color','k','linewidth',1); %B vs T spec model_03
     %     h= line([X(8)-bw/2 X(10)+bw/2],repmat(max(ylim),1,2)-.0025);set(h,'color','k','linewidth',1);
     %     h= line([X(11)-bw/2 X(12)+bw/2],repmat(max(ylim),1,2)-.1);set(h,'color','k','linewidth',1);
@@ -925,7 +948,7 @@ elseif strcmp(varargin{1},'figure_03C');
     
     text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',16); %diff B vs T spec vs unspec model_02
     %     text(mean(X([4 6])),ast_line(1)+.0055, pval2asterix(Pcs),'HorizontalAlignment','center','fontsize',16);
-%     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
+    %     text(mean(X([4 6])),ast_line(1)+.015 , sprintf('p = %05.3f',Pcs),'HorizontalAlignment','center','fontsize',13);
     text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',16);
     %     text(mean(X([8 10])),max(ylim)      , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',16);
     %     text(mean(X([11 12])),max(ylim)-.09      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
@@ -945,10 +968,10 @@ elseif strcmp(varargin{1},'figure_03C');
     %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
     %
     set(gcf,'Color',[1 1 1]);
-%     if ispc
-%         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
-%         export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
-%     end
+    %     if ispc
+    %         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
+    %         export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
+    %     end
     %
     keyboard %otherwise everything is gone
 elseif strcmp(varargin{1},'figure_04D')
@@ -995,10 +1018,10 @@ elseif strcmp(varargin{1},'figure_04D')
     EqualizeSubPlotYlim(gcf)
     varargout{1} = sim;
     varargout{2} = model;
-%     if ispc
-%         fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
-%         export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
-%     end
+    %     if ispc
+    %         fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
+    %         export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
+    %     end
     keyboard
 elseif strcmp(varargin{1},'model2behavior')
     %% this is used to see whether the found model parameters for model 2 correspond to any subject "behavior" such as ratings or SCR.
@@ -1011,71 +1034,71 @@ elseif strcmp(varargin{1},'model2behavior')
     % this is just playing around, add/remove models that are (not) wanted.
     stepwiselm([t.scr_test_parametric t.rating_test_parametric],t.beta1_diff)
     stepwiselm([t.scr_test_nonparam t.rating_test_nonparam],t.beta1_diff)
-
+    
     fitlm(t,'beta1_test ~ 1 + scr_test_parametric')
     fitlm(t,'beta1_test ~ 1 + scr_test_nonparam')
     
     fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam + rating_test_nonparam')
     
     fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam')
-
+    
     t.beta1_beta2 = t.beta1_diff - t.beta2_diff;
     
-%     
-%     
-%     normalize ellipsoid parameter by other parameter.
-%     beta1 = C.model_02.w1(:,2);
-%     beta2 = C.model_02.w2(:,2);
-%     param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
-%     
-%     if baseline corrected:
-%     beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
-%     beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
-%     parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
-% 
-%     %
-%     figure(1);
-%     subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-%     st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-%     figure(2);
-%     subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-%     subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-%     st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-%     figure(3);
-%     subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
-%     subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
-%     subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
-%     subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
-%     st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-%     figure(4);
-%     subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
-%     subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
-%     subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
-%     subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
-%     st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-%     figure(5);
-%     subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
-%     subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
-%     subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
-%     subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
-%     st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-%     figure(6);
-%     subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
-%     subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
-%     subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
-%     subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
-%     st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-%     
-%     names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
-%     for a = 1:6;
-%         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
-%     end
-
+    %
+    %
+    %     normalize ellipsoid parameter by other parameter.
+    %     beta1 = C.model_02.w1(:,2);
+    %     beta2 = C.model_02.w2(:,2);
+    %     param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
+    %
+    %     if baseline corrected:
+    %     beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    %     beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    %     parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
+    %
+    %     %
+    %     figure(1);
+    %     subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+    %     st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    %     figure(2);
+    %     subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
+    %     subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
+    %     st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    %     figure(3);
+    %     subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
+    %     subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
+    %     subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
+    %     subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
+    %     st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    %     figure(4);
+    %     subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
+    %     subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
+    %     subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
+    %     subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
+    %     st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    %     figure(5);
+    %     subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
+    %     subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
+    %     subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
+    %     subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
+    %     st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
+    %     figure(6);
+    %     subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
+    %     subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
+    %     subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
+    %     subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
+    %     st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
+    %
+    %     names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
+    %     for a = 1:6;
+    %         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
+    %     end
+    
 elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata for fpsa on SCR
     %%
     subs = FPSA_FearGen('get_subjects');
@@ -1150,14 +1173,14 @@ elseif strcmp(varargin{1},'get_fpsa_rate'); %%  FPSA on SCR data, just analog to
         load(filename);
     end
     varargout{1} = sim;
-
+    
 elseif strcmp(varargin{1},'fpsa_plot_scrrate')
     modality = varargin{2};
     if strcmp(modality,'scr')
         sim = FPSA_FearGen('get_fpsa_scr');
     elseif strcmp(modality,'rate')
-         sim = FPSA_FearGen('get_fpsa_rate');
-         sim.correlation = sim.euclidean; %only to be able to use existing code.
+        sim = FPSA_FearGen('get_fpsa_rate');
+        sim.correlation = sim.euclidean; %only to be able to use existing code.
     else
         fprintf('enter valid modality as second input (''scr'' or ''rate'')')
     end
@@ -1194,7 +1217,7 @@ elseif strcmp(varargin{1},'fpsa_plot_scrrate')
     tt = findobj(gca,'Type','Text');
     set(tt,'FontSize',13);
     title('MDS','fontweight','normal','fontsize',fs*3/2,'FontWeight','bold');
-
+    
     %%%%%%%%
     %%%%%%%%
     %% prepare table for fitting FPSA
@@ -1330,7 +1353,7 @@ elseif strcmp(varargin{1},'fpsa_plot_scrrate')
     
     ylim(ylims);
     if strcmp(modality,'scr')
-    set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
+        set(gca,'ytick', 0:.05:.2,'yticklabels', {'0' '.05' '.1' '.15' '.2'})
     else
         ylims(2) = -ylims(1);
         ylim(ylims)
@@ -1354,19 +1377,19 @@ elseif strcmp(varargin{1},'fpsa_plot_scrrate')
     text(mean(X(3:4))  ,ast_line(1)+.0025, pval2asterix(Pc),'HorizontalAlignment','center','fontsize',12);
     text(mean(X(4:5))  ,ast_line(1)+.015+.0025, pval2asterix(pIA),'HorizontalAlignment','center','fontsize',12); %diff B vs T spec vs unspec model_02
     
-     text(mean(X(5:6))  ,ast_line(1)+.0025, pval2asterix(Ps),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X(5:6))  ,ast_line(1)+.0025, pval2asterix(Ps),'HorizontalAlignment','center','fontsize',12);
     text(mean(X([7 8])),ast_line(1)+.0025, pval2asterix(Pgc),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([9 10])),ast_line(1)+.0025     , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',12);
-        text(mean(X([11 12])),ast_line(1)+.0025      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
-%     model names
+    text(mean(X([9 10])),ast_line(1)+.0025     , pval2asterix(Pgcs),'HorizontalAlignment','center','fontsize',12);
+    text(mean(X([11 12])),ast_line(1)+.0025      , pval2asterix(Pgg),'HorizontalAlignment','center','fontsize',12);
+    %     model names
     ylim(ylims)
-        set(h(1),'color','k','linewidth',1,'clipping','off');
+    set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(1:2)),ast_line(1)+.03,sprintf('Bottom-up\nSaliency\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
-
-        set(h(1),'color','k','linewidth',1,'clipping','off');
+    
+    set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(3:6)),ast_line(1)+.03,sprintf('Adversity\nCategorization\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     
-        set(h(1),'color','k','linewidth',1,'clipping','off');
+    set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     set(gcf,'Color',[1 1 1]);
     
@@ -1434,7 +1457,7 @@ elseif strcmp(varargin{1},'get_table_behavior'); %% returns parameter of the beh
         beta2_test         = C.model_02.w2(:,2);
         beta1_diff         = C.model_02.w1(:,2)-C.model_02.w1(:,1);
         beta2_diff         = C.model_02.w2(:,2)-C.model_02.w2(:,1);
-        beta_diff_test     = beta1_test - beta2_test; 
+        beta_diff_test     = beta1_test - beta2_test;
         beta_diffdiff      = (beta1_test - beta2_test) - (beta1_base - beta2_base);%how much does w1 increase more than w2 does? (Interaction)
         %% concatenate everything in the table
         t = table(subs(:),rating_test_parametric,rating_test_nonparam,rating_test_cspcsn,scr_test_parametric,scr_test_nonparam,scr_test_cspcsn,beta1_base,beta2_base,beta1_test,beta2_test,beta1_diff,beta2_diff,beta_diff_test,beta_diffdiff,'variablenames',{'subject_id' 'rating_test_parametric','rating_test_nonparam','rating_test_cspcsn','scr_test_parametric','scr_test_nonparam','scr_test_cspcsn','beta1_base','beta2_base','beta1_test','beta2_test','beta1_diff','beta2_diff','beta_diff_test','beta_diffdiff'});
@@ -1698,247 +1721,247 @@ elseif strcmp(varargin{1},'searchlight_plot')
     %sine^2) weight combination term.
     
     
-%     inputs = { {15 {}          'current_subject_pool' 0} {15 {}          'current_subject_pool' 1} ...        
-%                {15 {'fix' 2:5} 'current_subject_pool' 0} {15 {'fix' 2:5} 'current_subject_pool' 1} ...
-%                {30 {'fix' 2:5} 'current_subject_pool' 0} {30 {'fix' 2:5} 'current_subject_pool' 1}};
-
-inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
-
-
-%              };RERUN THIS INCLUDING THE COMPUTED SHIT AND RERUN WITH THE
-%              NEW ROIS
+    %     inputs = { {15 {}          'current_subject_pool' 0} {15 {}          'current_subject_pool' 1} ...
+    %                {15 {'fix' 2:5} 'current_subject_pool' 0} {15 {'fix' 2:5} 'current_subject_pool' 1} ...
+    %                {30 {'fix' 2:5} 'current_subject_pool' 0} {30 {'fix' 2:5} 'current_subject_pool' 1}};
+    
+    inputs = { {30 {'fix' 2:5} 'current_subject_pool' 1}};
+    
+    
+    %              };RERUN THIS INCLUDING THE COMPUTED SHIT AND RERUN WITH THE
+    %              NEW ROIS
     F = @(x) nanmean(x,4);
-         for input = inputs;
-             
-             input{1}{:}
-             current_title   = cell2str(input{1});
-             filename        = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s.png',current_title,func2str(F));             
-             filename2       = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s_viafixmat.png',current_title,func2str(F));             
-             if (exist(filename) == 0) | (exist(filename2) == 0) | 1
-                 %to do
-                 %(1) compare all fixations on all subjects;+
-                 %(2) compare all fixations on selected subjects;+
-                 %(3) exclude the first fixation on all subjects.
-                 %(4) exclude the first fixation on selected subjects.
-                 %(5) exclude the first fixation on all subjects and test the bigger searchlight window.
-                 %(6) exclude the first fixation on selected subjects and test the
-                 %bigger searchlight window.
-                 
-                 
-                 Mori            = FPSA_FearGen('searchlight',1,input{1}{:});
-                 
-                 
-                 % MORI(pixel,pixel,regressor,subject,phase)
-                 M                = Mori;
-                 M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
-                 M(:,:,:,:,3:end) = [];
-                 M(:,:,1,:,:)     = [];%remove the intercept
-                 %     M                = mean(M,3);%compute the weight for the circular model.
-                 % plot the number of subjects present per pixel, get a mask
-                 figure(1);
-                 C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
-                 imagesc(C,[0 100]);colorbar;hold on;
-                 contourf(C,[90 75 50],'fill','off');axis ij;hold off;
-                 axis off
-                 title('Counts');
-                 % remove the data outside of the mask
-                 M             = reshape(M,[500*500 2 size(Mori,4) 2]);
-                 mask          = C < 25;
-                 mask          = mask(:);
-                 M(mask,:,:,:) = NaN;                 
-%                  plot specific and unspecific components
-                 M             = reshape(M,[500 500 2 size(Mori,4) 2]);
-                 % plot specific and unspecific components
-                 ffigure;
-                 N   = 0;
-                 clf;
-                 d = -.12;u = .12;
-                 subplot(4,4,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;title('Specific-Baseline')
-                 subplot(4,4,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;title('unSpecific-Baseline')
-                 subplot(4,4,3);imagesc(squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))),[d u]);colorbar;title('Specific-Unspecific')
-                 subplot(4,4,4);imagesc(squeeze(F(mean(M(:,:,1:2,:,1),3))),[d u]);colorbar;title('Circle-Baseline')
-                 
-                 subplot(4,4,5);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;title('Specific-Test')
-                 subplot(4,4,6);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;title('unSpecific-Test')
-                 subplot(4,4,7);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2))),[d u]);colorbar;title('Specific-Unspecific')
-                 subplot(4,4,8);imagesc(squeeze(F(mean(M(:,:,1:2,:,2),3))),[d u]);colorbar;title('Circle-Test')
-                 
-                 subplot(4,4,9);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,1,:,1))),[d u]);colorbar;title('Diff')
-                 subplot(4,4,10);imagesc(squeeze(F(M(:,:,2,:,2)-M(:,:,2,:,1))),[d u]);colorbar;title('Diff')
-                 subplot(4,4,11);imagesc( squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2)))  - squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1)))  , [d u]);colorbar;title('Diff')
-                 subplot(4,4,12);imagesc(squeeze(F(mean(M(:,:,1:2,:,2),3)-mean(M(:,:,1:2,:,1),3))),[d u]);colorbar;title('Diff')
-                 supertitle(current_title,1,'fontsize',16,'fontweight','bold','interpreter','none');
-                 % count the beta values from 4 rois
-                 C = [];
-                 r = Fixmat([],[]).GetFaceROIs;
-                 r = sum(reshape(r,250000,4));
-                 for np = 1:size(M,5)
-                     for ns = 1:size(M,4)
-                         for w = 1:size(M,3)
-                             C(ns,:,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0)./r;%(pixel,pixel,regressor,subject,phase)
-                             %[subject, roi, predictor, phase]
-                         end
-                     end
-                 end                 
-                 C(:,4,:,:) = [];
-                 %%
-                 labels = {'eyes' 'nose' 'mouth'};
-                 %C = [subject roi predictor phase]
-                 subplot(4,4,13);                 
-                 D  = (C(:,:,1,2)-C(:,:,1,1));%Specific Test - Specific Baseline
-                 barplot_deluxe(D,labels);
-                 
-                 subplot(4,4,14)
-                 D  = (C(:,:,2,2)-C(:,:,2,1));%Unspecific Test  - Unspecific Baseline
-                 barplot_deluxe(D,labels );
-                 
-                 subplot(4,4,15);
-                 D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
-                 barplot_deluxe(D,labels );
-                 
-%                  SaveFigure(filename,'-r300');
-                 
-                 %% plot the same thing as below with Fixmat object
-                 figure;
-                 fix             = Fixmat([],[]);
-                 fix.cmap_limits = [-.2 .2];
-                                  
-                 %plot specific/unspecific Baseline and test as a 2x2
-                 %figure
-                 fix.maps        = cat(3,squeeze(F(M(:,:,2,:,1))),squeeze(F(M(:,:,2,:,2))),squeeze(F(M(:,:,1,:,1))),squeeze(F(M(:,:,1,:,2))))
-                 H = fix.plot;                                  
-                 for n = 1:length(H);
-                     axes(H(n));axis on;set(gca,'xticklabel','','yticklabel','','xgrid','on','ygrid','on');                                             
-                     Publication_RemoveXaxis(gca);
-                     Publication_RemoveYaxis(gca)                     
-                 end
-                 subplotChangeSize(H,.04,.04)
-                 set(gcf,'position',[ 2011         357         671         604])                 
-                 
-                 H(1).YLabel.String = 'Unspecific';
-                 H(1).YLabel.FontWeight = 'bold';
-                 H(3).YLabel.String = 'Specific';
-                 H(3).YLabel.FontWeight = 'bold';
-                 H(3).YLabel.FontSize   = 16;
-                 H(1).YLabel.FontSize   = 16;        
-                 %%  
-                 figure;                 
-                 D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
-                 [h p] =barplot_deluxe(D,labels );
-                 Publication_Ylim(gca,2,1)
-                 Publication_NiceTicks(gca,2);
-                 Publication_FancyYticks(gca,.05)
-                 Publication_RemoveXaxis(gca);
-                 set(gca,'xlim',[0.25 max(xlim)])
-                 ylabel('\Delta_{test} - \Delta_{baseline}','fontsize',16)
-                 %%
-                 SaveFigure(filename2,'-r300');             
-                                                  
-             else
-                 fprintf('%s: Computed already',filename)
-                 pause(4)                 
-             end                              
-             
-             
+    for input = inputs;
+        
+        input{1}{:}
+        current_title   = cell2str(input{1});
+        filename        = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s.png',current_title,func2str(F));
+        filename2       = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s_viafixmat.png',current_title,func2str(F));
+        if (exist(filename) == 0) | (exist(filename2) == 0) | 1
+            %to do
+            %(1) compare all fixations on all subjects;+
+            %(2) compare all fixations on selected subjects;+
+            %(3) exclude the first fixation on all subjects.
+            %(4) exclude the first fixation on selected subjects.
+            %(5) exclude the first fixation on all subjects and test the bigger searchlight window.
+            %(6) exclude the first fixation on selected subjects and test the
+            %bigger searchlight window.
+            
+            
+            Mori            = FPSA_FearGen('searchlight',1,input{1}{:});
+            
+            
+            % MORI(pixel,pixel,regressor,subject,phase)
+            M                = Mori;
+            M(:,:,:,:,2)     = nanmean(Mori(:,:,:,:,2:end),5);%merge the 3 test runs.
+            M(:,:,:,:,3:end) = [];
+            M(:,:,1,:,:)     = [];%remove the intercept
+            %     M                = mean(M,3);%compute the weight for the circular model.
+            % plot the number of subjects present per pixel, get a mask
+            figure(1);
+            C = mean(mean(double(~isnan(M(:,:,1,:,1:2))),4),5)*100;
+            imagesc(C,[0 100]);colorbar;hold on;
+            contourf(C,[90 75 50],'fill','off');axis ij;hold off;
+            axis off
+            title('Counts');
+            % remove the data outside of the mask
+            M             = reshape(M,[500*500 2 size(Mori,4) 2]);
+            mask          = C < 25;
+            mask          = mask(:);
+            M(mask,:,:,:) = NaN;
+            %                  plot specific and unspecific components
+            M             = reshape(M,[500 500 2 size(Mori,4) 2]);
+            % plot specific and unspecific components
+            ffigure;
+            N   = 0;
+            clf;
+            d = -.12;u = .12;
+            subplot(4,4,1);imagesc(squeeze(F(M(:,:,1,:,1))),[d u]);colorbar;title('Specific-Baseline')
+            subplot(4,4,2);imagesc(squeeze(F(M(:,:,2,:,1))),[d u]);colorbar;title('unSpecific-Baseline')
+            subplot(4,4,3);imagesc(squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1))),[d u]);colorbar;title('Specific-Unspecific')
+            subplot(4,4,4);imagesc(squeeze(F(mean(M(:,:,1:2,:,1),3))),[d u]);colorbar;title('Circle-Baseline')
+            
+            subplot(4,4,5);imagesc(squeeze(F(M(:,:,1,:,2))),[d u]);colorbar;title('Specific-Test')
+            subplot(4,4,6);imagesc(squeeze(F(M(:,:,2,:,2))),[d u]);colorbar;title('unSpecific-Test')
+            subplot(4,4,7);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2))),[d u]);colorbar;title('Specific-Unspecific')
+            subplot(4,4,8);imagesc(squeeze(F(mean(M(:,:,1:2,:,2),3))),[d u]);colorbar;title('Circle-Test')
+            
+            subplot(4,4,9);imagesc(squeeze(F(M(:,:,1,:,2)-M(:,:,1,:,1))),[d u]);colorbar;title('Diff')
+            subplot(4,4,10);imagesc(squeeze(F(M(:,:,2,:,2)-M(:,:,2,:,1))),[d u]);colorbar;title('Diff')
+            subplot(4,4,11);imagesc( squeeze(F(M(:,:,1,:,2)-M(:,:,2,:,2)))  - squeeze(F(M(:,:,1,:,1)-M(:,:,2,:,1)))  , [d u]);colorbar;title('Diff')
+            subplot(4,4,12);imagesc(squeeze(F(mean(M(:,:,1:2,:,2),3)-mean(M(:,:,1:2,:,1),3))),[d u]);colorbar;title('Diff')
+            supertitle(current_title,1,'fontsize',16,'fontweight','bold','interpreter','none');
+            % count the beta values from 4 rois
+            C = [];
+            r = Fixmat([],[]).GetFaceROIs;
+            r = sum(reshape(r,250000,4));
+            for np = 1:size(M,5)
+                for ns = 1:size(M,4)
+                    for w = 1:size(M,3)
+                        C(ns,:,w,np) = Fixmat([],[]).EyeNoseMouth(M(:,:,w,ns,np),0)./r;%(pixel,pixel,regressor,subject,phase)
+                        %[subject, roi, predictor, phase]
+                    end
+                end
+            end
+            C(:,4,:,:) = [];
+            %%
+            labels = {'eyes' 'nose' 'mouth'};
+            %C = [subject roi predictor phase]
+            subplot(4,4,13);
+            D  = (C(:,:,1,2)-C(:,:,1,1));%Specific Test - Specific Baseline
+            barplot_deluxe(D,labels);
+            
+            subplot(4,4,14)
+            D  = (C(:,:,2,2)-C(:,:,2,1));%Unspecific Test  - Unspecific Baseline
+            barplot_deluxe(D,labels );
+            
+            subplot(4,4,15);
+            D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
+            barplot_deluxe(D,labels );
+            
+            %                  SaveFigure(filename,'-r300');
+            
+            %% plot the same thing as below with Fixmat object
+            figure;
+            fix             = Fixmat([],[]);
+            fix.cmap_limits = [-.2 .2];
+            
+            %plot specific/unspecific Baseline and test as a 2x2
+            %figure
+            fix.maps        = cat(3,squeeze(F(M(:,:,2,:,1))),squeeze(F(M(:,:,2,:,2))),squeeze(F(M(:,:,1,:,1))),squeeze(F(M(:,:,1,:,2))))
+            H = fix.plot;
+            for n = 1:length(H);
+                axes(H(n));axis on;set(gca,'xticklabel','','yticklabel','','xgrid','on','ygrid','on');
+                Publication_RemoveXaxis(gca);
+                Publication_RemoveYaxis(gca)
+            end
+            subplotChangeSize(H,.04,.04)
+            set(gcf,'position',[ 2011         357         671         604])
+            
+            H(1).YLabel.String = 'Unspecific';
+            H(1).YLabel.FontWeight = 'bold';
+            H(3).YLabel.String = 'Specific';
+            H(3).YLabel.FontWeight = 'bold';
+            H(3).YLabel.FontSize   = 16;
+            H(1).YLabel.FontSize   = 16;
+            %%
+            figure;
+            D  = (C(:,:,1,2)-C(:,:,2,2))-(C(:,:,1,1)-C(:,:,2,1));%Specific-Unspecific between two phases
+            [h p] =barplot_deluxe(D,labels );
+            Publication_Ylim(gca,2,1)
+            Publication_NiceTicks(gca,2);
+            Publication_FancyYticks(gca,.05)
+            Publication_RemoveXaxis(gca);
+            set(gca,'xlim',[0.25 max(xlim)])
+            ylabel('\Delta_{test} - \Delta_{baseline}','fontsize',16)
+            %%
+            SaveFigure(filename2,'-r300');
+            
+        else
+            fprintf('%s: Computed already',filename)
+            pause(4)
+        end
+        
+        
     end
     %%
-%     G       = [ repmat(Vectorize(repmat(1:4,74,1)),4,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1],74,1)),1,1) ];
-%     anovan(Vectorize(C(:,1:4,1:2,1:2)),G,'model','interaction')
-%     %%
-%     G       = [ repmat(Vectorize(repmat(1:4,74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),1,1) ];
-%     anovan(Vectorize(C(:,1:4,1:2,2)-C(:,1:4,1:2,1)),G,'model','interaction')
-%     %%
-%     F  = [];
-%     CF = [];
-%     for phase = [2 4]
-%         %
-%         M = [];
-%         for deltacsp = [0 180]
-%             c = 0;
-%             v = [];
-%             for subjects = unique(fixmat.subject)
-%                 c    = c+1;
-%                 v{c} = {'subject' subjects 'phase' phase 'deltacsp',[deltacsp] 'start' 300:1500};
-%             end
-%             fixmat.getmaps(v{:});
-%             M{deltacsp+1} = fixmat.maps;
-%         end
-%         M = M{1} - M{181};
-%         %
-%         CF2 = [];
-%         for subjects = 1:size(fixmat.maps,3)
-%             CF2 = [CF2; fixmat.EyeNoseMouth(M(:,:,subjects))];
-%         end
-%         CF = cat(3,CF,CF2);
-%         F  = cat(3,F,mean(M,3));
-%     end
-%     %%
-%     ttest(CF(:,:,2)-CF(:,:,1))
-%     figure;bar(mean(CF(:,:,2)-CF(:,:,1)))
-%     %%
-%     fixmat.maps = F(:,:,2)-F(:,:,1);
-%     figure;fixmat.plot;
-%     %%
-%     fixmat.getmaps(v{:});
-%     
-%     %%
-%     %     subplot(3,2,5);imagesc(squeeze(F(M(:,:,1,:,2))-F(M(:,:,1,:,1))),[d u]);colorbar;
-%     %     subplot(3,2,6);imagesc(squeeze(F(M(:,:,2,:,2))-F(M(:,:,2,:,1))),[d u]);colorbar;
-%     
-%     fix             = Fixmat([],[]);
-%     fix.cmap_limits = 5;
-%     fix.maps        = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
-%     fix.plot;
-%     colormap jet
-%     subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
-%     %% plot the differences
-%     figure(2);
-%     N               = 0;
-%     fix             = Fixmat([],[]);
-%     Mdiff           = cat(3,nanmedian(M(:,:,1,:,2)-M(:,:,1,:,1),3),nanmedian(M(:,:,2,:,2)-M(:,:,2,:,1),3));
-%     fix.maps        = Mdiff;
-%     fix.plot;
-%     colormap jet
-%     %     subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
-%     %% make a ttest
-%     M2      = reshape(M,[500*500 2 74 2]);%[pixel regressor subject phase];
-%     Md     = squeeze(M2(:,1,:,2)-M2(:,1,:,1));%-(M(:,2,:,2)-M(:,2,:,1)));
-%     [h p]  = q;
-%     
-%     fix.maps = cat(3,reshape(h,500,500),reshape(-log10(p),500,500));
-%     fix.plot;
-%     %% make a signtest
-%     M     = reshape(M,[500*500 2 74 2]);
-%     h     = nan(250000,1);p = h;
-%     nbeta = 1;
-%     for npix = 1:250000;
-%         if mask(npix) == 0
-%             npix
-%             data              = squeeze(M(npix,nbeta,:,2)-M(npix,nbeta,:,1));
-%             %             [h(npix) p(npix)] = signtest( data(:));
-%             [p(npix) h(npix)] = signtest( data(:));
-%         end
-%     end
-%     fix.maps  = reshape([h(:) -log10(p(:))],[500 500 2]);
-%     imagesc(fix.maps(:,:,2));
-%     fix.plot;
-%     %%
-%     tuned         = ismember(FPSA_FearGen('get_subjects'),FPSA_FearGen('current_subject_pool',1,'get_subjects'))'
-%     M             = reshape(M,[500*500 2 74 2]);
-%     p             = nan(250000,1);
-%     h             = nan(250000,1);
-%     for i             = 1:250000;
-%         if mask(i) == 0
-%             data          = reshape(permute( squeeze(M(i,:,:,:)),[2 3 1]),[74 4]);%(subjects,phase,betas)
-%             %             G             = [Vectorize([zeros(74,2) ones(74,2)]) Vectorize([zeros(74,1) ones(74,1) zeros(74,1) ones(74,1)])];
-%             %             p(i,:)        = anovan(data(:),G,'model','interaction','display','off');
-%             %             data          = (data(:,2)-data(:,1))-(data(:,4)-data(:,3));
-%             data          = (data(tuned ,2)-data(tuned ,1));%-(data(tuned ,4)-data(tuned ,3));
-%             [h(i,1) p(i,1)] = signrank(data);
-%             
-%         end
-%     end
-%     
+    %     G       = [ repmat(Vectorize(repmat(1:4,74,1)),4,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1],74,1)),1,1) ];
+    %     anovan(Vectorize(C(:,1:4,1:2,1:2)),G,'model','interaction')
+    %     %%
+    %     G       = [ repmat(Vectorize(repmat(1:4,74,1)),2,1) repmat(Vectorize(repmat([0 0 0 0 1 1 1 1],74,1)),1,1) ];
+    %     anovan(Vectorize(C(:,1:4,1:2,2)-C(:,1:4,1:2,1)),G,'model','interaction')
+    %     %%
+    %     F  = [];
+    %     CF = [];
+    %     for phase = [2 4]
+    %         %
+    %         M = [];
+    %         for deltacsp = [0 180]
+    %             c = 0;
+    %             v = [];
+    %             for subjects = unique(fixmat.subject)
+    %                 c    = c+1;
+    %                 v{c} = {'subject' subjects 'phase' phase 'deltacsp',[deltacsp] 'start' 300:1500};
+    %             end
+    %             fixmat.getmaps(v{:});
+    %             M{deltacsp+1} = fixmat.maps;
+    %         end
+    %         M = M{1} - M{181};
+    %         %
+    %         CF2 = [];
+    %         for subjects = 1:size(fixmat.maps,3)
+    %             CF2 = [CF2; fixmat.EyeNoseMouth(M(:,:,subjects))];
+    %         end
+    %         CF = cat(3,CF,CF2);
+    %         F  = cat(3,F,mean(M,3));
+    %     end
+    %     %%
+    %     ttest(CF(:,:,2)-CF(:,:,1))
+    %     figure;bar(mean(CF(:,:,2)-CF(:,:,1)))
+    %     %%
+    %     fixmat.maps = F(:,:,2)-F(:,:,1);
+    %     figure;fixmat.plot;
+    %     %%
+    %     fixmat.getmaps(v{:});
+    %
+    %     %%
+    %     %     subplot(3,2,5);imagesc(squeeze(F(M(:,:,1,:,2))-F(M(:,:,1,:,1))),[d u]);colorbar;
+    %     %     subplot(3,2,6);imagesc(squeeze(F(M(:,:,2,:,2))-F(M(:,:,2,:,1))),[d u]);colorbar;
+    %
+    %     fix             = Fixmat([],[]);
+    %     fix.cmap_limits = 5;
+    %     fix.maps        = reshape(squeeze(nanmedian(M(:,:,:,:,:),4)),[500 500 size(M,3)*size(M,5)]);
+    %     fix.plot;
+    %     colormap jet
+    %     subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
+    %     %% plot the differences
+    %     figure(2);
+    %     N               = 0;
+    %     fix             = Fixmat([],[]);
+    %     Mdiff           = cat(3,nanmedian(M(:,:,1,:,2)-M(:,:,1,:,1),3),nanmedian(M(:,:,2,:,2)-M(:,:,2,:,1),3));
+    %     fix.maps        = Mdiff;
+    %     fix.plot;
+    %     colormap jet
+    %     %     subplot(2,2,1);title('Specific - Baseline');subplot(2,2,2);title('unSpecific - Baseline');subplot(2,2,3);title('Specific - Generalization');subplot(2,2,4);title('unSpecific - Generalization');
+    %     %% make a ttest
+    %     M2      = reshape(M,[500*500 2 74 2]);%[pixel regressor subject phase];
+    %     Md     = squeeze(M2(:,1,:,2)-M2(:,1,:,1));%-(M(:,2,:,2)-M(:,2,:,1)));
+    %     [h p]  = q;
+    %
+    %     fix.maps = cat(3,reshape(h,500,500),reshape(-log10(p),500,500));
+    %     fix.plot;
+    %     %% make a signtest
+    %     M     = reshape(M,[500*500 2 74 2]);
+    %     h     = nan(250000,1);p = h;
+    %     nbeta = 1;
+    %     for npix = 1:250000;
+    %         if mask(npix) == 0
+    %             npix
+    %             data              = squeeze(M(npix,nbeta,:,2)-M(npix,nbeta,:,1));
+    %             %             [h(npix) p(npix)] = signtest( data(:));
+    %             [p(npix) h(npix)] = signtest( data(:));
+    %         end
+    %     end
+    %     fix.maps  = reshape([h(:) -log10(p(:))],[500 500 2]);
+    %     imagesc(fix.maps(:,:,2));
+    %     fix.plot;
+    %     %%
+    %     tuned         = ismember(FPSA_FearGen('get_subjects'),FPSA_FearGen('current_subject_pool',1,'get_subjects'))'
+    %     M             = reshape(M,[500*500 2 74 2]);
+    %     p             = nan(250000,1);
+    %     h             = nan(250000,1);
+    %     for i             = 1:250000;
+    %         if mask(i) == 0
+    %             data          = reshape(permute( squeeze(M(i,:,:,:)),[2 3 1]),[74 4]);%(subjects,phase,betas)
+    %             %             G             = [Vectorize([zeros(74,2) ones(74,2)]) Vectorize([zeros(74,1) ones(74,1) zeros(74,1) ones(74,1)])];
+    %             %             p(i,:)        = anovan(data(:),G,'model','interaction','display','off');
+    %             %             data          = (data(:,2)-data(:,1))-(data(:,4)-data(:,3));
+    %             data          = (data(tuned ,2)-data(tuned ,1));%-(data(tuned ,4)-data(tuned ,3));
+    %             [h(i,1) p(i,1)] = signrank(data);
+    %
+    %         end
+    %     end
+    %
 elseif strcmp(varargin{1},'searchlight_stimulus')
     %% applies the search light analysis to the V1 representations.
     b1          = varargin{2};
@@ -1983,7 +2006,7 @@ elseif strcmp(varargin{1},'searchlight_beta_counts')
     fixmat      = FPSA_FearGen('get_fixmat');
     b1          = 1;
     b2          = 15;
-%     out         = FPSA_FearGen('searchlight',fixmat,b1,b2)
+    %     out         = FPSA_FearGen('searchlight',fixmat,b1,b2)
     out         = FPSA_FearGen('searchlight',b1,b2);
     for np = 1:2
         for ns = 1:size(out,4);
@@ -2052,7 +2075,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
                     for tr = unique(fix.trialid(ind)) %loop through trials of this cond-phase-sub
                         tc = tc+1;
                         fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
-                        dummy(tc) = FDMentropy(fix.vectorize_maps);
+                        dummy(tc) = FPSA_FearGen('FDMentropy',fix.vectorize_maps);
                         dummy2(tc) = entropy(fix.vectorize_maps);
                     end
                     d.FDMentropy.m(sc,pc,cc) = mean(dummy);
@@ -2073,7 +2096,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
     if visualization ==1
         subtitles = {'base','cond','test'};
         %% Number of fixations per condition and phase
-        figure;
+        figure('Name','Fix Number');
         meancorr = 1;
         for n=1:3;
             if meancorr  == 1
@@ -2094,9 +2117,20 @@ elseif strcmp(varargin{1},'eyebehave_params')
             end
             axis square
             subplot(2,3,n+3)
-            Project.plot_bar(-135:45:315,nanmean(data),nanstd(data)./sqrt(length(unique(fix.subject))));
+            Project.plot_bar(-135:45:315,nanmean(data),nanstd(data)./sqrt(length(subs)));
             set(gca,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-' 'UCS' 'Odd' 'Null'},'XTickLabelRotation',60,'fontsize',14);
-            
+            if n~=2
+                td.x = repmat(-135:45:180,length(subs),1);
+                td.y = data(:,1:8);
+                td.ids = subs;
+                t = Tuning(td);t.GroupFit(3);
+                if (10.^-t.groupfit.pval)<.05
+                    plot(t.groupfit.x_HD,[t.groupfit.fit_HD],'k','LineWidth',2)
+                else
+                    plot(linspace(-180,270,1000),repmat(mean(t.y_mean),1,1000),'k-','LineWidth',2)
+                end
+                title(sprintf('p = %04.2f',10.^-t.groupfit.pval));
+            end
             box off
             if meancorr ==1
                 ylabel('N fixations (subj.mean corr.)')
@@ -2111,7 +2145,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
             %             ylim([nanmean(d.fixN.data(:))-nanstd(d.fixN.data(:)) nanmean(d.fixN.data(:))+nanstd(d.fixN.data(:))])
         end
         %% Fixation durations per condition
-        figure;
+        figure('Name','Fix Duration');
         meancorr = 1;
         for n=1:3;
             if meancorr  ==1
@@ -2132,13 +2166,25 @@ elseif strcmp(varargin{1},'eyebehave_params')
             box off
             ylabel('fix duration [ms]')
             axis square
+            if n~=2
+                td.x = repmat(-135:45:180,length(subs),1);
+                td.y = data(:,1:8);
+                td.ids = subs;
+                t = Tuning(td);t.GroupFit(3);
+                if (10.^-t.groupfit.pval)<.05
+                    plot(t.groupfit.x_HD,[t.groupfit.fit_HD],'k','LineWidth',2)
+                else
+                    plot(linspace(-180,270,1000),repmat(mean(t.y_mean),1,1000),'k-','LineWidth',2)
+                end
+                title(sprintf('p = %04.2f',10.^-t.groupfit.pval));
+            end
         end
         for n = 4:6
             subplot(2,3,n)
             ylim([nanmean(data(:))-nanstd(data(:)) nanmean(data(:))+nanstd(data(:))])
         end
-        % difference of fixation durations between test and baseline
-        figure;
+        %% difference of fixation durations between test and baseline
+        figure('Name','Fix Duration T-B');
         diffTB = squeeze(d.fixdur.m(:,3,:)-d.fixdur.m(:,1,:)); % this is practically meancorrected for the sub then.. we just look at the difference.
         subplot(1,2,1)
         boxplot(diffTB);
@@ -2156,9 +2202,20 @@ elseif strcmp(varargin{1},'eyebehave_params')
         box off
         ylabel('duration diff Test-Base [ms]')
         axis square
-        
+        if n~=2
+            td.x = repmat(-135:45:180,length(subs),1);
+            td.y = diffTB(:,1:8);
+            td.ids = subs;
+            t = Tuning(td);t.GroupFit(3);
+            if (10.^-t.groupfit.pval)<.05
+                plot(t.groupfit.x_HD,[t.groupfit.fit_HD],'k','LineWidth',2)
+            else
+                plot(linspace(-180,270,1000),repmat(mean(t.y_mean),1,1000),'k-','LineWidth',2)
+            end
+            title(sprintf('p = %04.2f',10.^-t.groupfit.pval));
+        end
         %% Entropy of fixmaps per condition, sub and phase (matlab entropy)
-        figure;
+        figure('Name','Matlabs Entropy');
         meancorr = 1;
         for n = 1:3;
             if meancorr  ==1
@@ -2179,13 +2236,19 @@ elseif strcmp(varargin{1},'eyebehave_params')
             box off
             ylabel('FDM entropy [a.u.]')
             axis square
-            if meancorr == 1 && n==3
-                subplot(2,3,6)
+            if meancorr == 1 && n~=2
+                subplot(2,3,n+3)
                 dada.x = repmat(-135:45:180,74,1);
                 dada.y = data(:,1:8)*1000; % Tuning obj not working for such small numbers.
                 dada.ids = 1:74;
                 t = Tuning(dada);t.GroupFit(3);
-                plot(t.groupfit.x_HD,[t.groupfit.fit_HD+mean(t.y(:))]./1000,'k','LineWidth',2)
+                hold on;
+                if (10.^-t.groupfit.pval)<.05
+                    plot(t.groupfit.x_HD,[t.groupfit.fit_HD]./1000,'k','LineWidth',2)
+                else
+                    plot(linspace(-180,270,1000),repmat(mean(t.y_mean)./1000,1,1000),'k-','LineWidth',2)
+                end
+                title(sprintf('p = %04.2f',10.^-t.groupfit.pval));
             end
             
         end
@@ -2211,7 +2274,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
         % %        E = -sum(fdm.*log2(fdm));
         % %        end
         %
-        %     figure;
+        %     figure(5);
         %     for n=1:3;
         %         subplot(2,3,n);
         %         boxplot(squeeze(d.FDMentropy.m(:,n,:)));
@@ -2233,7 +2296,7 @@ elseif strcmp(varargin{1},'eyebehave_params')
         %     end
         
         %%
-        figure;
+        figure('Name','Between Runs');
         colors = GetFearGenColors;
         colors = [colors; .8 .8 .8];
         set(0,'DefaultAxesColorOrder',colors);
@@ -3153,11 +3216,11 @@ elseif strcmp(varargin{1},'figure_02B')
         load(path_scrampl)
     end
     
-    %% plot SCR 
+    %% plot SCR
     %baseline
     subplot(sps(1),sps(2),5);
     pa = patch([-180 225 225 -180],[mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))-CI(1) mean(nulltrials(:,1))+CI(1) mean(nulltrials(:,1))+CI(1)],'r','EdgeColor','none');
-    set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none'); 
+    set(pa,'FaceAlpha',.5,'FaceColor',grayshade,'EdgeColor','none');
     hold on;
     Project.plot_bar(-135:45:180,av(1:8));
     hold on;
@@ -3220,7 +3283,7 @@ elseif strcmp(varargin{1},'figure_02B')
         plot(test.groupfit.x_HD,test.groupfit.fit_HD,'Color',[0 0 0],'LineWidth',flw)
     else
         line([-150 195],repmat(mean(av(1:8)),[1 2]),'Color',[0 0 0],'LineWidth',flw)
-    end    
+    end
     axis square;axis tight;
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1)
@@ -3230,12 +3293,12 @@ elseif strcmp(varargin{1},'figure_02B')
     subplot(sps(1),sps(2),8)
     hold off;
     mat = scr_ampl(:,[2 3 4]);
-    dotplot(mat);        
+    dotplot(mat);
     axis square;set(gca,'xticklabel',[]);
     Publication_Ylim(gca,0,1);
     Publication_NiceTicks(gca,1);
     Publication_RemoveXaxis(gca);
-%     %paired ttest asterix b-t
+    %     %paired ttest asterix b-t
     line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
     %are amplitudes alpha diff from base to test?
     [h,pval,ci,teststat] = ttest(scr_ampl(:,2),scr_ampl(:,4))
@@ -3246,7 +3309,7 @@ elseif strcmp(varargin{1},'figure_02B')
     elseif pval < .05
         text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
     end
-%     Publication_Asterisks(mat,1:2:5);                        
+    %     Publication_Asterisks(mat,1:2:5);
     
     %% plot ratings
     subs              = FPSA_FearGen('get_subjects');
@@ -3305,7 +3368,7 @@ elseif strcmp(varargin{1},'figure_02B')
             e        = errorbar(-135:45:180,mean(ratings(:,:,n)),std(ratings(:,:,n))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
         end
         set(e,'LineWidth',web,'Color','k')
-        hold on;                                
+        hold on;
         axis square;axis tight;
         box off
         if n == 1
@@ -3318,10 +3381,10 @@ elseif strcmp(varargin{1},'figure_02B')
         else
             l = line([-150 195],repmat(mean(mean(ratings(:,:,n))),[1 2]),'Color','k','LineWidth',2);
         end
-%         Publication_Ylim(gca,0,2)
-        ylim([0 8])        
+        %         Publication_Ylim(gca,0,2)
+        ylim([0 8])
         Publication_NiceTicks(gca,1)
-        Publication_RemoveXaxis(gca);        
+        Publication_RemoveXaxis(gca);
         set(gca,'xticklabel',[]);
         title(tits{n},'Position',[min(xlim)+range(xlim)/2 max(ylim)+range(ylim)*.2],'horizontalalignment','center')
     end
@@ -3331,29 +3394,29 @@ elseif strcmp(varargin{1},'figure_02B')
     dotplot(mat);
     axis square;set(gca,'xticklabel',[]);
     Publication_Ylim(gca,0,1);
-    Publication_NiceTicks(gca,1);          
-%     Publication_Asterisks(mat,1:2:5);                
+    Publication_NiceTicks(gca,1);
+    %     Publication_Asterisks(mat,1:2:5);
     tt  = title(sprintf('Tuning\nStrength (\\alpha)'),'Position',[min(xlim)+range(xlim)/2 max(ylim)+range(ylim)*.2],'horizontalalignment','center');
     
     
     for n = 2:size(mat,2)
-       [~, pval] = ttest(mat(:,1),mat(:,n));
+        [~, pval] = ttest(mat(:,1),mat(:,n));
         if pval < .001
             text(n*2-1,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
         elseif pval < .01
             text(n*2-1,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
         elseif pval < .05
             text(n*2-1,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
-        end       
+        end
     end
-
-
+    
+    
     %% previously figure 03 from here
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
     method          = 3;
-    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');    
+    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');
     %counts => [faces, rois, subjects, phases]
     m_counts  = nanmean(counts,3);
     s_counts  = std(counts,1,3)./sqrt(size(counts,3));
@@ -3366,7 +3429,7 @@ elseif strcmp(varargin{1},'figure_02B')
     % plot the 3 count-profiles for whole group
     
     ylimmi = min(min(m_counts(:)));
-%     yticki = [0 30 60; 0 15 30; 0 3 6];    
+    %     yticki = [0 30 60; 0 15 30; 0 3 6];
     t={'Eyes\n(%%)' 'Nose\n(%%)' 'Mouth\n(%%)'};
     cc = 0;
     % Will equalize ylims of each row of subplots.
@@ -3390,101 +3453,101 @@ elseif strcmp(varargin{1},'figure_02B')
             if ismember(ph,[1 3])
                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
             end
-            hold off;             
+            hold off;
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
             if n==3
                 set(gca,'XTick',[0 180],'XTickLabels',{'CS+','CS-'});
             end
-%             if ph == 2
-%                 if pttest(nroi) < 0.001                    
-%                     text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
-%                     line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])                    
-%                 end
-%             end
+            %             if ph == 2
+            %                 if pttest(nroi) < 0.001
+            %                     text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+            %                     line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+            %                 end
+            %             end
         end
         Publication_Ylim(sax,0,10);
-%         Publication_SymmetricYlim(sax);
+        %         Publication_SymmetricYlim(sax);
         Publication_NiceTicks(sax,1);
-        Publication_RemoveXaxis(sax);        
-%         Publication_RemoveYaxis(sax(2:3));
+        Publication_RemoveXaxis(sax);
+        %         Publication_RemoveYaxis(sax(2:3));
         
         %%
         if ph ==3
             cc= cc + 1;
-        end        
+        end
     end
     
-            
+    
     
     %%
     %t-tests
     %are amplitudes in Test bigger than in Base?
-        for nroi = 1:3
-            [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
-        end
-        %% single subject fit scatter plot
-        subplothelp = [12 16 20];
-        liney = [.58 .41 .26];
-        xscatter = linspace(1,2,nsubs);
-        for nroi = 1:3
-            subplot(sps(1),sps(2),subplothelp(nroi))
-            hold off;
-            mat = squeeze(amp([1 2 3],nroi,:))';
-            dotplot(mat)
-            axis square;set(gca,'xticklabel',[]);
-            Publication_Ylim(gca,0,1);
-            Publication_NiceTicks(gca,1);
-
-            drawnow;
-            if nroi == 3
+    for nroi = 1:3
+        [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
+    end
+    %% single subject fit scatter plot
+    subplothelp = [12 16 20];
+    liney = [.58 .41 .26];
+    xscatter = linspace(1,2,nsubs);
+    for nroi = 1:3
+        subplot(sps(1),sps(2),subplothelp(nroi))
+        hold off;
+        mat = squeeze(amp([1 2 3],nroi,:))';
+        dotplot(mat)
+        axis square;set(gca,'xticklabel',[]);
+        Publication_Ylim(gca,0,1);
+        Publication_NiceTicks(gca,1);
+        
+        drawnow;
+        if nroi == 3
             set(gca,'xticklabels',{'B' 'C' 'G'})
-            end
-            if pttest(nroi) < 0.001
-                text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            elseif pttest(nroi) < .01
-                  text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            elseif pttest(nroi) < .05
-                  text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            end            
         end
+        if pttest(nroi) < 0.001
+            text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        elseif pttest(nroi) < .01
+            text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        elseif pttest(nroi) < .05
+            text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        end
+    end
     %%
     set(GetSubplotHandles(gcf),'fontsize',fs+1);%set all fontsizes to 12
     for i = get(GetSubplotHandles(gcf),'ylabel')';
         set(i{1},'fontweight','bold','VerticalAlignment','bottom','fontsize',fs+2);
-    end    
+    end
     subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
     %%
     if ispc
         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figures\figure_02AB_barplot.png'])
         export_fig([homedir 'Documents\Documents\manuscript_selim\figures\figure_02AB_barplot.png'],'-r400')
     end
-%     %% plot rois;
-%     roi = Fixmat([],[]).GetFaceROIs;
-%     roi = double(roi);
-%     roi(roi==0) = .3;
-%     coor = [[110 220 50 445];[221 375 250-90 250+90]; [376 485 250-150 250+150];[0 500 0 500]];%x and y coordinates for left eye (from my perspective), right eye, nose and mouth.             
-% 
-%     for nroi = 1:3
-%         figure(nroi);clf;
-%         h=imagesc(Fixmat([],[]).stimulus);hold on;
-%         set(h,'alphadata',roi(:,:,nroi));
-%         axis off
-%         axis square
-%         rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
-%         if ispc
-%             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
-%         end
-%     end
+    %     %% plot rois;
+    %     roi = Fixmat([],[]).GetFaceROIs;
+    %     roi = double(roi);
+    %     roi(roi==0) = .3;
+    %     coor = [[110 220 50 445];[221 375 250-90 250+90]; [376 485 250-150 250+150];[0 500 0 500]];%x and y coordinates for left eye (from my perspective), right eye, nose and mouth.
+    %
+    %     for nroi = 1:3
+    %         figure(nroi);clf;
+    %         h=imagesc(Fixmat([],[]).stimulus);hold on;
+    %         set(h,'alphadata',roi(:,:,nroi));
+    %         axis off
+    %         axis square
+    %         rectangle('Position',[coor(nroi,3) coor(nroi,1) diff(coor(nroi,3:4)) diff(coor(nroi,1:2))])
+    %         if ispc
+    %             export_fig([homedir 'Documents\Documents\manuscript_selim\' sprintf('ROI_%d.png',nroi)],'-r400')
+    %         end
+    %     end
     keyboard
 elseif strcmp(varargin{1},'SFig_03')
     %% if Fig 2 gets cut into Fig 2 and SFig 3
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
-        % general layout business.
+    % general layout business.
     fs       = 11; %fontsize
     ms       = 18;  %markersize
     sps      = [3 4]; %subplotsize rows x columns
@@ -3498,10 +3561,10 @@ elseif strcmp(varargin{1},'SFig_03')
     alpha_gf = .001;
     
     
- 
+    
     current_subject_pool = 0;
     method          = 3;
-    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');    
+    [counts,~,~]    = FPSA_FearGen('get_fixation_counts');
     %counts => [faces, rois, subjects, phases]
     m_counts  = nanmean(counts,3);
     s_counts  = std(counts,1,3)./sqrt(size(counts,3));
@@ -3514,7 +3577,7 @@ elseif strcmp(varargin{1},'SFig_03')
     % plot the 3 count-profiles for whole group
     
     ylimmi = min(min(m_counts(:)));
-%     yticki = [0 30 60; 0 15 30; 0 3 6];    
+    %     yticki = [0 30 60; 0 15 30; 0 3 6];
     t={'Eyes\n(%%)' 'Nose\n(%%)' 'Mouth\n(%%)'};
     titls = {'Baseline','Conditioning','Generalization'};
     cc = 0;
@@ -3539,70 +3602,70 @@ elseif strcmp(varargin{1},'SFig_03')
             if ismember(ph,[1 3])
                 plot(squeeze(Xgroupfit(ph,n,:)),squeeze(Ygroupfit(ph,n,:)),'k','Color',[0 0 0],'LineWidth',flw)
             end
-            hold off;             
+            hold off;
             set(gca,'XGrid','off','YGrid','off','XTickLabel',{''})
             if n==3
                 set(gca,'XTick',[0 180],'XTickLabels',{'CS+','CS-'});
             end
             if n == 1
-             th(ph) =  title(titls{ph},'fontsize',fs);
+                th(ph) =  title(titls{ph},'fontsize',fs);
             end
         end
         Publication_Ylim(sax,0,10);
-%         Publication_SymmetricYlim(sax);
+        %         Publication_SymmetricYlim(sax);
         Publication_NiceTicks(sax,1);
-        Publication_RemoveXaxis(sax);        
-%         Publication_RemoveYaxis(sax(2:3));
+        Publication_RemoveXaxis(sax);
+        %         Publication_RemoveYaxis(sax(2:3));
         
         %%
         if ph ==3
             cc= cc + 1;
-        end        
+        end
     end
     
-            
+    
     
     %%
     %t-tests
     %are amplitudes in Test bigger than in Base?
-        for nroi = 1:3
-            [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
-        end
-        %% single subject fit scatter plot
-        subplothelp = [4 8 12];
-        liney = [.58 .41 .26];
-        xscatter = linspace(1,2,nsubs);
-        for nroi = 1:3
-            subplot(sps(1),sps(2),subplothelp(nroi))
-            hold off;
-            mat = squeeze(amp([1 2 3],nroi,:))';
-            dotplot(mat)
-            axis square;set(gca,'xticklabel',[]);
-            Publication_Ylim(gca,0,1);
-            ylim([-4 4])
-            Publication_NiceTicks(gca,1);
-            drawnow;
-            if nroi == 3
+    for nroi = 1:3
+        [hypo(nroi) pttest(nroi)] = ttest(squeeze(amp(1,nroi,:)),squeeze(amp(3,nroi,:)));
+    end
+    %% single subject fit scatter plot
+    subplothelp = [4 8 12];
+    liney = [.58 .41 .26];
+    xscatter = linspace(1,2,nsubs);
+    for nroi = 1:3
+        subplot(sps(1),sps(2),subplothelp(nroi))
+        hold off;
+        mat = squeeze(amp([1 2 3],nroi,:))';
+        dotplot(mat)
+        axis square;set(gca,'xticklabel',[]);
+        Publication_Ylim(gca,0,1);
+        ylim([-4 4])
+        Publication_NiceTicks(gca,1);
+        drawnow;
+        if nroi == 3
             set(gca,'xticklabels',{'B' 'C' 'G'})
-            elseif nroi ==1
-                th(4)=title('Tuning Strength (\alpha)','fontsize',fs);
-            end
-            if pttest(nroi) < 0.001
-                text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            elseif pttest(nroi) < .01
-                  text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            elseif pttest(nroi) < .05
-                  text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
-                line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
-            end            
+        elseif nroi ==1
+            th(4)=title('Tuning Strength (\alpha)','fontsize',fs);
         end
+        if pttest(nroi) < 0.001
+            text(3,max(ylim)+range(ylim)*.04,'***','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        elseif pttest(nroi) < .01
+            text(3,max(ylim)+range(ylim)*.04,'**','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        elseif pttest(nroi) < .05
+            text(3,max(ylim)+range(ylim)*.04,'*','HorizontalAlignment','center','fontsize',16);
+            line([1 5],repmat(max(ylim),1,2),'Color',[0 0 0])
+        end
+    end
     %%
     set(GetSubplotHandles(gcf),'fontsize',12);%set all fontsizes to 12
     for i = get(GetSubplotHandles(gcf),'ylabel')';
         set(i{1},'fontweight','bold','VerticalAlignment','bottom','fontsize',16);
-    end    
+    end
     subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
     %%
     if ispc
@@ -3610,10 +3673,10 @@ elseif strcmp(varargin{1},'SFig_03')
         export_fig([homedir 'Documents\Documents\manuscript_selim\figures\SFig_03_barplot_withttitles.png'],'-r400')
     end
     
-%     %% plot rois;
-%     roi = Fixmat([],[]).GetFaceROIs;
-%     roi = double(roi);
-
+    %     %% plot rois;
+    %     roi = Fixmat([],[]).GetFaceROIs;
+    %     roi = double(roi);
+    
 elseif strcmp(varargin{1},'figure_02B_get_params')
     % get single sub params to plot them in fig 2
     
@@ -3728,7 +3791,7 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
         try
             e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
         catch
-            e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');            
+            e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
         end
         set(gca,'XTick',-135:45:180,'YTick',[0 5 10],'FontSize',12)
         %         SetFearGenBarColors(b)
@@ -3783,11 +3846,11 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
         %         Project.plot_bar(mean(ratings(:,:,sn)));
         hold on;
         try %capsize is 2016b compatible.
-              e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+            e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
         catch
             e  =         errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none');
         end
-%         e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
+        %         e        = errorbar(-135:45:180,mean(ratings(:,:,sn)),std(ratings(:,:,sn))./sqrt(size(ratings,1)),'ok','LineWidth',web,'marker','none','capsize',0);
         set(gca,'XTick',-135:45:180,'XTickLabel',{'' '' '' 'CS+' '' '' '' 'CS-'},'YTick',[0 5 10],'FontSize',12)
         %         SetFearGenBarColors(b)
         set(e,'LineWidth',2,'Color','k')
@@ -3830,7 +3893,7 @@ elseif strcmp(varargin{1},'figure_03A')
     d = .9;
     u = 1.3;
     labels  = {sprintf('-135%c',char(176)) sprintf('-90%c',char(176)) sprintf('-45%c',char(176)) 'CS+' sprintf('+45%c',char(176)) sprintf('+90%c',char(176)) sprintf('+135%c',char(176)) 'CS-' };
-    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };    
+    labels  = {'' sprintf('-90%c',char(176)) '' 'CS+' '' sprintf('+90%c',char(176)) '' 'CS-' };
     fs      = 12;
     %
     set(gcf,'position',[0 0         995         426]);
@@ -3839,7 +3902,7 @@ elseif strcmp(varargin{1},'figure_03A')
     h = imagesc(cormatz(1:8,1:8),[d u]);
     %     set(h,'alphaData',~diag(diag(true(8))));
     axis square;axis off;
-    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');    
+    h = text(0,4,'CS+');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
     h = text(0,8,'CS-');set(h,'HorizontalAlignment','center','fontsize',fs,'rotation',45,'FontWeight','bold');
     h = text(0,2,sprintf('-90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
     h = text(0,6,sprintf('+90%c',char(176)));set(h,'HorizontalAlignment','center','fontsize',fs*2/3,'rotation',45,'FontWeight','bold');
@@ -3879,7 +3942,7 @@ elseif strcmp(varargin{1},'figure_03A')
                 text(X(N),Y(N),'***','fontsize',fs,'color','k','FontWeight','bold');
             end
         end
-    end    
+    end
     subplotChangeSize(H(1:2),.035,.035);
     pos = get(gca,'position');
     %% colorbar
@@ -3959,7 +4022,7 @@ elseif strcmp(varargin{1},'figure_03A')
     %     subplotChangeSize(H,.025,.025);
     %subplot(9,6,[22 23 24 28 29 30])
     %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-%     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent','-r300');
+    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent','-r300');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
@@ -3984,7 +4047,7 @@ elseif strcmp(varargin{1},'get_fixation_counts')
     
     
     force          = 0;
-    c              = 0;    
+    c              = 0;
     for ns = subjects(:)'
         fprintf('Counting fixations in subject: %03d.\n',ns);
         c = c+1;
@@ -4011,28 +4074,28 @@ elseif strcmp(varargin{1},'get_fixation_counts')
                 save(path_write,'dummy_counts');
             else
                 load(path_write);
-            end                
-                count_dm(:,:,c,p) = demean(dummy_counts);
-                count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them                
-                dummy_dummy = [ dummy_dummy ; dummy_counts];
-        end %                
-        dummy_dummy([9 10 11 13 14 15],:) = NaN; 
+            end
+            count_dm(:,:,c,p) = demean(dummy_counts);
+            count(:,:,c,p) = dummy_counts;%[faces organs subjects phases] %keeping this to report % in each ROI without already demeaning them
+            dummy_dummy = [ dummy_dummy ; dummy_counts];
+        end %
+        dummy_dummy([9 10 11 13 14 15],:) = NaN;
         dummy_dummy                       = nanzscore(dummy_dummy);
         %[face rois subjects phases]
         count_z(:,:,c,1)                  = dummy_dummy(1:8,:);
         count_z(:,:,c,2)                  = dummy_dummy(9:16,:);
         count_z(:,:,c,3)                  = dummy_dummy(17:24,:);
     end
-        varargout{1} = count*100;
-        varargout{2} = count_dm;
-        varargout{3} = count_z;
-%     %these groups are for the venn plot later.
-%     groups.g1 = repmat([1:8]',[1 5 61 2]);
-%     groups.g2 = repmat(1:5,[8 1 61 2]);
-%     groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
-%     groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 61 1]);
-%     
-%     varargout{2} = groups;
+    varargout{1} = count*100;
+    varargout{2} = count_dm;
+    varargout{3} = count_z;
+    %     %these groups are for the venn plot later.
+    %     groups.g1 = repmat([1:8]',[1 5 61 2]);
+    %     groups.g2 = repmat(1:5,[8 1 61 2]);
+    %     groups.g3 = repmat(reshape(1:61,[1 1 61]),[8 5 1 2]);
+    %     groups.g4 = repmat(reshape(1:2,[1 1 1 2]),[8 5 61 1]);
+    %
+    %     varargout{2} = groups;
     %% Compute fixation density and their change.
     P = nanmean(nanmean(nanmean(count(:,1:3,:,1:3),4),3));
     fprintf('Mean fixation density in percentage in Baseline, Conditioning + Generalization:\n')
@@ -4063,7 +4126,7 @@ elseif strcmp(varargin{1},'anova_count_tuning');
     a = fitlm(t,'count ~ 1 + faces + roi + faces*roi')
     
 elseif strcmp(varargin{1},'get_groupfit_on_ROIcounts')
-
+    
     force = 0;
     onlywinnersgetacurve = 1;
     method = 3;
@@ -4110,7 +4173,7 @@ elseif strcmp(varargin{1},'get_singlesubfits_on_ROIcounts')
     method = 3;
     subs   = FPSA_FearGen('get_subjects');
     nsubs        = length(subs);
-    [~,~,counts] = FPSA_FearGen('get_fixation_counts');    
+    [~,~,counts] = FPSA_FearGen('get_fixation_counts');
     path_write   = sprintf('%s/data/midlevel/ROI_fixcount_ph234_singlesub_fit_%d_N%d.mat',path_project,method,size(counts,3));
     
     if ~exist(path_write) || force==1
@@ -4228,6 +4291,7 @@ elseif strcmp(varargin{1},'behavior_correlation');
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
     %
 elseif strcmp(varargin{1},'models_run1_run3')
+    
     filename     = sprintf('%s/data/midlevel/REVISION_fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_run_1vs3.mat',path_project,kernel_fwhm,current_subject_pool);
     C1 =  FPSA_FearGen('runs',1,'FPSA_model_singlesubject',{'fix',1:100});
     C2 =  FPSA_FearGen('runs',2,'FPSA_model_singlesubject',{'fix',1:100});
@@ -4250,16 +4314,20 @@ elseif strcmp(varargin{1},'models_run1_run3')
     legend('spec','unspec')
     set(gca,'XTick',1:3,'XTickLabel',{'Base','Test1','Test3'});
     
-     keyboard
+    keyboard
     save(filename,'spec','unspec');
 elseif strcmp(varargin{1},'corr_with_rate_scr')
+    
     t = FPSA_FearGen('get_table_behavior');
     
     [rhoR pvalR] = corr(t.beta_diff_test,t.rating_test_parametric);
     [rhoS pvalS] = corr(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
-  %%
-  figure;
-    subplot(1,2,1);
+    [rhoRspec pvalRspec] = corr(t.beta1_test,t.rating_test_parametric);
+    [rhoSspec pvalSspec] = corr(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
+
+    %%
+    figure;
+    subplot(2,2,1);
     hold on;
     scatter(t.beta_diff_test,t.rating_test_parametric,'filled');
     lsl = lsline;set(lsl,'LineWidth',2);
@@ -4267,20 +4335,261 @@ elseif strcmp(varargin{1},'corr_with_rate_scr')
     ylabel('Rating Tuning Amplitude')
     ylimmi = ylim;
     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoR,pvalR));set(tt,'FontSize',14)
-    subplot(1,2,2);
-     hold on;
+    subplot(2,2,2);
+    hold on;
     scatter(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
-      lsl = lsline;set(lsl,'LineWidth',2);
+    lsl = lsline;set(lsl,'LineWidth',2);
     xlabel('Anisotropy (spec-unspec)')
     ylabel('SCR Tuning Amplitude')
-      ylimmi = ylim;
+    ylimmi = ylim;
     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoS,pvalS));set(tt,'FontSize',14)
-    for ns = 1:2;
-        subplot(1,2,ns);
+    subplot(2,2,3);
+    hold on;
+    scatter(t.beta1_test,t.rating_test_parametric,'filled');
+    lsl = lsline;set(lsl,'LineWidth',2);
+    xlabel('spec')
+    ylabel('Rating Tuning Amplitude')
+    ylimmi = ylim;
+    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoRspec,pvalRspec));set(tt,'FontSize',14)
+    subplot(2,2,4);
+    hold on;
+    scatter(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
+    lsl = lsline;set(lsl,'LineWidth',2);
+    xlabel('spec')
+    ylabel('SCR Tuning Amplitude')
+    ylimmi = ylim;
+    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoSspec,pvalSspec));set(tt,'FontSize',14)
+    for ns = 1:4;
+        subplot(2,2,ns);
+        xL = get(gca, 'XLim');plot(xL, [0 0], 'k--')
+        
+        yL = get(gca, 'YLim');plot([0 0],yL,  'k--')
         set(gca,'FontSize',16)
         axis square
     end
     
+elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the behaviral recordings
+    %%
+    % Target: What features of fixation behavior predict the anisotropy
+    % from model_02?
+    % Steps:
+    % collect necessary data
+    % set up table
+    force_t  = 1;
+    force_d  = 0;
+    p        = Project;
+    subs     = FPSA_FearGen('get_subjects');
+    path2table = sprintf('%sdata/midlevel/table_fixfeatures_N%d.mat',path_project,length(subs));
+    
+    if ~exist(path2table)||force_t == 1
+        
+        %% get model parameters
+        C          = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
+        beta1_base         = C.model_02.w1(:,1);
+        beta2_base         = C.model_02.w2(:,1);
+        beta1_test         = C.model_02.w1(:,2);
+        beta2_test         = C.model_02.w2(:,2);
+        beta1_diff         = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+        beta2_diff         = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+        beta_diff_test     = beta1_test - beta2_test;
+        beta_diffdiff      = (beta1_test - beta2_test) - (beta1_base - beta2_base);%how much does w1 increase more than w2 does? (Interaction)
+        %%
+        if ~exist(strrep(path2table,'table','data'))|| force_d ==1
+            fix = FPSA_FearGen('get_fixmat');
+            
+            %mean number of fixations for this combination
+            [d.fixN.data, d.fixN.info] = fix.histogram;
+            
+            sc = 0;
+            for sub = unique(fix.subject)
+                fprintf('\nWorking on sub %02d, ',sub)
+                sc= sc+1;
+                pc = 0;
+                for ph = [2 4]
+                    fprintf('phase %d. ',ph)
+                    pc = pc+1;
+                    cc=0;
+                    for cond = unique(fix.deltacsp)
+                        cc=cc+1;
+                        ind = logical((fix.subject==sub).*(fix.phase == ph).* (fix.deltacsp == cond));
+                        %mean duration of fixations for this phase/sub/cond
+                        d.fixdur.m(sc,cc,pc) = mean(fix.stop(ind)-fix.start(ind));
+                        %% for entropy, we need single trials, otherwise the trial number contributing to mean FDM (for this cond-phase-sub) biases the entropy computation
+                        %mean entropy for this combination
+                        
+                        tc = 0;
+                        for tr = unique(fix.trialid(ind)) %loop through trials of this cond-phase-sub
+                            tc = tc+1;
+                            fix.unitize = 0;
+                            fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
+                            FDMent_u0(tc)     = FPSA_FearGen('FDMentropy',fix.vectorize_maps);
+                            MATent_u0(tc)     = entropy(fix.vectorize_maps);
+                            fix.unitize  = 1;
+                            fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
+                            FDMent_u1(tc)  = FPSA_FearGen('FDMentropy',fix.vectorize_maps);
+                            MATent_u1(tc)  = entropy(fix.vectorize_maps); %this is gonna be 0
+                            
+                            %% collect saccade lengths here, will ya!?
+                            ind_trial = logical(ind.*[fix.trialid == tr]);
+                            fixes = [fix.x(ind_trial)' fix.y(ind_trial)'];
+                            for nfix = 1:sum(ind_trial)-1
+                                saccdist_perfix(nfix) = pdist(fixes(nfix:nfix+1,:),'euclidean');
+                            end
+                            saccade_dist(tc) = mean(saccdist_perfix);
+                        end
+                        d.FDMentropy_u0.m(sc,cc,pc) = mean(FDMent_u0);
+                        d.MATentropy_u0.m(sc,cc,pc) = mean(MATent_u0);
+                        d.FDMentropy_u1.m(sc,cc,pc) = mean(FDMent_u1);
+                        d.MATentropy_u1.m(sc,cc,pc) = mean(MATent_u1);
+                        d.saccadedist.m(sc,cc,pc)   = mean(saccade_dist);
+                        fix.unitize = 1;
+                    end
+                end
+            end
+            save(strrep(path2table,'table','data'),'d','subs');
+        else
+            load(strrep(path2table,'table','data'));
+        end
+        base = 1;
+        test = 2;
+        spec = [4 8];
+        unspec = [6 2];
+        anis_fixN     = ((d.fixN.data(:,spec(1),test)-d.fixN.data(:,spec(1),base))- (d.fixN.data(:,spec(2),test)-d.fixN.data(:,spec(2),base)))-((d.fixN.data(:,unspec(1),test)-d.fixN.data(:,unspec(1),base))- (d.fixN.data(:,unspec(2),test)-d.fixN.data(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+        anis_fixdur   = ((d.fixdur.m(:,spec(1),test)-d.fixdur.m(:,spec(1),base))- (d.fixdur.m(:,spec(2),test)-d.fixdur.m(:,spec(2),base)))-((d.fixdur.m(:,unspec(1),test)-d.fixdur.m(:,unspec(1),base))- (d.fixdur.m(:,unspec(2),test)-d.fixdur.m(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+        anis_saccdist = ((d.saccadedist.m(:,spec(1),test)-d.saccadedist.m(:,spec(1),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base))...
+            -(d.saccadedist.m(:,unspec(2),test)-d.saccadedist.m(:,unspec(2),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base)));
+       anis_entr      = ((d.FDMentropy_u0.m(:,spec(1),test)-d.FDMentropy_u0.m(:,spec(1),base))- (d.FDMentropy_u0.m(:,spec(2),test)-d.FDMentropy_u0.m(:,spec(2),base)))-((d.FDMentropy_u0.m(:,unspec(1),test)-d.FDMentropy_u0.m(:,unspec(1),base))- (d.FDMentropy_u0.m(:,unspec(2),test)-d.FDMentropy_u0.m(:,unspec(2),base))); %ba
+        
+        
+        %% concatenate everything in the table
+        t = table(subs(:),...
+            beta1_base,beta2_base,beta1_test,beta2_test,beta1_diff,beta2_diff,beta_diff_test,beta_diffdiff,anis_fixN,anis_fixdur,anis_saccdist,anis_entr,...
+            'variablenames',{'subject_id' ,'beta1_base','beta2_base','beta1_test','beta2_test','beta1_diff','beta2_diff','beta_diff_test','beta_diffdiff','anis_fixN','anis_fixdur','anis_saccdist','anis_entr'});
+        save(path2table,'t');
+    else
+        fprintf('Found table at %s, loading it.\n',path2table)
+        load(path2table);
+    end
+    %%
+    varargout{1} = t;
+    
+    varargout{2} = d;
+elseif strcmp(varargin{1},'GLM_fixfeatures')
+    force    = 0;
+    p        = Project;
+    subs     = FPSA_FearGen('get_subjects');
+    
+    path2table = sprintf('%sdata/midlevel/table_fixfeatures_N%d.mat',path_project,length(subs));
+    
+    if ~exist(path2table) || force == 1
+        t  = FPSA_FearGen('get_table_fixfeatures');
+    else
+        load(path2table);
+    end
+    
+    mat = [t.anis_fixN t.anis_fixdur t.anis_saccdist t.anis_entr];
+    [cmat, pmat] = corrcoef(mat);
+    figure;
+    h = imagesc(cmat,[-1 1]);
+    hold on;
+    mask = double(pmat<.05);
+    mask(mask == 0) = .15;
+    colorbar
+    set(h,'AlphaData',mask);
+    hh=ImageWithText(cmat,cmat,[-1 1]);
+    set(hh,'AlphaData',0);
+    hold on;
+    set(gca,'XTick',1:4,'YTick',1:4,'XTicklabel',{'fixN','fixDur','SaccDist','Entr'},'YTicklabel',{'fixN','fixDur','SaccDist','Entr'})
+axis image;box off
+    model          = fitlme(t,'beta_diffdiff ~ 1 + anis_fixN + anis_fixdur + anis_saccdist + anis_entr');
+    
+elseif strcmp(varargin{1},'FDMentropy')
+    % computes entropy of a fixation density map.
+    % Map should be normalized anyway. If not, this function does it.
+    
+    % remove zero entries in p
+    fdm = varargin{2};
+    fdm(fdm==0) = [];
+    
+    if sum(fdm) ~=0
+        % normalize p so that sum(p) is one.
+        fdm = fdm ./ numel(fdm);
+    end
+    
+    E = -sum(fdm.*log2(fdm));
+    varargout{1} = E;
+elseif strcmp(varargin{1},'compare_binary2Gauss_singlesub')
+        
+    subs = FPSA_FearGen('get_subjects');
+    path2modelfits = sprintf('%sdata/midlevel/Ratings_binary2Gauss_N%d_fits.mat',path_project,length(subs));
+
+    if~exist(path2modelfits) || force == 1
+      
+        sc = 0;
+        for sub = subs(:)'
+            sc = sc+1;
+            s = Subject(sub);
+            for ph = 1:3
+                t = Tuning(s.get_rating(ph+1));
+                t.SingleSubjectFit(3);
+                LL_Gauss(sc,ph) = t.fit_results.Likelihood;
+                
+                LL_null(sc,ph)  = t.fit_results.null_Likelihood;
+                t.SingleSubjectFit(10);
+                LL_bin_miny(sc,ph)   = t.fit_results.Likelihood;
+                t.SingleSubjectFit(11);
+                LL_bin_meany(sc,ph)   = t.fit_results.Likelihood;
+            end
+        end
+        
+        save(path2modelfits,'LL_Gauss','LL_null','LL_bin_miny','LL_bin_meany')
+    else
+        load(path2modelfits)
+    end
+    
+    t = Tuning(Subject(1).get_rating(4));
+    figure;
+    b = bar(-135:45:180,t.y_mean);
+    set(b,'FaceAlpha',.3,'EdgeColor','none')
+    t.visualization = 0;
+    t.SingleSubjectFit(3);
+    hold on;
+    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'r','LineWidth',2)
+    hold on
+    t.SingleSubjectFit(10)
+    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'g','LineWidth',2)
+    t.SingleSubjectFit(11);
+    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'c','LineWidth',2)
+    legend('rating','Gauss','binary min(y)','binary mean(y)')
+    box off
+    
+    keyboard
+%   %% which model wins on subject level?   
+     df = t.fit_results.dof; 
+     pval_Gauss_vs_miny   = (1-chi2cdf(-2*(LL_Gauss - LL_bin_miny),df) + eps);
+     pval_Gauss_vs_meany  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_meany),df) + eps);
+     pval_miny_vs_null    = (1-chi2cdf(-2*(LL_bin_miny - LL_null),df) + eps);
+     pval_meany_vs_null   = (1-chi2cdf(-2*(LL_bin_meany - LL_null),df) + eps);
+     
+     N_Gauss_miny = sum(pval_Gauss_vs_miny<.05);
+     N_Gauss_meany = sum(pval_Gauss_vs_meany<.05);
+     
+     %is this sign. diff from chance?
+     BinomPval_Gaussminy  = binopdf(N_Gauss_miny,length(subs),.5); %.5 for chance level.
+     BinomPval_Gaussmeany = binopdf(N_Gauss_meany,length(subs),.5);
+     
+     figure;
+     [fG,xiG] = ksdensity(LL_Gauss(:,3));plot(xiG,fG,'b','LineWidth',2);hold on;
+     [fMin,xiMin] = ksdensity(LL_bin_miny(:,3));plot(xiMin,fMin,'r','LineWidth',2);hold on;
+     [fMean,xiMean] = ksdensity(LL_bin_meany(:,3));plot(xiMean,fMean,'y','LineWidth',2);hold on;
+     legend('Gauss','binary from minY','binary from meanY')
+     box off
+     ylabel('ksdensity of LL')
+     xlabel('Log Likelihood (LL)')
+     set(gca,'FontSize',16)
+     kruskalwallis(LLmat)
+     pGmin = ranksum(LL_Gauss(:,3),LL_bin_miny(:,3));
+     pGmean = ranksum(LL_Gauss(:,3),LL_bin_meany(:,3));
 
 elseif strcmp(varargin{1},'get_path_project');
     varargout{1} = path_project;
