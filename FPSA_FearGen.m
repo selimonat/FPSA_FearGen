@@ -516,9 +516,9 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
             subc     = 0;
             for subject = unique(fixmat.subject);
                 subc                    = subc + 1;
-                maps                    = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject,selector{:}});
+                maps                    = FPSA_FearGen('get_fixmap',fixmat,{'subject' subject,selector{:}}); %this gives 16 fixmaps, [8condsBaseline 8condsTestphase]
                 fprintf('Subject: %03d, Run: %03d, Method: %s\n',subject,run,method);
-                sim.(method)(subc,:,runc)= pdist(maps',method);%
+                sim.(method)(subc,:,runc)= pdist(maps',method);% %length 120, triangular form of 16*16 matrix
             end
         end
         %average across runs
@@ -625,7 +625,7 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
         %the full B and T similarity matrix which are jointly computed;
         sim       = FPSA_FearGen('get_fpsa_fair',selector,runs);%returns FPSA per subject
         %%we only want the B and T parts
-        B         = FPSA_FearGen('get_block',sim,1,1);
+        B         = FPSA_FearGen('get_block',sim,1,1); %8x8x74
         T         = FPSA_FearGen('get_block',sim,2,2);
         %once we have these, we go back to the compact form and concat the
         %stuff, now each column is a non-redundant FPSA per subject
@@ -635,6 +635,9 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
         end
         BB       = BB';
         TT       = TT';
+        % gives us column vectors with dissimilarities of each subject for
+        % B and for T , size 120
+        
         % some indicator variables for phase, subject identities.
         phase    = repmat([repmat(1,size(BB,1)/2,1); repmat(2,size(BB,1)/2,1)],1,size(BB,2));
         subject  = repmat(1:size(sim.correlation,1),size(BB,1),1);
@@ -656,7 +659,7 @@ elseif strcmp(varargin{1},'FPSA_get_table') %% returns a table object ready for 
         [cmat]     = getcorrmat(0,3,1,1);%see model_rsa_testgaussian_optimizer
         model3_g   = repmat(repmat(squareform_force(cmat),1,1),1,size(subject,2));%
         %% add all this to a TABLE object.
-        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'});
+        t          = table(1-BB(:),1-TT(:),model1(:),model2_c(:),model2_s(:),model3_g(:),categorical(subject(:)),categorical(phase(:)),'variablenames',{'FPSA_B' 'FPSA_G' 'circle' 'specific' 'unspecific' 'Gaussian' 'subject' 'phase'}); %this phase category is corrupt.
         save(filename,'t');
     else
         load(filename);
@@ -733,13 +736,13 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;
 elseif strcmp(varargin{1},'FPSA_model_kfold')
-
+    
     selector   = {'fix',1:100};
     t          = FPSA_FearGen('runs',runs,'FPSA_get_table',selector);
     tab = FPSA_FearGen('FPSA_model_singlesubject');
     CVO = cvpartition(t.subject_id,'KFold',5);
     
-  
+    
     for i = 1:CVO.NumTestSets
         trIds = CVO.training(i);
         teIds = CVO.test(i);
@@ -747,8 +750,8 @@ elseif strcmp(varargin{1},'FPSA_model_kfold')
         model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');
         model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
         model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
-           
-    out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+        
+        out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
     end
     
     
@@ -2544,6 +2547,341 @@ elseif strcmp(varargin{1},'SVM')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
     end
+elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
+    %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
+    %It collects the data and computes the eigenvalues on the
+    %fly for chosen(or a range of parameters) (kernel_fwhm, number of
+    %eigenvalues). As the number of trials are lower in the
+    %baseline, all the test-training sessions should use the same number of
+    %trials. For example to keep the comparisons comparable, in baseline 11
+    %trials in the baseline, with .5 hold-out, one needs to sample the same
+    %number of trials from the testphase before training.
+    %the option random = 1 randomizes labels to determine the chance classification
+    %performance level.
+    random = 0;
+    exclmouth = 0;
+    tbootstrap       = 100; %number of bootstraps
+    phase            = [2 4 4 4];%baseline = 2, test = 4
+    holdout_ratio    = .2; %holdout_ratio for training vs. test set
+    teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
+    crit             = 'var';%choose 'ellbow' classification or 'var' 90% variance explained.
+    cutoffcrit       = .9;
+    R                = [];%result storage for classification performance
+    HP               = [];%result storage for single subject hyperplanes.
+    AVEHP            = [];%result storate for average hyperplane
+    
+    eigval           = [];
+    trialselect      = {1:120 1:120 121:240 241:360};
+    
+    
+    subjects = FPSA_FearGen('get_subjects');
+    o = 0;
+    for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+        o = o+1;
+        fix             = Fixmat(subjects,phase(run));%get the data
+        if exclmouth == 1
+            roi = fix.GetFaceROIs;
+        end
+        fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
+        %% get number of trials per condition and subject: Sanity check...
+        M               = [];%this will contain number of trials per subject and per condition. some few people have 10 trials (not 11) but that is ok. This is how I formed the subject_exlusion variable.
+        sub_c           = 0;
+        for ns = subjects(:)'
+            sub_c = sub_c + 1;
+            nc = 0;
+            for cond = [0 180]%unique(fix.deltacsp)
+                nc          = nc +1;
+                i           = ismember(fix.phase,phase(run)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
+                i           = logical(i);
+                M(sub_c,nc,o) = length(unique(fix.trialid(i)));
+            end
+        end
+        %% get all the single trials in a huge matrix D together with labels.
+        global_counter = 0;
+        clear D;%the giant data matrix
+        clear labels;%and associated labels.
+        for ns = subjects(:)'
+            for deltacsp = [0 180]%-135:45:180;
+                i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
+                trials         = unique(fix.trialid(i == 1));
+                trial_counter  = 0;
+                for trialid = trials
+                    trial_counter       = trial_counter + 1;
+                    global_counter      = global_counter +1;
+                    c                   = global_counter;
+                    v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
+                    fix.getmaps(v);
+                    if exclmouth == 1
+                        fix.maps(roi(:,:,4)) = 0;
+                    end
+                    D(:,c)              = Vectorize(imresize(fix.maps,.1));
+                    labels.sub(c)       = ns;
+                    labels.phase(c)     = phase(run);
+                    labels.trial(c)     = trial_counter;%some people have less trials check it out with plot(labels.trial)
+                    labels.cond(c)      = deltacsp;
+                end
+            end
+        end
+        %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+        fprintf('starting covariance computation\n')
+        covmat    = cov(D');
+        fprintf('done\n')
+        fprintf('starting eigenvector computation\n')
+        [e dv]    = eig(covmat);
+        fprintf('done\n')
+        dv        = sort(diag(dv),'descend');
+        eigval(:,run) = dv;
+            figure(101);
+            plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+        eigen     = fliplr(e);
+        %collect loadings of every trial
+        trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+        %% LIBSVM business
+        neigs = [7 12 8 10]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+        if strcmp(crit,'ellbow')
+            neig = neigs(run);
+        elseif strcmp(crit,'var')
+            neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+        end
+        sub_counter = 0;
+        result      = [];
+        w           = [];
+        cov_feat   = [];
+        hyper_im   = [];
+        for sub = unique(labels.sub)%go subject by subject
+            fprintf('run:%d-Eig:%d-Sub:%d\n',run,neig,sub);
+            if random == 1
+                warning('Randomizing labels as wanted. \n')
+            end
+            sub_counter = sub_counter + 1;
+            ind_all     = ismember(labels.sub,sub);%this subject, this phase.
+            %
+            for n = 1:tbootstrap%
+                Ycond   = double(labels.cond(ind_all))';%labels of the fixation maps for this subject in this phase.
+                X       = trialload(ind_all,1:neig);%fixation maps of this subject in this phase.
+                % now normal Holdout for every phase (which should all have the
+                % same number of trials now)
+                P       = cvpartition(Ycond,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
+                i       = logical(P.training.*ismember(Ycond,[0 180]));%train using only the CS+ and CS? conditions.
+                if random ==1
+                    model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                else
+                    model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                end
+                % get the hyperplane
+                try
+                    w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
+                    % Haufe et al ,2003
+                    cov_feat(:,:,sub_counter,n)   = cov(X(i,1:neig));
+                    a                           = cov_feat(:,:,sub_counter,n)*w(:,sub_counter,n);
+                    hyper_im(:,:,sub_counter,n) = reshape(a'*eigen(:,1:neig)',50,50);
+                catch
+                    keyboard%sanity check: stop if something is wrong
+                end
+                %%
+                cc=0;
+                for cond = unique(Ycond)'
+                    cc                          = cc+1;
+                    i                           = logical(P.test.*ismember(Ycond,cond));%find all indices that were not used for training belonging to COND.
+                    [~, dummy]                  = evalc('svmpredict(Ycond(i), X(i,:), model);');%doing it like this supresses outputs.
+                    dummy                       = dummy == 0;%binarize: 1=CS+, 0=Not CS+
+                    result(cc,n,sub_counter)    = sum(dummy)/length(dummy);%get the percentage of CS+ responses for each CONDITION,BOOTSTR,SUBJECT
+                end
+                [~, dummy]    = evalc('svmpredict(Ycond(P.test), X(P.test,:), model);');
+%                 predicted(:,sub_counter,n) = dummy ;%doing it like this supresses outputs.
+%                 actual(:,sub_counter,n) = Ycond(P.test);
+            end
+        end
+        %once the data is there compute relevant output metrics:
+%         R(:,run)      = mean(mean(result,2),3);%average across bootstaps the classification results
+%         AVEHP(:,:,run) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
+%         HP(:,:,:,run) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
+%         
+        savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+        filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP.mat',neig,random,run,crit,exclmouth);
+        if exist(savepath)
+%             save([savepath filename],'neig','hyper_im','eigval','eigen','predicted','actual');
+            save([savepath filename],'neig','hyper_im','eigval','eigen');
+        else
+            fprintf('Creating SVM results folder...\n')
+            mkdir(savepath);
+            save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+        end
+    end
+elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
+    %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
+    %It collects the data and computes the eigenvalues on the
+    %fly for chosen(or a range of parameters) (kernel_fwhm, number of
+    %eigenvalues). As the number of trials are lower in the
+    %baseline, all the test-training sessions should use the same number of
+    %trials. For example to keep the comparisons comparable, in baseline 11
+    %trials in the baseline, with .5 hold-out, one needs to sample the same
+    %number of trials from the testphase before training.
+    %the option random = 1 randomizes labels to determine the chance classification
+    %performance level.
+    random = 0;
+    exclmouth = 0;
+    tbootstrap       = 100; %number of bootstraps
+    phase            = [2 4 4 4];%baseline = 2, test = 4
+    holdout_ratio    = .2; %holdout_ratio for training vs. test set
+    teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
+    crit             = 'var';%choose 'ellbow' classification or 'var' 90% variance explained.
+    cutoffcrit       = .9;
+    R                = [];%result storage for classification performance
+    HP               = [];%result storage for single subject hyperplanes.
+    AVEHP            = [];%result storate for average hyperplane
+    
+    eigval           = [];
+    trialselect      = {1:120 1:120 121:240 241:360};
+    
+    
+    subjects = FPSA_FearGen('get_subjects');
+    o = 0;
+    for run = 1%:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+        o = o+1;
+        fix             = Fixmat(subjects,phase(run));%get the data
+        if exclmouth == 1
+            roi = fix.GetFaceROIs;
+        end
+        fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
+        %% get number of trials per condition and subject: Sanity check...
+        M               = [];%this will contain number of trials per subject and per condition. some few people have 10 trials (not 11) but that is ok. This is how I formed the subject_exlusion variable.
+        sub_c           = 0;
+        for ns = subjects(:)'
+            sub_c = sub_c + 1;
+            nc = 0;
+            for cond = [0 180]%unique(fix.deltacsp)
+                nc          = nc +1;
+                i           = ismember(fix.phase,phase(run)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
+                i           = logical(i);
+                M(sub_c,nc,o) = length(unique(fix.trialid(i)));
+            end
+        end
+        %% get all the single trials in a huge matrix D together with labels.
+        global_counter = 0;
+        clear D;%the giant data matrix
+        clear labels;%and associated labels.
+        for ns = subjects(:)'
+            for deltacsp = [0 180]%-135:45:180;
+                i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
+                trials         = unique(fix.trialid(i == 1));
+                trial_counter  = 0;
+                for trialid = trials
+                    trial_counter       = trial_counter + 1;
+                    global_counter      = global_counter +1;
+                    c                   = global_counter;
+                    v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
+                    fix.getmaps(v);
+                    if exclmouth == 1
+                        fix.maps(roi(:,:,4)) = 0;
+                    end
+                    D(:,c)              = Vectorize(imresize(fix.maps,.1));
+                    labels.sub(c)       = ns;
+                    labels.phase(c)     = phase(run);
+                    labels.trial(c)     = trial_counter;%some people have less trials check it out with plot(labels.trial)
+                    labels.cond(c)      = deltacsp;
+                end
+            end
+        end
+        %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+        fprintf('starting covariance computation\n')
+        covmat    = cov(D');
+        fprintf('done\n')
+        fprintf('starting eigenvector computation\n')
+        [e dv]    = eig(covmat);
+        fprintf('done\n')
+        dv        = sort(diag(dv),'descend');
+        eigval(:,run) = dv;
+            figure(101);
+            plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+        eigen     = fliplr(e);
+        %collect loadings of every trial
+        trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+        %% LIBSVM business
+        neigs = [7 12 8 10]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+        if strcmp(crit,'ellbow')
+            neig = neigs(run);
+        elseif strcmp(crit,'var')
+            neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+        end
+        
+        
+        
+        %% SVM starts.
+        sub_counter = 0;
+        result      = [];
+        w           = [];
+        cov_feat   = [];
+        hyper_im   = [];
+        for sub = 1:2;%unique(labels.sub)% will leave this one out.
+            fprintf('run:%d-Eig:%d-leaving out sub:%d\n',run,neig,sub);
+            if random == 1
+                warning('Randomizing labels as wanted. \n')
+            end
+            sub_counter = sub_counter + 1;
+            ind_all     = ~ismember(labels.sub,sub);%this subject, this phase.
+            ind_testsub = ismember(labels.sub,sub);
+            %
+            fprintf('Bootstraps done: ')
+            for n = 1:tbootstrap%
+                if mod(n,10)==0
+                fprintf('%03d, ',n);
+                end
+                Ycond   = double(labels.cond)';%labels of the fixation maps for this subject in this phase.
+                X       = trialload(:,1:neig);%fixation maps of this subject in this phase.
+               
+                i       = ind_all;%train using only the CS+ and CS? conditions.
+                if random ==1
+                    model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                else
+                    model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                end
+                % get the hyperplane
+                try
+                    w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
+                    % Haufe et al ,2003
+                    cov_feat(:,:,sub_counter,n)   = cov(X(i,1:neig));
+                    a                           = cov_feat(:,:,sub_counter,n)*w(:,sub_counter,n);
+                    hyper_im(:,:,sub_counter,n) = reshape(a'*eigen(:,1:neig)',50,50);
+                catch
+                    keyboard%sanity check: stop if something is wrong
+                end
+                %% predict labels for left out subject
+                [~, predicted]                  = evalc('svmpredict(Ycond(ind_testsub), X(ind_testsub,:), model);');%doing it like this supresses outputs.
+                actual = Ycond(ind_testsub);
+                
+                TP = sum(predicted == 0 & actual==0)./length(predicted); 
+                FP = sum(predicted == 0 & actual==180)./length(predicted); 
+                FN = sum(predicted == 180 & actual==0)./length(predicted);  
+                TN = sum(predicted == 180 & actual==180)./length(predicted);
+              
+                Precision(sub_counter,n,run) = TP / (TP+FP);
+                Recall(sub_counter,n,run) = TP / (TP+FN);
+                Accuracy(sub_counter,n,run) = (TP + TN) / (TP + TN + FP + FN);
+            end
+            fprintf('.\n')
+        end
+        %once the data is there compute relevant output metrics:
+%         R(:,run)      = mean(mean(result,2),3);%average across bootstaps the classification results
+%         AVEHP(:,:,run) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
+%         HP(:,:,:,run) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
+%         
+        savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+        filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_leave1subout.mat',neig,random,run,crit,exclmouth);
+        if exist(savepath)
+%             save([savepath filename],'neig','hyper_im','eigval','eigen','predicted','actual');
+            save([savepath filename],'neig','hyper_im','eigval','eigen','Precision','Accuracy','Recall');
+        else
+            fprintf('Creating SVM results folder...\n')
+            mkdir(savepath);
+            %             save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+        end
+        
+        clear Precision
+        clear Recall
+        clear  Accuracy
+    end
+    keyboard
 elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
     % here we classify subjects to show their idiosyncratic patterns.
     % we classify them within each phase seperately to account for diff.
@@ -4324,7 +4662,7 @@ elseif strcmp(varargin{1},'corr_with_rate_scr')
     [rhoS pvalS] = corr(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
     [rhoRspec pvalRspec] = corr(t.beta1_test,t.rating_test_parametric);
     [rhoSspec pvalSspec] = corr(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
-
+    
     %%
     figure;
     subplot(2,2,1);
@@ -4375,7 +4713,7 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
     % Steps:
     % collect necessary data
     % set up table
-    force_t  = 1;
+    force_t  = 0;
     force_d  = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
@@ -4423,11 +4761,7 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
                             fix.unitize = 0;
                             fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
                             FDMent_u0(tc)     = FPSA_FearGen('FDMentropy',fix.vectorize_maps);
-                            MATent_u0(tc)     = entropy(fix.vectorize_maps);
-                            fix.unitize  = 1;
-                            fix.getmaps({'trialid' tr 'phase' ph 'subject' sub 'deltacsp' cond});
-                            FDMent_u1(tc)  = FPSA_FearGen('FDMentropy',fix.vectorize_maps);
-                            MATent_u1(tc)  = entropy(fix.vectorize_maps); %this is gonna be 0
+                            FDMent_ChSh(tc)     = FPSA_FearGen('FDMentropy_ChaoShen',fix.vectorize_maps);
                             
                             %% collect saccade lengths here, will ya!?
                             ind_trial = logical(ind.*[fix.trialid == tr]);
@@ -4438,9 +4772,7 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
                             saccade_dist(tc) = mean(saccdist_perfix);
                         end
                         d.FDMentropy_u0.m(sc,cc,pc) = mean(FDMent_u0);
-                        d.MATentropy_u0.m(sc,cc,pc) = mean(MATent_u0);
-                        d.FDMentropy_u1.m(sc,cc,pc) = mean(FDMent_u1);
-                        d.MATentropy_u1.m(sc,cc,pc) = mean(MATent_u1);
+                        d.FDMentropy_ChSh.m(sc,cc,pc) = mean(FDMent_ChSh);
                         d.saccadedist.m(sc,cc,pc)   = mean(saccade_dist);
                         fix.unitize = 1;
                     end
@@ -4458,7 +4790,7 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
         anis_fixdur   = ((d.fixdur.m(:,spec(1),test)-d.fixdur.m(:,spec(1),base))- (d.fixdur.m(:,spec(2),test)-d.fixdur.m(:,spec(2),base)))-((d.fixdur.m(:,unspec(1),test)-d.fixdur.m(:,unspec(1),base))- (d.fixdur.m(:,unspec(2),test)-d.fixdur.m(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
         anis_saccdist = ((d.saccadedist.m(:,spec(1),test)-d.saccadedist.m(:,spec(1),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base))...
             -(d.saccadedist.m(:,unspec(2),test)-d.saccadedist.m(:,unspec(2),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base)));
-       anis_entr      = ((d.FDMentropy_u0.m(:,spec(1),test)-d.FDMentropy_u0.m(:,spec(1),base))- (d.FDMentropy_u0.m(:,spec(2),test)-d.FDMentropy_u0.m(:,spec(2),base)))-((d.FDMentropy_u0.m(:,unspec(1),test)-d.FDMentropy_u0.m(:,unspec(1),base))- (d.FDMentropy_u0.m(:,unspec(2),test)-d.FDMentropy_u0.m(:,unspec(2),base))); %ba
+        anis_entr      = ((d.FDMentropy_ChSh.m(:,spec(1),test)-d.FDMentropy_ChSh.m(:,spec(1),base))- (d.FDMentropy_ChSh.m(:,spec(2),test)-d.FDMentropy_ChSh.m(:,spec(2),base)))-((d.FDMentropy_ChSh.m(:,unspec(1),test)-d.FDMentropy_ChSh.m(:,unspec(1),base))- (d.FDMentropy_ChSh.m(:,unspec(2),test)-d.FDMentropy_ChSh.m(:,unspec(2),base))); %ba
         
         
         %% concatenate everything in the table
@@ -4469,10 +4801,10 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
     else
         fprintf('Found table at %s, loading it.\n',path2table)
         load(path2table);
+        load(strrep(path2table,'table','data'));
     end
     %%
     varargout{1} = t;
-    
     varargout{2} = d;
 elseif strcmp(varargin{1},'GLM_fixfeatures')
     force    = 0;
@@ -4485,6 +4817,7 @@ elseif strcmp(varargin{1},'GLM_fixfeatures')
         t  = FPSA_FearGen('get_table_fixfeatures');
     else
         load(path2table);
+        load(strrep(path2table,'table','data'));
     end
     
     mat = [t.anis_fixN t.anis_fixdur t.anis_saccdist t.anis_entr];
@@ -4500,12 +4833,18 @@ elseif strcmp(varargin{1},'GLM_fixfeatures')
     set(hh,'AlphaData',0);
     hold on;
     set(gca,'XTick',1:4,'YTick',1:4,'XTicklabel',{'fixN','fixDur','SaccDist','Entr'},'YTicklabel',{'fixN','fixDur','SaccDist','Entr'})
-axis image;box off
-    model          = fitlme(t,'beta_diffdiff ~ 1 + anis_fixN + anis_fixdur + anis_saccdist + anis_entr');
+    axis image;box off
+    
+    
+    
+    
+    model          = fitlm(t,'beta_diffdiff ~ 1 + anis_fixN + anis_fixdur + anis_saccdist + anis_entr');
     
 elseif strcmp(varargin{1},'FDMentropy')
     % computes entropy of a fixation density map.
     % Map should be normalized anyway. If not, this function does it.
+    %% THIS IS BIASED BY NUMBER OF FIXATIONS.
+    
     
     % remove zero entries in p
     fdm = varargin{2};
@@ -4518,13 +4857,36 @@ elseif strcmp(varargin{1},'FDMentropy')
     
     E = -sum(fdm.*log2(fdm));
     varargout{1} = E;
+elseif strcmp(varargin{1},'FDMentropy_ChaoShen')
+    
+    % entropy compuation with Chao-Shen KL correction (see Wilming et al.,
+    % 2011)
+    % q needs to be an FDM where sum ~= 1
+    
+    q = varargin{2};
+    yx = q(q > 0); % remove bins with zero counts
+    n = sum(yx);
+    p = yx/n;
+    f1 = sum(yx == 1); % number of singletons in the sample
+    if f1 == n % avoid C == 0
+        f1 = f1 - 1;
+    end
+    C = 1 - (f1/n); % estimated coverage of the sample
+    pa = C * p; % coverage adjusted empirical frequencies
+    la = (1 - (1 - pa).^n); % probability to see a bin (species) in the sample
+    H = -sum((pa.* log2(pa))./ la);
+    
+    varargout{1} = H;
+    varargout{2} = pa;
+    varargout{3} = la;
+    
 elseif strcmp(varargin{1},'compare_binary2Gauss_singlesub')
-        
+    
     subs = FPSA_FearGen('get_subjects');
-    path2modelfits = sprintf('%sdata/midlevel/Ratings_binary2Gauss_N%d_fits.mat',path_project,length(subs));
-
+    path2modelfits = sprintf('%sdata/midlevel/Ratings_binary2Gauss_N%d_fits_3_10_11_12.mat',path_project,length(subs));
+    
     if~exist(path2modelfits) || force == 1
-      
+        
         sc = 0;
         for sub = subs(:)'
             sc = sc+1;
@@ -4539,10 +4901,12 @@ elseif strcmp(varargin{1},'compare_binary2Gauss_singlesub')
                 LL_bin_miny(sc,ph)   = t.fit_results.Likelihood;
                 t.SingleSubjectFit(11);
                 LL_bin_meany(sc,ph)   = t.fit_results.Likelihood;
+                t.SingleSubjectFit(12);
+                LL_bin_freey(sc,ph)   = t.fit_results.Likelihood;
             end
         end
         
-        save(path2modelfits,'LL_Gauss','LL_null','LL_bin_miny','LL_bin_meany')
+        save(path2modelfits,'LL_Gauss','LL_null','LL_bin_miny','LL_bin_meany','LL_bin_freey')
     else
         load(path2modelfits)
     end
@@ -4560,37 +4924,39 @@ elseif strcmp(varargin{1},'compare_binary2Gauss_singlesub')
     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'g','LineWidth',2)
     t.SingleSubjectFit(11);
     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'c','LineWidth',2)
-    legend('rating','Gauss','binary min(y)','binary mean(y)')
+    t.SingleSubjectFit(12);
+    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'b','LineWidth',2)
+    legend('rating','Gauss','binary min(y)','binary mean(y)','binary free_y')
     box off
     
     keyboard
-%   %% which model wins on subject level?   
-     df = t.fit_results.dof; 
-     pval_Gauss_vs_miny   = (1-chi2cdf(-2*(LL_Gauss - LL_bin_miny),df) + eps);
-     pval_Gauss_vs_meany  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_meany),df) + eps);
-     pval_miny_vs_null    = (1-chi2cdf(-2*(LL_bin_miny - LL_null),df) + eps);
-     pval_meany_vs_null   = (1-chi2cdf(-2*(LL_bin_meany - LL_null),df) + eps);
-     
-     N_Gauss_miny = sum(pval_Gauss_vs_miny<.05);
-     N_Gauss_meany = sum(pval_Gauss_vs_meany<.05);
-     
-     %is this sign. diff from chance?
-     BinomPval_Gaussminy  = binopdf(N_Gauss_miny,length(subs),.5); %.5 for chance level.
-     BinomPval_Gaussmeany = binopdf(N_Gauss_meany,length(subs),.5);
-     
-     figure;
-     [fG,xiG] = ksdensity(LL_Gauss(:,3));plot(xiG,fG,'b','LineWidth',2);hold on;
-     [fMin,xiMin] = ksdensity(LL_bin_miny(:,3));plot(xiMin,fMin,'r','LineWidth',2);hold on;
-     [fMean,xiMean] = ksdensity(LL_bin_meany(:,3));plot(xiMean,fMean,'y','LineWidth',2);hold on;
-     legend('Gauss','binary from minY','binary from meanY')
-     box off
-     ylabel('ksdensity of LL')
-     xlabel('Log Likelihood (LL)')
-     set(gca,'FontSize',16)
-     kruskalwallis(LLmat)
-     pGmin = ranksum(LL_Gauss(:,3),LL_bin_miny(:,3));
-     pGmean = ranksum(LL_Gauss(:,3),LL_bin_meany(:,3));
-
+    %   %% which model wins on subject level?
+    df = t.fit_results.dof;
+    pval_Gauss_vs_miny   = (1-chi2cdf(-2*(LL_Gauss - LL_bin_miny),df) + eps);
+    pval_Gauss_vs_meany  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_meany),df) + eps);
+    pval_miny_vs_null    = (1-chi2cdf(-2*(LL_bin_miny - LL_null),df) + eps);
+    pval_meany_vs_null   = (1-chi2cdf(-2*(LL_bin_meany - LL_null),df) + eps);
+    
+    N_Gauss_miny = sum(pval_Gauss_vs_miny<.05);
+    N_Gauss_meany = sum(pval_Gauss_vs_meany<.05);
+    
+    %is this sign. diff from chance?
+    BinomPval_Gaussminy  = binopdf(N_Gauss_miny,length(subs),.5); %.5 for chance level.
+    BinomPval_Gaussmeany = binopdf(N_Gauss_meany,length(subs),.5);
+    
+    figure;
+    [fG,xiG] = ksdensity(LL_Gauss(:,3));plot(xiG,fG,'b','LineWidth',2);hold on;
+    [fMin,xiMin] = ksdensity(LL_bin_miny(:,3));plot(xiMin,fMin,'r','LineWidth',2);hold on;
+    [fMean,xiMean] = ksdensity(LL_bin_meany(:,3));plot(xiMean,fMean,'y','LineWidth',2);hold on;
+    legend('Gauss','binary from minY','binary from meanY')
+    box off
+    ylabel('ksdensity of LL')
+    xlabel('Log Likelihood (LL)')
+    set(gca,'FontSize',16)
+    kruskalwallis(LLmat)
+    pGmin = ranksum(LL_Gauss(:,3),LL_bin_miny(:,3));
+    pGmean = ranksum(LL_Gauss(:,3),LL_bin_meany(:,3));
+    
 elseif strcmp(varargin{1},'get_path_project');
     varargout{1} = path_project;
     
