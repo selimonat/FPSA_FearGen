@@ -2737,26 +2737,14 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
     
     subjects = FPSA_FearGen('get_subjects');
     o = 0;
-    for run = 1%:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+    for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
         o = o+1;
         fix             = Fixmat(subjects,phase(run));%get the data
         if exclmouth == 1
             roi = fix.GetFaceROIs;
         end
         fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
-        %% get number of trials per condition and subject: Sanity check...
-        M               = [];%this will contain number of trials per subject and per condition. some few people have 10 trials (not 11) but that is ok. This is how I formed the subject_exlusion variable.
-        sub_c           = 0;
-        for ns = subjects(:)'
-            sub_c = sub_c + 1;
-            nc = 0;
-            for cond = [0 180]%unique(fix.deltacsp)
-                nc          = nc +1;
-                i           = ismember(fix.phase,phase(run)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
-                i           = logical(i);
-                M(sub_c,nc,o) = length(unique(fix.trialid(i)));
-            end
-        end
+
         %% get all the single trials in a huge matrix D together with labels.
         global_counter = 0;
         clear D;%the giant data matrix
@@ -2804,16 +2792,13 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
         elseif strcmp(crit,'var')
             neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
         end
-        
-        
-        
         %% SVM starts.
         sub_counter = 0;
         result      = [];
         w           = [];
         cov_feat   = [];
         hyper_im   = [];
-        for sub = 1:2;%unique(labels.sub)% will leave this one out.
+        for sub = unique(labels.sub)% will leave this one out.
             fprintf('run:%d-Eig:%d-leaving out sub:%d\n',run,neig,sub);
             if random == 1
                 warning('Randomizing labels as wanted. \n')
@@ -2879,7 +2864,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
         
         clear Precision
         clear Recall
-        clear  Accuracy
+        clear Accuracy
     end
     keyboard
 elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
