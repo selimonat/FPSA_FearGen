@@ -529,6 +529,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     end
     
     varargout{1} = sim;
+
 elseif strcmp(varargin{1},'plot_fpsa');%% A routine to plot similarity matrices
     %%
     figure;
@@ -736,28 +737,61 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;
 elseif strcmp(varargin{1},'FPSA_model_kfold')
+    subs = FPSA_FearGen('get_subjects');
+    t74          = FPSA_FearGen('runs',1:3,'FPSA_get_table',{'fix',1:100});
     
-    selector   = {'fix',1:100};
-    t          = FPSA_FearGen('runs',runs,'FPSA_get_table',selector);
-    tab = FPSA_FearGen('FPSA_model_singlesubject');
-    CVO = cvpartition(t.subject_id,'KFold',5);
+    options       = optimset('Display','none','maxfunevals',10000,'tolX',10^-12,'tolfun',10^-12,'MaxIter',10000,'Algorithm','interior-point');
+    %design matrices
+    dM{1} = [ones(28,1) table2array(t74(1:28,'circle'))];
+    dM{2} = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific'))];
+%     dM_03 = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific')) table2array(t74(1:28,'Gaussian'))];
+    model_strings = {'FPSA_G ~ 1 + circle','FPSA_G ~ 1 + specific + unspecific '};
     
-    
-    for i = 1:CVO.NumTestSets
-        trIds = CVO.training(i);
-        teIds = CVO.test(i);
-        model_00_mixed    = fitlme(t,'FPSA_G ~ 1 + (1|subject)');
-        model_01_mixed    = fitlme(t,'FPSA_G ~ 1 + circle + (1 + circle|subject)');
-        model_02_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific +  (1 + specific + unspecific|subject)');
-        model_03_mixed    = fitlme(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+    for sc = 1:length(subs)
         
-        out.baseline.model_03_mixed          = fitlme(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian + (1 + specific + unspecific + Gaussian|subject)');
+        FPSA_Gsub = table2array(t74(double(t74.subject)==sc,'FPSA_G'));
+        t = t74(~ismember(double(t74.subject),sc),:);
+        
+        for nm = 1:2 %model numbers
+            fprintf('Running Sub %02d, Model %d.\n',sc,nm)
+            model       = fitlm(t,model_strings{nm});
+            pred        = [model.Coefficients.Estimate'*dM{nm}']';
+            betas{nm}(sc,:) = model.Coefficients.Estimate;
+            
+
+           % compute AIC with likelihood from normal distribution with optimized sd
+           likelihoodfun  = @(sd) sum(-log( normpdf( pred - FPSA_Gsub , 0,sd)));
+           L = 0;
+           U = [];
+           Init = 1;
+           [sd_osd(sc,nm), logL_osd(sc,nm),ExitF(sc,nm)]  = fmincon(likelihoodfun, Init, [],[],[],[],L,U,[],options);
+           aic_osd(sc,nm) = 2*logL_osd(sc,nm) + 2*(nm+1); %nm is the same as number of parameters, by chance.
+           
+           % compute AIC with likelihood from standard normal distribution
+           logL_ssd(sc,nm) =  sum(log( normpdf(pred - FPSA_Gsub, 0,1)));
+           aic_ssd(sc,nm) = -2*logL_ssd(sc,nm) + 2*nm;
+           
+           % compute AIC from RSS
+           RSS(sc,nm) = sum((pred - FPSA_Gsub).^2);           
+           n = length(FPSA_Gsub);
+           aic_rss(sc,nm) = 2*nm + n*log(RSS(sc,nm));
+        end
     end
     
-    
-    
-    
-    
+    for nm=1:2
+        aicc_osd = aic_osd + (2*(nm.^2) + 2*nm)./(n-nm-1);
+        aicc_ssd = aic_ssd + (2*(nm.^2) + 2*nm)./(n-nm-1);
+        aicc_rss = aic_rss + (2*(nm.^2) + 2*nm)./(n-nm-1);
+    end
+    savepath = sprintf('%sdata/midlevel/CV_GLM_leaveoneout.mat',path_project);
+    save(savepath,'aic_rss','aic_osd','aic_ssd','aicc_rss','aicc_osd','aicc_ssd');
+    %%
+    % compare models.
+    AIC = aic_rss; % decide on the appropriate one
+    N_winning    = sum(AIC(:,1)<AIC(:,2));
+    outcome_perc = mean(AIC(:,1)<AIC(:,2))*100;
+    fprintf('In %02d out of N = %02d subjects (%04.2f percent), model 02 won over model 01 (leave-one-out CV).\n',N_winning,sc,outcome_perc)
+    keyboard;
     
 elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject FPSA matrices.
     %% same as FPSA_model, but on gathers a model parameter for single subjects.
@@ -2548,6 +2582,8 @@ elseif strcmp(varargin{1},'SVM')
         xlim([-170 215])
     end
 elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
+    %NEED HOLDOUT AS INPUT2
+
     %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
     %It collects the data and computes the eigenvalues on the
     %fly for chosen(or a range of parameters) (kernel_fwhm, number of
@@ -2562,7 +2598,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     exclmouth = 0;
     tbootstrap       = 100; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
-    holdout_ratio    = .2; %holdout_ratio for training vs. test set
+    holdout_ratio    = varargin{2}./100; %holdout_ratio for training vs. test set
     teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
     crit             = 'var';%choose 'ellbow' classification or 'var' 90% variance explained.
     cutoffcrit       = .9;
@@ -2583,19 +2619,6 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
             roi = fix.GetFaceROIs;
         end
         fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
-        %% get number of trials per condition and subject: Sanity check...
-        M               = [];%this will contain number of trials per subject and per condition. some few people have 10 trials (not 11) but that is ok. This is how I formed the subject_exlusion variable.
-        sub_c           = 0;
-        for ns = subjects(:)'
-            sub_c = sub_c + 1;
-            nc = 0;
-            for cond = [0 180]%unique(fix.deltacsp)
-                nc          = nc +1;
-                i           = ismember(fix.phase,phase(run)).*ismember(fix.subject,ns).*ismember(fix.deltacsp,cond);%this is on fixation logic, not trials.
-                i           = logical(i);
-                M(sub_c,nc,o) = length(unique(fix.trialid(i)));
-            end
-        end
         %% get all the single trials in a huge matrix D together with labels.
         global_counter = 0;
         clear D;%the giant data matrix
@@ -2622,92 +2645,267 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
                 end
             end
         end
-        %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
-        fprintf('starting covariance computation\n')
-        covmat    = cov(D');
-        fprintf('done\n')
-        fprintf('starting eigenvector computation\n')
-        [e dv]    = eig(covmat);
-        fprintf('done\n')
-        dv        = sort(diag(dv),'descend');
-        eigval(:,run) = dv;
-            figure(101);
-            plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
-        eigen     = fliplr(e);
-        %collect loadings of every trial
-        trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
-        %% LIBSVM business
-        neigs = [7 12 8 10]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
-        if strcmp(crit,'ellbow')
-            neig = neigs(run);
-        elseif strcmp(crit,'var')
-            neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
-        end
-        sub_counter = 0;
-        result      = [];
-        w           = [];
-        cov_feat   = [];
-        hyper_im   = [];
-        for sub = unique(labels.sub)%go subject by subject
-            fprintf('run:%d-Eig:%d-Sub:%d\n',run,neig,sub);
-            if random == 1
-                warning('Randomizing labels as wanted. \n')
-            end
-            sub_counter = sub_counter + 1;
-            ind_all     = ismember(labels.sub,sub);%this subject, this phase.
-            %
-            for n = 1:tbootstrap%
-                Ycond   = double(labels.cond(ind_all))';%labels of the fixation maps for this subject in this phase.
-                X       = trialload(ind_all,1:neig);%fixation maps of this subject in this phase.
-                % now normal Holdout for every phase (which should all have the
-                % same number of trials now)
-                P       = cvpartition(Ycond,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
-                i       = logical(P.training.*ismember(Ycond,[0 180]));%train using only the CS+ and CS? conditions.
-                if random ==1
-                    model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+        %% EV decomposition has to be within trainingsset already!
+        ssc = 0;
+        for ns = subjects(:)'
+            ssc = ssc+1;
+            
+            this_sub = labels.sub == ns;
+            DD      = D(:,this_sub);
+            Ys      = labels.cond(this_sub);
+            fprintf('\nRun:%d-Sub:%d-Bootstr: ',run,subjects(ssc));
+            for n = 1:tbootstrap
+               
+                if mod(n,20)==0
+                    fprintf('%d',n)
+                end
+                if holdout_ratio > 0
+                    P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
                 else
-                    model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                    P.training = logical(ones(length(Ys),1));
+                end
+                
+                %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+%                 fprintf('starting covariance computation...')
+                covmat    = cov(DD(:,P.training)');
+%                 fprintf('done\n')
+%                 fprintf('starting eigenvector computation...')
+                [e dv]    = eig(covmat);
+%                 fprintf('done\n')
+                dv        = sort(diag(dv),'descend');
+                eigval(:,run) = dv;
+                %             figure(101);
+                %             plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+                eigen     = fliplr(e);
+                %collect loadings of every trial
+                trialload = DD'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+                %% LIBSVM business
+                neigs = [NaN NaN NaN NaN]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+                if strcmp(crit,'ellbow')
+                    fprintf('not defined, please check visually...\n')
+                    keyboard
+                    neig = neigs(run);
+                elseif strcmp(crit,'var')
+                    neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+                end
+                % take neig features from generously collected trialload
+                Ycond   = double(Ys)';
+                X       = trialload(:,1:neig);
+                if random ==1
+                    warning('Randomizing labels as wanted. \n')
+                    model   = svmtrain(Shuffle(Ycond(P.training)), X(P.training,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                else
+                    model   = svmtrain(Ycond(P.training), X(P.training,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
                 end
                 % get the hyperplane
                 try
-                    w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
+                    w          = model.SVs'*model.sv_coef;
+                    HP(:,:,ssc,n,run) = reshape(eigen(:,1:neig)*w,[50 50 1]);% old way to compute HP
+                    % neg for 
                     % Haufe et al ,2003
-                    cov_feat(:,:,sub_counter,n)   = cov(X(i,1:neig));
-                    a                           = cov_feat(:,:,sub_counter,n)*w(:,sub_counter,n);
-                    hyper_im(:,:,sub_counter,n) = reshape(a'*eigen(:,1:neig)',50,50);
+                    cov_feat   = cov(X(P.training,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
+                    a                           = cov_feat*w;
+                    hyper_im(:,:,ssc,n,run) = reshape(a'*eigen(:,1:neig)',50,50);
                 catch
                     keyboard%sanity check: stop if something is wrong
                 end
-                %%
-                cc=0;
-                for cond = unique(Ycond)'
-                    cc                          = cc+1;
-                    i                           = logical(P.test.*ismember(Ycond,cond));%find all indices that were not used for training belonging to COND.
-                    [~, dummy]                  = evalc('svmpredict(Ycond(i), X(i,:), model);');%doing it like this supresses outputs.
-                    dummy                       = dummy == 0;%binarize: 1=CS+, 0=Not CS+
-                    result(cc,n,sub_counter)    = sum(dummy)/length(dummy);%get the percentage of CS+ responses for each CONDITION,BOOTSTR,SUBJECT
+                if holdout_ratio > 0
+                    [~, predicted]    = evalc('svmpredict(Ycond(P.test), X(P.test,:), model);');
+                    actual = Ycond(P.test);
+                    TP(ssc,n,run) = sum(predicted == 0 & actual==0);
+                    FP(ssc,n,run) = sum(predicted == 0 & actual==180);
+                    FN(ssc,n,run) = sum(predicted == 180 & actual==0);
+                    TN(ssc,n,run) = sum(predicted == 180 & actual==180);
+                    N_pred(ssc,n,run) = length(predicted);
+                    
+                    Precision(ssc,n,run) = TP(ssc,n,run) / (TP(ssc,n,run)+FP(ssc,n,run));
+                    Recall(ssc,n,run) = TP(ssc,n,run) / (TP(ssc,n,run)+FN(ssc,n,run));
+                    Accuracy(ssc,n,run) = (TP(ssc,n,run) + TN(ssc,n,run)) / (TP(ssc,n,run) + TN(ssc,n,run) + FP(ssc,n,run) + FN(ssc,n,run));
+                    
+                    num_eigs(ssc,n,run) = neig;
                 end
-                [~, dummy]    = evalc('svmpredict(Ycond(P.test), X(P.test,:), model);');
-%                 predicted(:,sub_counter,n) = dummy ;%doing it like this supresses outputs.
-%                 actual(:,sub_counter,n) = Ycond(P.test);
             end
         end
-        %once the data is there compute relevant output metrics:
-%         R(:,run)      = mean(mean(result,2),3);%average across bootstaps the classification results
-%         AVEHP(:,:,run) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
-%         HP(:,:,:,run) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
-%         
-        savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
-        filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP.mat',neig,random,run,crit,exclmouth);
-        if exist(savepath)
-%             save([savepath filename],'neig','hyper_im','eigval','eigen','predicted','actual');
-            save([savepath filename],'neig','hyper_im','eigval','eigen');
+    end
+    %
+    savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+    filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_EVfromTrain_allruns_holdout%d.mat',neig,random,run,crit,exclmouth,holdout_ratio*100);
+    try
+        if holdout_ratio > 0
+            save([savepath filename],'hyper_im','Precision','Accuracy','Recall','TP','FP','TN','FN','N_pred');
         else
-            fprintf('Creating SVM results folder...\n')
-            mkdir(savepath);
-            save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
+            save([savepath filename],'hyper_im')
+        end
+    catch
+        keyboard
+    end
+    
+    
+elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane_CSgroup')
+    %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
+    %It collects the data and computes the eigenvalues on the
+    %fly for chosen(or a range of parameters) (kernel_fwhm, number of
+    %eigenvalues). As the number of trials are lower in the
+    %baseline, all the test-training sessions should use the same number of
+    %trials. For example to keep the comparisons comparable, in baseline 11
+    %trials in the baseline, with .5 hold-out, one needs to sample the same
+    %number of trials from the testphase before training.
+    %the option random = 1 randomizes labels to determine the chance classification
+    %performance level.
+    random = 0;
+    exclmouth = 0;
+    tbootstrap       = 100; %number of bootstraps
+    phase            = [2 4 4 4];%baseline = 2, test = 4
+    holdout_ratio    = varargin{2}./100; %holdout_ratio for training vs. test set
+    teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
+    crit             = 'var';%choose 'ellbow' classification or 'var' 90% variance explained.
+    cutoffcrit       = .9;
+    eigval           = [];
+    trialselect      = {1:120 1:120 121:240 241:360};
+    
+    
+    subjects = FPSA_FearGen('get_subjects');
+    g = Group(subjects);
+    csps = g.getcsp;
+    
+    
+    o = 0;
+    for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+        o = o+1;
+        fix             = Fixmat(subjects,phase(run));%get the data
+        if exclmouth == 1
+            roi = fix.GetFaceROIs;
+        end
+        fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
+        %% get all the single trials in a huge matrix D together with labels.
+        global_counter = 0;
+        clear D;%the giant data matrix
+        clear labels;%and associated labels.
+        for ns = subjects(:)'
+            for deltacsp = [0 180]%-135:45:180;
+                i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
+                trials         = unique(fix.trialid(i == 1));
+                trial_counter  = 0;
+                for trialid = trials
+                    trial_counter       = trial_counter + 1;
+                    global_counter      = global_counter +1;
+                    c                   = global_counter;
+                    v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
+                    fix.getmaps(v);
+                    if exclmouth == 1
+                        fix.maps(roi(:,:,4)) = 0;
+                    end
+                    D(:,c)              = Vectorize(imresize(fix.maps,.1));
+                    labels.sub(c)       = ns;
+                    labels.phase(c)     = phase(run);
+                    labels.trial(c)     = trial_counter;%some people have less trials check it out with plot(labels.trial)
+                    labels.cond(c)      = deltacsp;
+                end
+            end
+        end
+        %% EV decomposition has to be within trainingsset already!
+        cs = 0;
+        for csp = 1:4
+            cs = cs+1;
+            
+            subs_face{cs} = subjects(csps==csp);
+            this_face = ismember(labels.sub,subs_face{cs});
+            subs_face{cs+4} = subjects(csps==csp+4);
+            opp_face =  ismember(labels.sub,subs_face{cs+4});
+            
+            
+            both_faces = logical(this_face + opp_face); %those are logicals, ok to do that.
+            labels.cond(opp_face) =  abs(labels.cond(opp_face)-180); %switches 0 and 180
+            
+            DD      = D(:,both_faces);
+            Ys      = labels.cond(both_faces);
+
+            
+            for n = 1:tbootstrap
+                if mod(n,20)==0
+                    fprintf('%d',n)
+                end
+                 if holdout_ratio > 0
+                    P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
+                else
+                    P.training = logical(ones(length(Ys),1));
+                end
+               
+                %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+%                 fprintf('starting covariance computation...')
+                covmat    = cov(DD(:,P.training)');
+%                 fprintf('done\n')
+%                 fprintf('starting eigenvector computation...')
+                [e dv]    = eig(covmat);
+%                 fprintf('done\n')
+                dv        = sort(diag(dv),'descend');
+                eigval(:,run) = dv;
+                %             figure(101);
+                %             plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+                eigen     = fliplr(e);
+                %collect loadings of every trial
+                trialload = DD'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+                %% LIBSVM business
+                neigs = [NaN NaN NaN NaN]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+                if strcmp(crit,'ellbow')
+                    fprintf('not defined, please check visually...\n')
+                    keyboard
+                    neig = neigs(run);
+                elseif strcmp(crit,'var')
+                    neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+                end
+                % take neig features from generously collected trialload
+                Ycond   = double(Ys)';
+                X       = trialload(:,1:neig);
+                if random ==1
+                    warning('Randomizing labels as wanted. \n')
+                    model   = svmtrain(Shuffle(Ycond(P.training)), X(P.training,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                else
+                    model   = svmtrain(Ycond(P.training), X(P.training,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                end
+                % get the hyperplane
+                try
+                    w          = model.SVs'*model.sv_coef;
+                    HP(:,:,cs,n,run) = reshape(eigen(:,1:neig)*w,[50 50 1]);% old way to compute HP
+                    % neg for 
+                    % Haufe et al ,2003
+                    cov_feat   = cov(X(P.training,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
+                    a                           = cov_feat*w;
+                    hyper_im(:,:,cs,n,run) = reshape(a'*eigen(:,1:neig)',50,50);
+                catch
+                    keyboard%sanity check: stop if something is wrong
+                end
+                if holdout_ratio >0
+                    [~, predicted]    = evalc('svmpredict(Ycond(P.test), X(P.test,:), model);');
+                    actual = Ycond(P.test);
+                    TP(cs,n,run) = sum(predicted == 0 & actual==0);
+                    FP(cs,n,run) = sum(predicted == 0 & actual==180);
+                    FN(cs,n,run) = sum(predicted == 180 & actual==0);
+                    TN(cs,n,run) = sum(predicted == 180 & actual==180);
+                    N_pred(cs,n,run) = length(predicted);
+                    
+                    Precision(cs,n,run) = TP(cs,n,run) / (TP(cs,n,run)+FP(cs,n,run));
+                    Recall(cs,n,run) = TP(cs,n,run) / (TP(cs,n,run)+FN(cs,n,run));
+                    Accuracy(cs,n,run) = (TP(cs,n,run) + TN(cs,n,run)) / (TP(cs,n,run) + TN(cs,n,run) + FP(cs,n,run) + FN(cs,n,run));
+                    
+                    num_eigs(cs,n,run) = neig;
+                end
+            end
         end
     end
+    %
+    savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+    filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_EVfromTrain_allruns_holdout%d_CSgroups.mat',neig,random,run,crit,exclmouth,holdout_ratio*100);
+    try
+        if holdout_ratio > 0
+            save([savepath filename],'hyper_im','Precision','Accuracy','Recall','TP','FP','TN','FN','N_pred','HP');
+        else
+            save([savepath filename],'hyper_im','HP')
+        end
+    catch
+        keyboard
+    end
+    
 elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
     %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
     %It collects the data and computes the eigenvalues on the
@@ -2719,7 +2917,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
     %number of trials from the testphase before training.
     %the option random = 1 randomizes labels to determine the chance classification
     %performance level.
-    random = 0;
+        random = 1;
     exclmouth = 0;
     tbootstrap       = 100; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
@@ -2744,7 +2942,6 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
             roi = fix.GetFaceROIs;
         end
         fix.unitize     = 1;%unitize fixmaps or not (sum(fixmap(:))=0 or not).
-
         %% get all the single trials in a huge matrix D together with labels.
         global_counter = 0;
         clear D;%the giant data matrix
@@ -2771,102 +2968,86 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
                 end
             end
         end
-        %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
-        fprintf('starting covariance computation\n')
-        covmat    = cov(D');
-        fprintf('done\n')
-        fprintf('starting eigenvector computation\n')
-        [e dv]    = eig(covmat);
-        fprintf('done\n')
-        dv        = sort(diag(dv),'descend');
-        eigval(:,run) = dv;
-            figure(101);
-            plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
-        eigen     = fliplr(e);
-        %collect loadings of every trial
-        trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
-        %% LIBSVM business
-        neigs = [7 12 8 10]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
-        if strcmp(crit,'ellbow')
-            neig = neigs(run);
-        elseif strcmp(crit,'var')
-            neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
-        end
-        %% SVM starts.
-        sub_counter = 0;
-        result      = [];
-        w           = [];
-        cov_feat   = [];
-        hyper_im   = [];
-        for sub = unique(labels.sub)% will leave this one out.
-            fprintf('run:%d-Eig:%d-leaving out sub:%d\n',run,neig,sub);
-            if random == 1
-                warning('Randomizing labels as wanted. \n')
-            end
-            sub_counter = sub_counter + 1;
-            ind_all     = ~ismember(labels.sub,sub);%this subject, this phase.
-            ind_testsub = ismember(labels.sub,sub);
-            %
-            fprintf('Bootstraps done: ')
-            for n = 1:tbootstrap%
-                if mod(n,10)==0
-                fprintf('%03d, ',n);
+        %% EV decomposition has to be within trainingsset already!
+        sc = 0;
+        for ns = subjects(:)'
+            sc = sc+1;
+            
+            all_other = labels.sub ~= ns;
+            this_sub  = labels.sub == ns;
+            DD_allbut1      = D(:,all_other);
+            fprintf('\nRun: %d-leaving out sub %d.\n',run,ns);
+%             fprintf('\nRun:%d-leaving out Sub:%d-Bootstr: ',run,subjects(ns));
+%             for n = 1:tbootstrap
+%                 if mod(n,20)==0
+%                     fprintf('%d ',n)
+%                 end
+                
+%                 P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
+                
+                %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+%                 fprintf('starting covariance computation...')
+                covmat    = cov(DD_allbut1');
+%                 fprintf('done\n')
+%                 fprintf('starting eigenvector computation...')
+                [e dv]    = eig(covmat);
+%                 fprintf('done\n')
+                dv        = sort(diag(dv),'descend');
+                eigval(:,ns,run) = dv;
+                %             figure(101);
+                %             plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+                eigen     = fliplr(e);
+                %collect loadings of every trial (now the left out is
+                %included again)
+                trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+                %% LIBSVM business
+                neigs = [NaN NaN NaN NaN]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+                if strcmp(crit,'ellbow')
+                    fprintf('not defined, please check visually...\n')
+                    keyboard
+                    neig = neigs(run);
+                elseif strcmp(crit,'var')
+                    neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
                 end
-                Ycond   = double(labels.cond)';%labels of the fixation maps for this subject in this phase.
-                X       = trialload(:,1:neig);%fixation maps of this subject in this phase.
-               
-                i       = ind_all;%train using only the CS+ and CS? conditions.
+                % take neig features from generously collected trialload
+                Ycond   = double(labels.cond)';
+                X       = trialload(:,1:neig);
                 if random ==1
-                    model   = svmtrain(Shuffle(Ycond(i)), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                    warning('Randomizing labels as wanted. \n')
+                    model   = svmtrain(Shuffle(Ycond(all_other)), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
                 else
-                    model   = svmtrain(Ycond(i), X(i,1:neig), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+                    model   = svmtrain(Ycond(all_other), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
                 end
                 % get the hyperplane
                 try
-                    w(:,sub_counter,n)          = model.SVs'*model.sv_coef;
+                    w          = model.SVs'*model.sv_coef;
                     % Haufe et al ,2003
-                    cov_feat(:,:,sub_counter,n)   = cov(X(i,1:neig));
-                    a                           = cov_feat(:,:,sub_counter,n)*w(:,sub_counter,n);
-                    hyper_im(:,:,sub_counter,n) = reshape(a'*eigen(:,1:neig)',50,50);
+                    cov_feat   = cov(X(all_other,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
+                    a          = cov_feat*w;
+                    hyper_im(:,:,sc,run) = reshape(a'*eigen(:,1:neig)',50,50);
                 catch
                     keyboard%sanity check: stop if something is wrong
                 end
-                %% predict labels for left out subject
-                [~, predicted]                  = evalc('svmpredict(Ycond(ind_testsub), X(ind_testsub,:), model);');%doing it like this supresses outputs.
-                actual = Ycond(ind_testsub);
+                [~, predicted]    = evalc('svmpredict(Ycond(this_sub), X(this_sub,:), model);');
+                actual = Ycond(this_sub);
+                TP(sc,run) = sum(predicted == 0 & actual==0)./length(predicted);
+                FP(sc,run) = sum(predicted == 0 & actual==180)./length(predicted);
+                FN(sc,run) = sum(predicted == 180 & actual==0)./length(predicted);
+                TN(sc,run) = sum(predicted == 180 & actual==180)./length(predicted);
                 
-                TP = sum(predicted == 0 & actual==0)./length(predicted); 
-                FP = sum(predicted == 0 & actual==180)./length(predicted); 
-                FN = sum(predicted == 180 & actual==0)./length(predicted);  
-                TN = sum(predicted == 180 & actual==180)./length(predicted);
-              
-                Precision(sub_counter,n,run) = TP / (TP+FP);
-                Recall(sub_counter,n,run) = TP / (TP+FN);
-                Accuracy(sub_counter,n,run) = (TP + TN) / (TP + TN + FP + FN);
-            end
-            fprintf('.\n')
+                Precision(sc,run) = TP(sc,run) / (TP(sc,run)+FP(sc,run));
+                Recall(sc,run) = TP(sc,run) / (TP(sc,run)+FN(sc,run));
+                Accuracy(sc,run) = (TP(sc,run) + TN(sc,run)) / (TP(sc,run) + TN(sc,run) + FP(sc,run) + FN(sc,run));
+                
+                num_eigs(sc,run) = neig;
+%             end
         end
-        %once the data is there compute relevant output metrics:
-%         R(:,run)      = mean(mean(result,2),3);%average across bootstaps the classification results
-%         AVEHP(:,:,run) = reshape(mean(eigen(:,1:neig)*mean(w,3),2),[50 50 1]);%average hyperplane across subjects
-%         HP(:,:,:,run) = reshape(eigen(:,1:neig)*mean(w,3),[50 50 size(eigen(:,1:neig)*mean(w,3),2)]); %single hyperplanes
-%         
-        savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
-        filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_leave1subout.mat',neig,random,run,crit,exclmouth);
-        if exist(savepath)
-%             save([savepath filename],'neig','hyper_im','eigval','eigen','predicted','actual');
-            save([savepath filename],'neig','hyper_im','eigval','eigen','Precision','Accuracy','Recall');
-        else
-            fprintf('Creating SVM results folder...\n')
-            mkdir(savepath);
-            %             save([savepath filename],'neig','R','eigval','result','HP','AVEHP');
-        end
-        
-        clear Precision
-        clear Recall
-        clear Accuracy
     end
-    keyboard
+    %
+    savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+    filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_leave1out_EVfromTrain.mat',neig,random,run,crit,exclmouth);
+    save([savepath filename],'hyper_im','Precision','Accuracy','Recall','FP','TP','FN','TN');
+    
 elseif strcmp(varargin{1},'get_trials_for_svm_idiosync')
     % here we classify subjects to show their idiosyncratic patterns.
     % we classify them within each phase seperately to account for diff.
