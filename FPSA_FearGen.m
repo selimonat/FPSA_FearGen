@@ -96,8 +96,8 @@ varargin([find(~invalid_varargin) find(~invalid_varargin)+1]) = [];%now we have 
 if strcmp(varargin{1},'get_subjects'); %% returns subject indices based on the CURRENT_SUBJECT_POOL variable.
     %%
     % For the paper we use current_pool = 0, which discards all subjects:
-    % who are not calibrated good enough +
-    % who did not get the CS+ - UCS association.
+    % who are not calibrated good enough
+    %
     % Results are cached, use FORCE = 1 to recache. Set
     % CURRENT_SUBJECT_POOL = 0 to not select participants.
     
@@ -529,7 +529,7 @@ elseif strcmp(varargin{1},'get_fpsa_fair') %% Computes FPSA separately for each 
     end
     
     varargout{1} = sim;
-
+    
 elseif strcmp(varargin{1},'plot_fpsa');%% A routine to plot similarity matrices
     %%
     figure;
@@ -744,52 +744,52 @@ elseif strcmp(varargin{1},'FPSA_model_kfold')
     %design matrices
     dM{1} = [ones(28,1) table2array(t74(1:28,'circle'))];
     dM{2} = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific'))];
-%     dM_03 = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific')) table2array(t74(1:28,'Gaussian'))];
-    model_strings = {'FPSA_G ~ 1 + circle','FPSA_G ~ 1 + specific + unspecific '};
+    dM{3} = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific')) table2array(t74(1:28,'Gaussian'))];
+    model_strings = {'FPSA_G ~ 1 + circle','FPSA_G ~ 1 + specific + unspecific ','FPSA_G ~ 1 + specific + unspecific + Gaussian'};
     
     for sc = 1:length(subs)
         
         FPSA_Gsub = table2array(t74(double(t74.subject)==sc,'FPSA_G'));
         t = t74(~ismember(double(t74.subject),sc),:);
         
-        for nm = 1:2 %model numbers
+        for nm = 1:3 %model numbers
             fprintf('Running Sub %02d, Model %d.\n',sc,nm)
             model       = fitlm(t,model_strings{nm});
             pred        = [model.Coefficients.Estimate'*dM{nm}']';
             betas{nm}(sc,:) = model.Coefficients.Estimate;
             
-
-           % compute AIC with likelihood from normal distribution with optimized sd
-           likelihoodfun  = @(sd) sum(-log( normpdf( pred - FPSA_Gsub , 0,sd)));
-           L = 0;
-           U = [];
-           Init = 1;
-           [sd_osd(sc,nm), logL_osd(sc,nm),ExitF(sc,nm)]  = fmincon(likelihoodfun, Init, [],[],[],[],L,U,[],options);
-           aic_osd(sc,nm) = 2*logL_osd(sc,nm) + 2*(nm+1); %nm is the same as number of parameters, by chance.
-           
-           % compute AIC with likelihood from standard normal distribution
-           logL_ssd(sc,nm) =  sum(log( normpdf(pred - FPSA_Gsub, 0,1)));
-           aic_ssd(sc,nm) = -2*logL_ssd(sc,nm) + 2*nm;
-           
-           % compute AIC from RSS
-           RSS(sc,nm) = sum((pred - FPSA_Gsub).^2);           
-           n = length(FPSA_Gsub);
-           aic_rss(sc,nm) = 2*nm + n*log(RSS(sc,nm));
+            
+            % compute AIC with likelihood from normal distribution with optimized sd
+            likelihoodfun  = @(sd) sum(-log( normpdf( pred - FPSA_Gsub , 0,sd)));
+            L = 0;
+            U = [];
+            Init = 1;
+            [sd_osd(sc,nm), logL_osd(sc,nm),ExitF(sc,nm)]  = fmincon(likelihoodfun, Init, [],[],[],[],L,U,[],options);
+            aic_osd(sc,nm) = 2*logL_osd(sc,nm) + 2*(nm+1); %nm is the same as number of parameters, by chance.
+            
+            % compute AIC with likelihood from standard normal distribution
+            logL_ssd(sc,nm) =  sum(log( normpdf(pred - FPSA_Gsub, 0,1)));
+            aic_ssd(sc,nm) = -2*logL_ssd(sc,nm) + 2*nm;
+            
+            % compute AIC from RSS
+            RSS(sc,nm) = sum((pred - FPSA_Gsub).^2);
+            n = length(FPSA_Gsub);
+            aic_rss(sc,nm) = 2*nm + n*log(RSS(sc,nm));
         end
     end
-    
-    for nm=1:2
-        aicc_osd = aic_osd + (2*(nm.^2) + 2*nm)./(n-nm-1);
+    %compute corrected AIC
+    for nm=1:3
+        aicc_osd = aic_osd + (2*(nm.^2) + 2*nm)./(n-nm-1); %number of paramters is again model_number
         aicc_ssd = aic_ssd + (2*(nm.^2) + 2*nm)./(n-nm-1);
         aicc_rss = aic_rss + (2*(nm.^2) + 2*nm)./(n-nm-1);
     end
-    savepath = sprintf('%sdata/midlevel/CV_GLM_leaveoneout.mat',path_project);
+    savepath = sprintf('%sdata/midlevel/CV_GLM_leaveoneout_3models.mat',path_project);
     save(savepath,'aic_rss','aic_osd','aic_ssd','aicc_rss','aicc_osd','aicc_ssd');
     %%
     % compare models.
     AIC = aic_rss; % decide on the appropriate one
-    N_winning    = sum(AIC(:,1)<AIC(:,2));
-    outcome_perc = mean(AIC(:,1)<AIC(:,2))*100;
+    N_winning    = sum(AIC(:,2)<AIC(:,1));
+    outcome_perc = mean(AIC(:,2)<AIC(:,1))*100;
     fprintf('In %02d out of N = %02d subjects (%04.2f percent), model 02 won over model 01 (leave-one-out CV).\n',N_winning,sc,outcome_perc)
     keyboard;
     
@@ -822,6 +822,12 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
             Model.model_01.w1(ns,:) = [B.Coefficients.Estimate(2) T.Coefficients.Estimate(2)];
             M(ns,1,1,1)             = B.Coefficients.Estimate(2);
             M(ns,2,1,1)             = T.Coefficients.Estimate(2);
+            MC(ns,1,1)              = B.ModelCriterion;
+            MC(ns,2,1)              = T.ModelCriterion;
+            LL(ns,1,1)              = B.LogLikelihood;
+            LL(ns,2,1)              = T.LogLikelihood;
+            
+            
             %
             B                       = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific');
             T                       = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific');
@@ -831,6 +837,10 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
             M(ns,2,2,1)             = T.Coefficients.Estimate(2);
             M(ns,1,2,2)             = B.Coefficients.Estimate(3);
             M(ns,2,2,2)             = T.Coefficients.Estimate(3);
+            MC(ns,1,2)              = B.ModelCriterion;
+            MC(ns,2,2)              = T.ModelCriterion;
+            LL(ns,1,2)              = B.LogLikelihood;
+            LL(ns,2,2)              = T.LogLikelihood;
             %
             B                       = fitlm(t2,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
             T                       = fitlm(t2,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
@@ -843,12 +853,18 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
             M(ns,2,3,2)             = T.Coefficients.Estimate(3);
             M(ns,1,3,3)             = B.Coefficients.Estimate(4);
             M(ns,2,3,3)             = T.Coefficients.Estimate(4);
+            MC(ns,1,3)              = B.ModelCriterion;
+            MC(ns,2,3)              = T.ModelCriterion;
+            LL(ns,1,3)              = B.LogLikelihood;
+            LL(ns,2,3)              = T.LogLikelihood;
         else
             cprintf([1 0 0],'FPSA matrix contains NaN, will not be modelled...\n');
         end
     end
     varargout{1} = Model;
     varargout{2} = M;
+    varargout{3} = MC;
+    varargout{4} = LL;
     
 elseif strcmp(varargin{1},'model2text'); %% spits text from a model object
     %% handy function to dump model output to a text file that let you easily
@@ -1002,16 +1018,108 @@ elseif strcmp(varargin{1},'figure_03C');
     %     set(h(1),'color','k','linewidth',1,'clipping','off');
     text(mean(X(7:end)),ast_line(1)+.03,sprintf('Adversity\nTuning\nmodel'),'Rotation',0,'HorizontalAlignment','center','FontWeight','normal','fontname','Helvetica','fontsize',14,'verticalalignment','bottom');
     %%
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03E.png');
-    %
     set(gcf,'Color',[1 1 1]);
-    %     if ispc
-    %         fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figure_03C.png'])
-    %         export_fig([homedir 'Documents\Documents\manuscript_selim\figure_03C.png'],'-r600')
-    %     end
+    % SaveFigure(sprintf('%s/data/midlevel/figures/figure_03C.png',path_project),'-transparent','-r300');
+    
     %
-    keyboard %otherwise everything is gone
-elseif strcmp(varargin{1},'figure_04D')
+    %     keyboard
+elseif strcmp(varargin{1},'figure_04B') %SVM barplot
+    % to run this, you need a csv that contains the accuracies for classification along specific (CS+/CS-) and unspecific (-90/90) dimensions
+    filename = sprintf('%s/data/midlevel/accuracy_SVM_py_csv.csv',path_project);
+    a=csvread(filename,1,0);
+    spec = a(:,3)==0;
+    unspec = a(:,3)==90;
+    base = a(:,2)==2;
+    test = a(:,2)==4;
+    acc_base_spec = a(spec&base,end);
+    acc_base_unspec = a(unspec&base,end);
+    acc_test_spec = a(spec&test,end);
+    acc_test_unspec = a(unspec&test,end);
+    
+    M = mean([acc_base_spec acc_test_spec acc_base_unspec  acc_test_unspec]);
+    SEM = std([acc_base_spec acc_test_spec acc_base_unspec  acc_test_unspec])./sqrt(74);
+    
+    figure;
+    b=bar(M);set(b,'FaceColor','none');
+    hold on;
+    errorbar(M,SEM,'k.','LineWidth',2);
+    box off
+    ylim([.4 .6])
+    legend('Baseline','Test');
+    set(gca,'YTick',.3:.1:.6,'LineWidth',1.5,'FontSize',16)
+    % SaveFigure(sprintf('%s/data/midlevel/figures/figure_04B.png',path_project),'-transparent','-r300');
+    
+elseif strcmp(varargin{1},'figure_04D') % differences between stimuli.
+    
+    fix = Fixmat(6,2);
+    for cs = 1:8
+        dummy   = imread(strrep(fix.find_stim,'ave',sprintf('%02d',ID)));
+        dummy  = dummy( fix.rect(1):fix.rect(1)+fix.rect(3)-1,  fix.rect(2):fix.rect(2)+fix.rect(4)-1);
+        allstims(:,:,cs) = dummy;
+    end
+    for cs = 1:4
+        diffimg(:,:,cs) = allstims(:,:,cs)-allstims(:,:,cs+4);
+        
+        stimdiff        = repmat(adapthisteq(rgb2gray(diffimg(:,:,:,cs))),[1 1 3]);
+        %  imwrite(strrep(fix.find_stim,'ave',sprintf('test%02dto%02d_neg_adjhisteq',cs,cs+4)));
+    end
+    
+    dummy   = imread(strrep(fix.find_stim,'ave',sprintf('%02d',ID)));
+    stimdiff    = imread(strrep(fix.find_stim,'ave',sprintf('diff%02dto%02d_neg_adjhisteq',cs,cs+4)));
+    stimdiff    = repmat(adapthisteq(rgb2gray(stimdiff)),[1 1 3]);
+    %         imwrite(bild,strrep(fix.find_stim,'ave',sprintf('test%02dto%02d_neg_adjhisteq',cs,cs+4)));
+    
+    
+    % SaveFigure(sprintf('%s/data/midlevel/figures/figure_04B.png',path_project),'-transparent','-r300');
+    
+    %  %% does individual hyperplane correlate with difference map?
+    % g = Group(FPSA_FearGen('get_subjects'));
+    % csps = g.getcsp;
+    % fix = Fixmat(6,2);
+    %
+    % for ID = 1:8
+    %     dummy   = imread(strrep(fix.find_stim,'ave',sprintf('%02d',ID)));
+    %     dummy  = dummy( fix.rect(1):fix.rect(1)+fix.rect(3)-1,  fix.rect(2):fix.rect(2)+fix.rect(4)-1);
+    %     bild(:,:,ID) = dummy;
+    %     bildRGB(:,:,:,ID)    = repmat(dummy,[1 1 3]);
+    % end
+    %
+    % for cs = 1:4
+    %     diffbild(:,:,cs) = bild(:,:,cs)-bild(:,:,cs+4);
+    % end
+    %
+    % diffbild_r   = imresize(diffbild,.1);
+    % diffbild_vec = double(reshape(diffbild_r,2500,4));
+    % diffbild_vec = repmat(diffbild_vec,1,2); % so we can loop through csps and 1 is 5, 2 is 6 etc..
+    %
+    % HP_basetest = subs_HP(:,:,:,[1 5]);
+    % HP_vec = reshape(HP_basetest,2500,74,2);
+    %
+    % for ph = 1:2
+    %     for ns = 1:74
+    %         [rho(ns,ph)] = corr(HP_vec(:,ns,ph),diffbild_vec(:,csps(ns)));
+    %     end
+    % end
+    % %across everyone?
+    % for ph = 1:2
+    %     for face = 1:4
+    %         subs_id = csps==face;
+    %         HP_all_ph = HP_vec(:,subs_id,ph);
+    %         nsubs = sum(subs_id);
+    %         [rho_all(face,ph) p_all(face,ph)] = corr(HP_all_ph(:),repmat(diffbild_vec(:,face),nsubs,1));
+    %     end
+    % end
+    % % does that change?
+    % figure;
+    % for ph = 1:2
+    %     rhoz(:,ph) = fisherz(rho(:,ph));
+    % end
+    % bar(fisherz_inverse(mean(rhoz)));
+    % hold on;
+    % errorbar(fisherz_inverse(mean(rhoz)),fisherz_inverse(std(rhoz))./sqrt(length(rho)));
+    
+    
+elseif strcmp(varargin{1},'figure_05A') %4D before
     
     %% now plots band of timewindowed model params
     window_size    = varargin{2};
@@ -1055,86 +1163,10 @@ elseif strcmp(varargin{1},'figure_04D')
     EqualizeSubPlotYlim(gcf)
     varargout{1} = sim;
     varargout{2} = model;
-    %     if ispc
-    %         fprintf('Done plotting, now saving to %s \n',[homedir sprintf('Dropbox\feargen_hiwi\manuscript\figures\figure_04D_%d_%d.png',window_size,window_overlap)]);
-    %         export_fig(fullfile(homedir,'Dropbox','feargen_hiwi','manuscript','figures',sprintf('figure_04D_%d_%d.png',window_size,window_overlap)),'-r600')
-    %     end
+    
+    %SaveFigure(sprintf('%s/data/midlevel/figures/figure_05A.png',path_project),'-transparent','-r300');
+    
     keyboard
-elseif strcmp(varargin{1},'model2behavior')
-    %% this is used to see whether the found model parameters for model 2 correspond to any subject "behavior" such as ratings or SCR.
-    %%
-    C         = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
-    subs      = FPSA_FearGen('get_subjects'); %be sure to make current_subject_pool =0
-    t         = FPSA_FearGen('get_table_behavior');
-    
-    
-    % this is just playing around, add/remove models that are (not) wanted.
-    stepwiselm([t.scr_test_parametric t.rating_test_parametric],t.beta1_diff)
-    stepwiselm([t.scr_test_nonparam t.rating_test_nonparam],t.beta1_diff)
-    
-    fitlm(t,'beta1_test ~ 1 + scr_test_parametric')
-    fitlm(t,'beta1_test ~ 1 + scr_test_nonparam')
-    
-    fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam + rating_test_nonparam')
-    
-    fitlm(t,'beta1_diff ~ 1 + scr_test_nonparam')
-    
-    t.beta1_beta2 = t.beta1_diff - t.beta2_diff;
-    
-    %
-    %
-    %     normalize ellipsoid parameter by other parameter.
-    %     beta1 = C.model_02.w1(:,2);
-    %     beta2 = C.model_02.w2(:,2);
-    %     param = (beta1-beta2)./(beta1+beta2); %% ellipsoidness is specific vs unspecific beta
-    %
-    %     if baseline corrected:
-    %     beta1bc = C.model_02.w1(:,2)-C.model_02.w1(:,1);
-    %     beta2bc = C.model_02.w2(:,2)-C.model_02.w2(:,1);
-    %     parambc = (beta1bc-beta2bc)./(beta1bc+beta2bc);
-    %
-    %     %
-    %     figure(1);
-    %     subplot(2,2,1);plot(param(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,2);plot(param(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,3);plot(param,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,4);plot(param,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-    %     st=supertitle('modelparam vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    %     figure(2);
-    %     subplot(2,2,1);plot(parambc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,2);plot(parambc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,3);plot(parambc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('(b1-b2)/sum(b)');box off
-    %     subplot(2,2,4);plot(parambc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('(b1-b2)/sum(b)');box off
-    %     st=supertitle('modelparam vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    %     figure(3);
-    %     subplot(2,2,1);plot(beta1(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1');box off
-    %     subplot(2,2,2);plot(beta1(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1');box off
-    %     subplot(2,2,3);plot(beta1,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1');box off
-    %     subplot(2,2,4);plot(beta1,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1');box off
-    %     st=supertitle('beta1 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    %     figure(4);
-    %     subplot(2,2,1);plot(beta1bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta1bc');box off
-    %     subplot(2,2,2);plot(beta1bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta1bc');box off
-    %     subplot(2,2,3);plot(beta1bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta1bc');box off
-    %     subplot(2,2,4);plot(beta1bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta1bc');box off
-    %     st=supertitle('beta1 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    %     figure(5);
-    %     subplot(2,2,1);plot(beta2(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2');box off
-    %     subplot(2,2,2);plot(beta2(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2');box off
-    %     subplot(2,2,3);plot(beta2,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2');box off
-    %     subplot(2,2,4);plot(beta2,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2');box off
-    %     st=supertitle('beta2 vs behavior');set(st,'fontsize',16,'position',[0 .5]);
-    %     figure(6);
-    %     subplot(2,2,1);plot(beta2bc(selector),scr_cond,'bo');lsline;ylabel('SCR CS+>CS- Cond'); xlabel('beta2bc');box off
-    %     subplot(2,2,2);plot(beta2bc(selector),scr_test,'bo');lsline;ylabel('SCR CS+>CS- Test'); xlabel('beta2bc');box off
-    %     subplot(2,2,3);plot(beta2bc,amp_cond,'ro');lsline;ylabel('Ampl. Rating Cond'); xlabel('beta2bc');box off
-    %     subplot(2,2,4);plot(beta2bc,amp_test,'ro');lsline;ylabel('Ampl. Rating Test'); xlabel('beta2bc');box off
-    %     st=supertitle('beta2 vs behavior, baseline corrected');set(st,'fontsize',16,'position',[0 .5]);
-    %
-    %     names = {'beta1-2' 'beta1-2BC' 'beta1','beta1BC','beta2','beta2BC'};
-    %     for a = 1:6;
-    %         export_fig(figure(a),[path_project 'data/midlevel/' names{a} '.png']);
-    %     end
     
 elseif strcmp(varargin{1},'get_scr_singletrials'); %% get singletrial rawdata for fpsa on SCR
     %%
@@ -1663,6 +1695,15 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('No change from learning for unspecific component:');
     [h p ci stats] = ttest(C.model_02.w2(:,2),C.model_02.w2(:,1));
     fprintf('  t(%d) = %04.3f, p = %06.5f\n',stats.df,stats.tstat,p)
+    %% change in dissimilarities:
+    mean(Bsquare(4,8,:))
+    std(Bsquare(4,8,:))/sqrt(nsubs)
+    mean(Tsquare(4,8,:))
+    std(Tsquare(4,8,:))/sqrt(nsubs)
+    mean(Bsquare(2,6,:))
+    std(Bsquare(2,6,:))/sqrt(nsubs)
+    mean(Tsquare(2,6,:))
+    std(Tsquare(2,6,:))/sqrt(nsubs)
     
     %% adversity categorization model better than adversity tuning model
     out.generalization.model_03_mixed;
@@ -1684,6 +1725,33 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     [h p ci stats] = ttest(w_gaussian(:,2),w_gaussian(:,1));
     fprintf('t(%d) = %04.3f, p = %04.2f\n',stats.df,stats.tstat,p)
     
+    %%
+    beta1_base         = C.model_02.w1(:,1);
+    beta2_base         = C.model_02.w2(:,1);
+    beta1_test         = C.model_02.w1(:,2);
+    beta2_test         = C.model_02.w2(:,2);
+    beta_diffdiff      = (beta1_test - beta2_test) - (beta1_base - beta2_base);%how much does w1 increase more than w2 does? (Interaction)
+    
+    subs1 = FPSA_FearGen('current_subject_pool',1,'get_subjects');
+    subs0 = FPSA_FearGen('current_subject_pool',0,'get_subjects');
+    % all subs
+    sum(beta_diffdiff>0) % subs with anisotropy test > base
+    sum(beta_diffdiff>0)./length(subs0)
+    %pr
+    binopdf(sum(beta_diffdiff>0),length(subs0),.5) %.5 for chance level.
+    
+    % learners only
+    ind = ismember(subs0,subs1);
+    sum(beta_diffdiff(ind)>0)
+    sum(beta_diffdiff(ind)>0)./length(subs1)
+    binopdf(sum(beta_diffdiff(ind)>0),length(subs1),.5) %.5 for chance level.
+    
+    %
+    has_learned = ind;
+    anis        = beta_diffdiff>0;
+    [tbl chi2 pv]=crosstab(has_learned,anis);
+    
+    %%
     varargout{1} = out;
     varargout{2} = C;
     varargout{3} = sim;
@@ -1753,7 +1821,7 @@ elseif strcmp(varargin{1},'searchlight_get_design_matrix');
     model2_s   = squareform_force(sin(x)'*sin(x));
     X          = [ones(length(model2_c(:)),1) model2_c model2_s];
     varargout{1}  = X;
-elseif strcmp(varargin{1},'searchlight_plot')
+elseif strcmp(varargin{1},'figure_05BC') %'searchlight_plot'
     %% will spatially plot the ellipses area using the sqrt(cosine^2 +
     %sine^2) weight combination term.
     
@@ -1772,8 +1840,8 @@ elseif strcmp(varargin{1},'searchlight_plot')
         
         input{1}{:}
         current_title   = cell2str(input{1});
-        filename        = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s.png',current_title,func2str(F));
-        filename2       = sprintf('~/gdrive/Office/FPSA/figures/searchlight_%s_fun_%s_viafixmat.png',current_title,func2str(F));
+        filename        = sprintf('%s/data/midlevel/figures/searchlight_%s_fun_%s.png',path_project,current_title,func2str(F));
+        filename2       = sprintf('%s/data/midlevel/figures/searchlight_%s_fun_%s_viafixmat.png',path_project,current_title,func2str(F));
         if (exist(filename) == 0) | (exist(filename2) == 0) | 1
             %to do
             %(1) compare all fixations on all subjects;+
@@ -2070,7 +2138,7 @@ elseif strcmp(varargin{1},'searchlight_anova')
     phase    = [ones(tsubject,1);ones(tsubject,1);ones(tsubject,1)*2;ones(tsubject,1)*2];
     anovan(y,{side(:) phase(:)},'model','full')
     
-elseif strcmp(varargin{1},'eyebehave_params')
+elseif strcmp(varargin{1},'eyebehave_params') %outdated
     
     savepath = sprintf('%s/data/midlevel/',path_project);
     filename = 'eyebehave_params.mat';
@@ -2581,9 +2649,63 @@ elseif strcmp(varargin{1},'SVM')
         set(gca,'YTick',[.3 .5 .7])
         xlim([-170 215])
     end
+elseif strcmp(varargin{1},'SVM_getData')
+    
+    random = 0;
+    exclmouth = 0;
+    tbootstrap       = 50; %number of bootstraps
+    phase            = [2 4 4 4];%baseline = 2, test = 4
+    unitize_or_not    = 1;
+    eigval           = [];
+    trialselect      = {1:120 1:120 121:240 241:360};
+    
+    
+    conds2include = -135:45:180;
+    
+    subjects = FPSA_FearGen('get_subjects');
+    g = Group(subjects);
+    csps = g.getcsp;
+    c = 0;
+    for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
+        fix             = Fixmat(subjects,phase(run));%get the data
+        if exclmouth == 1
+            roi = fix.GetFaceROIs;
+        end
+        fix.unitize     = unitize_or_not;%unitize fixmaps or not
+        %% get all the single trials in a huge matrix D together with labels.
+        
+        for ns = subjects(:)'
+            for deltacsp = conds2include(:)'
+                i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
+                trials         = unique(fix.trialid(i == 1));
+                trial_counter  = 0;
+                for trialid = trials
+                    trial_counter       = trial_counter + 1;
+                    c      = c + 1;
+                    v                   = {'subject' ns 'deltacsp' deltacsp 'trialid' trialid};
+                    fix.getmaps(v);
+                    if exclmouth == 1
+                        fix.maps(roi(:,:,4)) = 0;
+                    end
+                    D(:,c)              = Vectorize(imresize(fix.maps,.1));
+                    labels.sub(c)       = ns;
+                    labels.run(c)       = run;
+                    labels.phase(c)     = phase(run);
+                    labels.trial(c)     = trial_counter;%some people have less trials check it out with plot(labels.trial)
+                    labels.cond(c)      = deltacsp;
+                    labels.face(c)      = csps(find(subjects==ns));
+                end
+            end
+        end
+    end
+    
+    savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+    filename = sprintf('SVM_FDM_unitized%d_runs1234_N74_allconds.mat',unitize_or_not);
+    save([savepath filename],'D','labels')
+    
 elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     %NEED HOLDOUT AS INPUT2
-
+    
     %This script trains a linear SVM training CS+ vs. CS- for phases 2 and 4.
     %It collects the data and computes the eigenvalues on the
     %fly for chosen(or a range of parameters) (kernel_fwhm, number of
@@ -2596,7 +2718,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     %performance level.
     random = 0;
     exclmouth = 0;
-    tbootstrap       = 100; %number of bootstraps
+    tbootstrap       = 50; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
     holdout_ratio    = varargin{2}./100; %holdout_ratio for training vs. test set
     teig             = 100; %up to how many eigenvalues should be included for tuning SVM?
@@ -2608,8 +2730,11 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     
     eigval           = [];
     trialselect      = {1:120 1:120 121:240 241:360};
+    conds2train      = [-90 90];%[0 180];
     
-    
+    if nargin > 2
+        conds2train = varargin{3};
+    end
     subjects = FPSA_FearGen('get_subjects');
     o = 0;
     for run = 1:4 % phase 2, phase 4.1 phase 4.2 phase 4.3
@@ -2624,7 +2749,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
         clear D;%the giant data matrix
         clear labels;%and associated labels.
         for ns = subjects(:)'
-            for deltacsp = [0 180]%-135:45:180;
+            for deltacsp = conds2train(:)'%[0 180]%-135:45:180;
                 i              = ismember(fix.trialid,trialselect{run}).*(fix.subject == ns).*(fix.deltacsp == deltacsp);
                 trials         = unique(fix.trialid(i == 1));
                 trial_counter  = 0;
@@ -2655,7 +2780,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
             Ys      = labels.cond(this_sub);
             fprintf('\nRun:%d-Sub:%d-Bootstr: ',run,subjects(ssc));
             for n = 1:tbootstrap
-               
+                
                 if mod(n,20)==0
                     fprintf('%d',n)
                 end
@@ -2666,12 +2791,12 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
                 end
                 
                 %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
-%                 fprintf('starting covariance computation...')
+                %                 fprintf('starting covariance computation...')
                 covmat    = cov(DD(:,P.training)');
-%                 fprintf('done\n')
-%                 fprintf('starting eigenvector computation...')
+                %                 fprintf('done\n')
+                %                 fprintf('starting eigenvector computation...')
                 [e dv]    = eig(covmat);
-%                 fprintf('done\n')
+                %                 fprintf('done\n')
                 dv        = sort(diag(dv),'descend');
                 eigval(:,run) = dv;
                 %             figure(101);
@@ -2701,7 +2826,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
                 try
                     w          = model.SVs'*model.sv_coef;
                     HP(:,:,ssc,n,run) = reshape(eigen(:,1:neig)*w,[50 50 1]);% old way to compute HP
-                    % neg for 
+                    % neg for
                     % Haufe et al ,2003
                     cov_feat   = cov(X(P.training,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
                     a                           = cov_feat*w;
@@ -2729,7 +2854,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     end
     %
     savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
-    filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_EVfromTrain_allruns_holdout%d.mat',neig,random,run,crit,exclmouth,holdout_ratio*100);
+    filename = sprintf('/SVM_NEV%d_FWHM30_r%d_run%d_crit%s_exclmouth_%d_CSPCSN_HaufeHP_EVfromTrain_allruns_cond_%d_cond_%d_holdout%d_nboot_%d.mat',neig,random,run,crit,exclmouth,abs(conds2train(1)),conds2train(2),holdout_ratio*100,tbootstrap);
     try
         if holdout_ratio > 0
             save([savepath filename],'hyper_im','Precision','Accuracy','Recall','TP','FP','TN','FN','N_pred');
@@ -2819,25 +2944,25 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane_CSgroup')
             
             DD      = D(:,both_faces);
             Ys      = labels.cond(both_faces);
-
+            
             
             for n = 1:tbootstrap
                 if mod(n,20)==0
                     fprintf('%d',n)
                 end
-                 if holdout_ratio > 0
+                if holdout_ratio > 0
                     P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
                 else
                     P.training = logical(ones(length(Ys),1));
                 end
-               
+                
                 %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
-%                 fprintf('starting covariance computation...')
+                %                 fprintf('starting covariance computation...')
                 covmat    = cov(DD(:,P.training)');
-%                 fprintf('done\n')
-%                 fprintf('starting eigenvector computation...')
+                %                 fprintf('done\n')
+                %                 fprintf('starting eigenvector computation...')
                 [e dv]    = eig(covmat);
-%                 fprintf('done\n')
+                %                 fprintf('done\n')
                 dv        = sort(diag(dv),'descend');
                 eigval(:,run) = dv;
                 %             figure(101);
@@ -2867,7 +2992,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane_CSgroup')
                 try
                     w          = model.SVs'*model.sv_coef;
                     HP(:,:,cs,n,run) = reshape(eigen(:,1:neig)*w,[50 50 1]);% old way to compute HP
-                    % neg for 
+                    % neg for
                     % Haufe et al ,2003
                     cov_feat   = cov(X(P.training,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
                     a                           = cov_feat*w;
@@ -2917,7 +3042,7 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
     %number of trials from the testphase before training.
     %the option random = 1 randomizes labels to determine the chance classification
     %performance level.
-        random = 1;
+    random = 1;
     exclmouth = 0;
     tbootstrap       = 100; %number of bootstraps
     phase            = [2 4 4 4];%baseline = 2, test = 4
@@ -2977,70 +3102,70 @@ elseif strcmp(varargin{1},'SVM_CSPCSN_leave1subout')
             this_sub  = labels.sub == ns;
             DD_allbut1      = D(:,all_other);
             fprintf('\nRun: %d-leaving out sub %d.\n',run,ns);
-%             fprintf('\nRun:%d-leaving out Sub:%d-Bootstr: ',run,subjects(ns));
-%             for n = 1:tbootstrap
-%                 if mod(n,20)==0
-%                     fprintf('%d ',n)
-%                 end
-                
-%                 P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
-                
-                %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
-%                 fprintf('starting covariance computation...')
-                covmat    = cov(DD_allbut1');
-%                 fprintf('done\n')
-%                 fprintf('starting eigenvector computation...')
-                [e dv]    = eig(covmat);
-%                 fprintf('done\n')
-                dv        = sort(diag(dv),'descend');
-                eigval(:,ns,run) = dv;
-                %             figure(101);
-                %             plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
-                eigen     = fliplr(e);
-                %collect loadings of every trial (now the left out is
-                %included again)
-                trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
-                %% LIBSVM business
-                neigs = [NaN NaN NaN NaN]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
-                if strcmp(crit,'ellbow')
-                    fprintf('not defined, please check visually...\n')
-                    keyboard
-                    neig = neigs(run);
-                elseif strcmp(crit,'var')
-                    neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
-                end
-                % take neig features from generously collected trialload
-                Ycond   = double(labels.cond)';
-                X       = trialload(:,1:neig);
-                if random ==1
-                    warning('Randomizing labels as wanted. \n')
-                    model   = svmtrain(Shuffle(Ycond(all_other)), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
-                else
-                    model   = svmtrain(Ycond(all_other), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
-                end
-                % get the hyperplane
-                try
-                    w          = model.SVs'*model.sv_coef;
-                    % Haufe et al ,2003
-                    cov_feat   = cov(X(all_other,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
-                    a          = cov_feat*w;
-                    hyper_im(:,:,sc,run) = reshape(a'*eigen(:,1:neig)',50,50);
-                catch
-                    keyboard%sanity check: stop if something is wrong
-                end
-                [~, predicted]    = evalc('svmpredict(Ycond(this_sub), X(this_sub,:), model);');
-                actual = Ycond(this_sub);
-                TP(sc,run) = sum(predicted == 0 & actual==0)./length(predicted);
-                FP(sc,run) = sum(predicted == 0 & actual==180)./length(predicted);
-                FN(sc,run) = sum(predicted == 180 & actual==0)./length(predicted);
-                TN(sc,run) = sum(predicted == 180 & actual==180)./length(predicted);
-                
-                Precision(sc,run) = TP(sc,run) / (TP(sc,run)+FP(sc,run));
-                Recall(sc,run) = TP(sc,run) / (TP(sc,run)+FN(sc,run));
-                Accuracy(sc,run) = (TP(sc,run) + TN(sc,run)) / (TP(sc,run) + TN(sc,run) + FP(sc,run) + FN(sc,run));
-                
-                num_eigs(sc,run) = neig;
-%             end
+            %             fprintf('\nRun:%d-leaving out Sub:%d-Bootstr: ',run,subjects(ns));
+            %             for n = 1:tbootstrap
+            %                 if mod(n,20)==0
+            %                     fprintf('%d ',n)
+            %                 end
+            
+            %                 P       = cvpartition(Ys,'Holdout',holdout_ratio); % divide training and test datasets respecting conditions
+            
+            %% DATA2LOAD get the eigen decomposition: D is transformed to TRIALLOAD
+            %                 fprintf('starting covariance computation...')
+            covmat    = cov(DD_allbut1');
+            %                 fprintf('done\n')
+            %                 fprintf('starting eigenvector computation...')
+            [e dv]    = eig(covmat);
+            %                 fprintf('done\n')
+            dv        = sort(diag(dv),'descend');
+            eigval(:,ns,run) = dv;
+            %             figure(101);
+            %             plot(cumsum(dv)./sum(dv),'o-');xlim([0 200]);drawnow
+            eigen     = fliplr(e);
+            %collect loadings of every trial (now the left out is
+            %included again)
+            trialload = D'*eigen(:,1:teig)*diag(dv(1:teig))^-.5;%dewhitened
+            %% LIBSVM business
+            neigs = [NaN NaN NaN NaN]; %check eigenvalues and put numbers of EV here, based on ellbow criterion.
+            if strcmp(crit,'ellbow')
+                fprintf('not defined, please check visually...\n')
+                keyboard
+                neig = neigs(run);
+            elseif strcmp(crit,'var')
+                neig = find(cumsum(dv)./sum(dv)>cutoffcrit,1,'first');
+            end
+            % take neig features from generously collected trialload
+            Ycond   = double(labels.cond)';
+            X       = trialload(:,1:neig);
+            if random ==1
+                warning('Randomizing labels as wanted. \n')
+                model   = svmtrain(Shuffle(Ycond(all_other)), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+            else
+                model   = svmtrain(Ycond(all_other), X(all_other,:), '-t 0 -c 1 -q'); %t 0: linear, -c 1: criterion, -q: quiet
+            end
+            % get the hyperplane
+            try
+                w          = model.SVs'*model.sv_coef;
+                % Haufe et al ,2003
+                cov_feat   = cov(X(all_other,1:neig)); %% COV OF TRAININGS FEAT? OR ALL? cov(X(:,1:neig));
+                a          = cov_feat*w;
+                hyper_im(:,:,sc,run) = reshape(a'*eigen(:,1:neig)',50,50);
+            catch
+                keyboard%sanity check: stop if something is wrong
+            end
+            [~, predicted]    = evalc('svmpredict(Ycond(this_sub), X(this_sub,:), model);');
+            actual = Ycond(this_sub);
+            TP(sc,run) = sum(predicted == 0 & actual==0)./length(predicted);
+            FP(sc,run) = sum(predicted == 0 & actual==180)./length(predicted);
+            FN(sc,run) = sum(predicted == 180 & actual==0)./length(predicted);
+            TN(sc,run) = sum(predicted == 180 & actual==180)./length(predicted);
+            
+            Precision(sc,run) = TP(sc,run) / (TP(sc,run)+FP(sc,run));
+            Recall(sc,run) = TP(sc,run) / (TP(sc,run)+FN(sc,run));
+            Accuracy(sc,run) = (TP(sc,run) + TN(sc,run)) / (TP(sc,run) + TN(sc,run) + FP(sc,run) + FN(sc,run));
+            
+            num_eigs(sc,run) = neig;
+            %             end
         end
     end
     %
@@ -3336,7 +3461,7 @@ elseif strcmp(varargin{1},'svm_classify_subs_1vsrest')
     varargout{1} = performance;
     varargout{2} = confmats;
     
-elseif strcmp(varargin{1},'SFig_03')
+elseif strcmp(varargin{1},'old_SFig_03')
     %% plot
     savepath = sprintf('%s/data/midlevel/SVM/',path_project);
     files = cellstr(ls(savepath));
@@ -4046,8 +4171,184 @@ elseif strcmp(varargin{1},'figure_02B')
     %         end
     %     end
     keyboard
-elseif strcmp(varargin{1},'SFig_03')
-    %% if Fig 2 gets cut into Fig 2 and SFig 3
+elseif strcmp(varargin{1},'figure_05_fig_suppl_1');
+    
+    [tabl, d] = FPSA_FearGen('get_table_fixfeatures');
+    fs = 14;
+    data = d.FDMentropy_ChSh.m(:,1:8,:); st_str = {'FDM entropy'};
+    % data = reshape(zscore(reshape(data,74,16),0,2),74,8,2);
+    data = zscore(data,0,2);
+    
+    data48 = [data(:,4,1) data(:,4,2) data(:,8,1) data(:,8,2)];
+    fg1=figure(1);clf;fg1.Position = [235 246 728 420];
+    st = supertitle(st_str);
+    subplot(1,2,1);
+    Project.plot_bar(-135:45:180,mean(data(:,1:8,1)),std(data(:,1:8,1))./sqrt(length(data)));
+    ylim([mean(data(:))-.3*std(data(:)) mean(data(:))+.3*std(data(:))]);title('Baseline');set(gca,'FontSize',fs);
+    ylabel('[M +/- SEM]')
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,1));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    
+    subplot(1,2,2);
+    Project.plot_bar(-135:45:180,mean(data(:,1:8,2)),std(data(:,1:8,2))./sqrt(length(data)));
+    ylim([mean(data(:))-.3*std(data(:)) mean(data(:))+.3*std(data(:))]);title('Testphase');set(gca,'FontSize',fs);
+    set(st,'FontSize',fs+2)
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,2));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    set(fg1,'Color','w')
+    print -dbitmap
+    
+    st_str = {'fixation N'};
+    data = d.fixN.data(:,1:8,:);
+    data = zscore(data,0,2);
+    data48 = [data(:,4,1) data(:,4,2) data(:,8,1) data(:,8,2)];
+    fg1=figure(1);clf;fg1.Position = [235 246 728 420];
+    st = supertitle(st_str);
+    subplot(1,2,1);
+    Project.plot_bar(-135:45:180,mean(data(:,1:8,1)),std(data(:,1:8,1))./sqrt(length(data)));
+    % ylim([nanmean(data(:))-std(data(:)) nanmean(data(:))+std(data(:))]);
+    title('Baseline');set(gca,'FontSize',fs);
+    ylabel('[M +/- SEM]')
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,2));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    
+    subplot(1,2,2);
+    Project.plot_bar(-135:45:180,mean(data(:,1:8,2)),std(data(:,1:8,2))./sqrt(length(data)));
+    % ylim([nanmean(data(:))-nanstd(data(:)) nanmean(data(:))+nanstd(data(:))]);
+    title('Testphase');set(gca,'FontSize',fs);
+    set(st,'FontSize',fs+2)
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,1));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    set(fg1,'Color','w')
+    print -dbitmap
+    
+    
+    
+    st_str = {'fixation duration'};
+    data = d.fixdur.m(:,1:8,:);
+    data = zscore(data,0,2);
+    data48 = [data(:,4,1) data(:,4,2) data(:,8,1) data(:,8,2)];
+    fg1=figure(1);clf;fg1.Position = [235 246 728 420];
+    st = supertitle(st_str);
+    subplot(1,2,1);
+    Project.plot_bar(-135:45:180,nanmean(data(:,1:8,1)),nanstd(data(:,1:8,1))./sqrt(length(data)));
+    ylim([nanmean(data(:))-.4*nanstd(data(:)) nanmean(data(:))+.4*nanstd(data(:))]);title('Baseline');set(gca,'FontSize',fs);
+    ylabel('[M +/- SEM]')
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,1));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    
+    subplot(1,2,2);
+    Project.plot_bar(-135:45:180,nanmean(data(:,1:8,2)),nanstd(data(:,1:8,2))./sqrt(length(data)));
+    ylim([nanmean(data(:))-.4*nanstd(data(:)) nanmean(data(:))+.4*nanstd(data(:))]);title('Testphase');set(gca,'FontSize',fs);
+    set(st,'FontSize',fs+2)
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,2));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    set(fg1,'Color','w')
+    print -dbitmap
+    
+    
+    st_str = {'Saccade distance'};
+    data = double(d.saccadedist.m(:,1:8,:));
+    data = zscore(data,0,2);
+    data48 = [data(:,4,1) data(:,4,2) data(:,8,1) data(:,8,2)];
+    fg1=figure(1);clf;fg1.Position = [235 246 728 420];
+    st = supertitle(st_str);
+    subplot(1,2,1);
+    Project.plot_bar(-135:45:180,nanmean(data(:,1:8,1)),nanstd(data(:,1:8,1))./sqrt(length(data)));
+    ylim([nanmean(data(:))-nanstd(data(:)) nanmean(data(:))+nanstd(data(:))]);title('Baseline');set(gca,'FontSize',fs);
+    ylabel('[M +/- SEM]')
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,1));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    
+    subplot(1,2,2);
+    Project.plot_bar(-135:45:180,nanmean(data(:,1:8,2)),nanstd(data(:,1:8,2))./sqrt(length(data)));
+    ylim([nanmean(data(:))-nanstd(data(:)) nanmean(data(:))+nanstd(data(:))]);title('Testphase');set(gca,'FontSize',fs);
+    set(st,'FontSize',fs+2)
+    td.x = repmat(-135:45:180,length(data),1);
+    td.y = squeeze(data(:,1:8,2));
+    td.ids = 1:74;
+    t = Tuning(td);
+    t.visualization = 0;
+    t.GroupFit(3);
+    if t.groupfit.ExitFlag ~= 1
+        if (10.^-t.groupfit.pval)<.001
+            hold on;
+            plot(t.groupfit.x_HD,t.groupfit.fit_HD,'k','LineWidth',2)
+        end
+    end
+    set(fg1,'Color','w')
+    print -dbitmap
+elseif strcmp(varargin{1},'figure_05_fig_suppl_2') %old SFig 3 fixation counts on ROIs
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
@@ -4172,10 +4473,8 @@ elseif strcmp(varargin{1},'SFig_03')
     end
     subplotChangeSize(GetSubplotHandles(gcf),.01,.01);
     %%
-    if ispc
-        fprintf('Done plotting, now saving to %s \n',[homedir 'Documents\Documents\manuscript_selim\figures\SFig_03_barplot_withttitles.png'])
-        export_fig([homedir 'Documents\Documents\manuscript_selim\figures\SFig_03_barplot_withttitles.png'],'-r400')
-    end
+    %         SaveFigure(sprintf('%s/data/midlevel/figures/Figure_05_fig_suppl2.png',path_project),'-r300')
+    
     
     %     %% plot rois;
     %     roi = Fixmat([],[]).GetFaceROIs;
@@ -4385,7 +4684,11 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     text(30,8.5,'***','FontSize',20)
     
 elseif strcmp(varargin{1},'figure_03A')
-    %FPSA_FearGen('figure_03A',FPSA_FearGen('get_fpsa_fair',{'fix' 1:100},1:3))
+    %has to be called like this:
+    %FPSA_FearGen_MSc('figure_03A',FPSA_FearGen_MSc('get_fpsa_fair',{'fix' 1:100},1:3))
+    %i.e.
+    %sim = FPSA_FearGen_MSc('get_fpsa_fair',{'fix' 1:100},1:3);
+    %FPSA_FearGen_MSc('figure_03A',sim);
     %% observed similarity matrices
     
     clf
@@ -4471,6 +4774,7 @@ elseif strcmp(varargin{1},'figure_03A')
     H(3) = subplot(1,3,3);
     Y         = FPSA_FearGen('get_mdscale',squareform(mean(sim.correlation)),2);
     y         = reshape(Y,length(Y)/16,16)';
+    y      = fliplr(y);
     a =      0;
     rm     = [cos(deg2rad(a)) -sin(deg2rad(a)) ;sin(deg2rad(a)) cos(deg2rad(a)) ];
     y      = (rm*y')';
@@ -4516,17 +4820,20 @@ elseif strcmp(varargin{1},'figure_03A')
     subplotChangeSize(H(3),.04,.04);
     %
     %% legend
-    plot(plotlims(1),plotlims(2),'ko','markersize',12)
-    text(plotlims(1)+.05,plotlims(2),'Baseline','fontsize',12);
+    %     plot(plotlims(1),plotlims(2),'ko','markersize',12)
+    %     text(plotlims(1)+.05,plotlims(2),'Baseline','fontsize',12);
+    %     hold on;
+    %     plot(plotlims(1),plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
+    %     text(plotlims(1)+.05,plotlims(2)-.08,'Generalization','fontsize',12)
+    %     hold off;
+    plot(plotlims(2)*.6,plotlims(2),'ko','markersize',12)
+    text(plotlims(2)*.6+.05,plotlims(2),'Baseline','fontsize',12);
     hold on;
-    plot(plotlims(1),plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
-    text(plotlims(1)+.05,plotlims(2)-.08,'Generaliz.','fontsize',12)
+    plot(plotlims(2)*.6,plotlims(2)-.08,'ko','markersize',12,'markerfacecolor','k');
+    text(plotlims(2)*.6+.05,plotlims(2)-.08,'Generalization','fontsize',12)
     hold off;
     %%
-    %     subplotChangeSize(H,.025,.025);
-    %subplot(9,6,[22 23 24 28 29 30])
-    %FPSA_FearGen('model_rsa_singlesubject_plot',1:100);
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/figure_03A.png','-transparent','-r300');
+    %     SaveFigure(sprintf('%s/data/midlevel/figures/figure_03AB.png',path_project),'-transparent','-r300');
     
     
 elseif strcmp(varargin{1},'get_fixation_counts')
@@ -4791,12 +5098,13 @@ elseif strcmp(varargin{1},'behavior_correlation');
     set(gca,'ytick',1:size(data,2),'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
     set(gca,'xtick',1:size(data,2),'xticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none','XTickLabelRotation',90);
     %     SaveFigure('~/Dropbox/selim/Office/RSAofFDM/FigureCache/BehavioralCorrelation.png','-transparent')
-    elsel
+    
+    
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
     %
-elseif strcmp(varargin{1},'models_run1_run3')
+elseif strcmp(varargin{1},'Figure_03_figure_supplement_2')%models_run1_run2_run3
     
-    filename     = sprintf('%s/data/midlevel/REVISION_fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_run_1vs3.mat',path_project,kernel_fwhm,current_subject_pool);
+    filename     = sprintf('%s/data/midlevel/REVISION_fpsa_fair_kernel_fwhm_%03d_subjectpool_%03d_run_1-2-3.mat',path_project,kernel_fwhm,current_subject_pool);
     C1 =  FPSA_FearGen('runs',1,'FPSA_model_singlesubject',{'fix',1:100});
     C2 =  FPSA_FearGen('runs',2,'FPSA_model_singlesubject',{'fix',1:100});
     C3 =  FPSA_FearGen('runs',3,'FPSA_model_singlesubject',{'fix',1:100});
@@ -4804,23 +5112,36 @@ elseif strcmp(varargin{1},'models_run1_run3')
     
     spec_base = C1.model_02.w1(:,1); %=C3.model_02.w1(:,1);
     spec_test1 = C1.model_02.w1(:,2);
+    spec_test2 = C2.model_02.w1(:,2);
     spec_test3 = C3.model_02.w1(:,2);
     unspec_base    = C1.model_02.w1(:,1); %=C3.model_02.w1(:,1);
     unspec_test1 =  C1.model_02.w2(:,2);
+    unspec_test2 =  C2.model_02.w2(:,2);
     unspec_test3 =  C3.model_02.w2(:,2);
-    spec = [spec_base spec_test1 spec_test3];
-    unspec = [unspec_base unspec_test1 unspec_test3];
+    spec = [spec_base spec_test1 spec_test2 spec_test3];
+    unspec = [unspec_base unspec_test1 unspec_test2 unspec_test3];
     
     figure;
-    errorbar([.95 1.95 2.95],mean(spec),std(spec)./sqrt(length(spec)),'r','LineWidth',2)
+    errorbar([.95 1.95 2.95 3.95],mean(spec),std(spec)./sqrt(length(spec)),'r','LineWidth',2)
     hold on;
-    errorbar([1.05 2.05 3.05],mean(unspec),std(unspec)./sqrt(length(unspec)),'k','LineWidth',2)
+    errorbar([1.05 2.05 3.05 4.05],mean(unspec),std(unspec)./sqrt(length(unspec)),'k','LineWidth',2)
     legend('spec','unspec')
-    set(gca,'XTick',1:3,'XTickLabel',{'Base','Test1','Test3'});
+    set(gca,'XTick',1:4,'XTickLabel',{'Base','Gen_run1','Gen_run2','Gen_run3'},'FontSize',14);
+    set(gcf,'color','w')
+    ylabel('beta (M +/- SEM)')
+    box off
+    [ht pt] = ttest(unspec_test3,unspec_test1)
+    [ht pt] = ttest(spec_test1,unspec_test1)
+    %     SaveFigure(sprintf('%s/data/midlevel/figures/Figure_03_figure_supplement_2.png',path_project),'-transparent','-r300');
     
     keyboard
-    save(filename,'spec','unspec');
-elseif strcmp(varargin{1},'corr_with_rate_scr')
+    MT = table(unspec_base,unspec_test1,unspec_test2,unspec_test3,...
+        spec_base,spec_test1,spec_test2,spec_test3);
+    csvwrite(strrep(filename,'.mat','.csv'),MT,1,0)
+    writetable(MT,strrep(filename,'.mat','.csv')) %for JASP etc.
+    save(filename,'spec','unspec','MT');
+    
+elseif strcmp(varargin{1},'Figure_03_figure_supplement_1') %%corr_with_rate_scr
     
     t = FPSA_FearGen('get_table_behavior');
     
@@ -4828,50 +5149,77 @@ elseif strcmp(varargin{1},'corr_with_rate_scr')
     [rhoS pvalS] = corr(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
     [rhoRspec pvalRspec] = corr(t.beta1_test,t.rating_test_parametric);
     [rhoSspec pvalSspec] = corr(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
+    %% both anisotropy as well as baseline-corrected-anisotropy
+    %     figure;
+    %     subplot(2,2,1);
+    %     hold on;
+    %     scatter(t.beta_diff_test,t.rating_test_parametric,'filled');
+    %     lsl = lsline;set(lsl,'LineWidth',2);
+    %     xlabel('Anisotropy (spec-unspec)')
+    %     ylabel('Rating Tuning Amplitude')
+    %     ylimmi = ylim;
+    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoR,pvalR));set(tt,'FontSize',14)
+    %     subplot(2,2,2);
+    %     hold on;
+    %     scatter(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
+    %     lsl = lsline;set(lsl,'LineWidth',2);
+    %     xlabel('Anisotropy (spec-unspec)')
+    %     ylabel('SCR Tuning Amplitude')
+    %     ylimmi = ylim;
+    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoS,pvalS));set(tt,'FontSize',14)
+    %     subplot(2,2,3);
+    %     hold on;
+    %     scatter(t.beta1_test,t.rating_test_parametric,'filled');
+    %     lsl = lsline;set(lsl,'LineWidth',2);
+    %     xlabel('spec')
+    %     ylabel('Rating Tuning Amplitude')
+    %     ylimmi = ylim;
+    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoRspec,pvalRspec));set(tt,'FontSize',14)
+    %     subplot(2,2,4);
+    %     hold on;
+    %     scatter(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
+    %     lsl = lsline;set(lsl,'LineWidth',2);
+    %     xlabel('spec')
+    %     ylabel('SCR Tuning Amplitude')
+    %     ylimmi = ylim;
+    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoSspec,pvalSspec));set(tt,'FontSize',14)
+    %     for ns = 1:4;
+    %         subplot(2,2,ns);
+    %         xL = get(gca, 'XLim');plot(xL, [0 0], 'k--')
+    %
+    %         yL = get(gca, 'YLim');plot([0 0],yL,  'k--')
+    %         set(gca,'FontSize',16)
+    %         axis square
+    %     end
     
-    %%
-    figure;
-    subplot(2,2,1);
+    %% Figure_03_figure_supplement_1
+    fs =  14;
+    fg = figure;
+    fg.Position(3:4) = [750 350];
+    subplot(1,2,1);
     hold on;
     scatter(t.beta_diff_test,t.rating_test_parametric,'filled');
     lsl = lsline;set(lsl,'LineWidth',2);
-    xlabel('Anisotropy (spec-unspec)')
-    ylabel('Rating Tuning Amplitude')
+    xlabel('FPSA anisotropy (spec-unspec)')
+    ylabel('Rating tuning \alpha')
     ylimmi = ylim;
-    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoR,pvalR));set(tt,'FontSize',14)
-    subplot(2,2,2);
+    tt=text(.45,ylimmi(1)*.6,sprintf('r = %04.2f\np = %04.2f',rhoR,pvalR));set(tt,'FontSize',fs)
+    subplot(1,2,2);
     hold on;
     scatter(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
     lsl = lsline;set(lsl,'LineWidth',2);
-    xlabel('Anisotropy (spec-unspec)')
-    ylabel('SCR Tuning Amplitude')
+    xlabel('FPSA anisotropy (spec-unspec)')
+    ylabel('SCR tuning \alpha')
     ylimmi = ylim;
-    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoS,pvalS));set(tt,'FontSize',14)
-    subplot(2,2,3);
-    hold on;
-    scatter(t.beta1_test,t.rating_test_parametric,'filled');
-    lsl = lsline;set(lsl,'LineWidth',2);
-    xlabel('spec')
-    ylabel('Rating Tuning Amplitude')
-    ylimmi = ylim;
-    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoRspec,pvalRspec));set(tt,'FontSize',14)
-    subplot(2,2,4);
-    hold on;
-    scatter(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
-    lsl = lsline;set(lsl,'LineWidth',2);
-    xlabel('spec')
-    ylabel('SCR Tuning Amplitude')
-    ylimmi = ylim;
-    tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoSspec,pvalSspec));set(tt,'FontSize',14)
-    for ns = 1:4;
-        subplot(2,2,ns);
+    tt=text(.45,ylimmi(1)*.6,sprintf('r = %04.2f\np = %04.2f',rhoS,pvalS));set(tt,'FontSize',fs)
+    for ns = 1:2;
+        subplot(1,2,ns);
         xL = get(gca, 'XLim');plot(xL, [0 0], 'k--')
-        
         yL = get(gca, 'YLim');plot([0 0],yL,  'k--')
-        set(gca,'FontSize',16)
+        set(gca,'FontSize',fs)
         axis square
     end
-    
+    %     SaveFigure(sprintf('%s/data/midlevel/figures/Figure_03_figure_supplement_1.png',path_project),'-transparent','-r300');
 elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the behaviral recordings
     %%
     % Target: What features of fixation behavior predict the anisotropy
@@ -4881,9 +5229,13 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
     % set up table
     force_t  = 0;
     force_d  = 0;
+    
+    zscore_wanted =1;
+    bc_wanted = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
-    path2table = sprintf('%sdata/midlevel/table_fixfeatures_N%d.mat',path_project,length(subs));
+    
+    path2table = sprintf('%s/data/midlevel/table_fixfeatures_N%d_zscore%d_bc%d.mat',path_project,length(subs),zscore_wanted,bc_wanted);
     
     if ~exist(path2table)||force_t == 1
         
@@ -4946,18 +5298,33 @@ elseif strcmp(varargin{1},'get_table_fixfeatures'); %% returns parameter of the 
             end
             save(strrep(path2table,'table','data'),'d','subs');
         else
-            load(strrep(path2table,'table','data'));
+            load(strrep(strrep(path2table,'table','data'),sprintf('_zscore%d_bc%d',zscore_wanted,bc_wanted),''))
+            
         end
         base = 1;
         test = 2;
         spec = [4 8];
         unspec = [6 2];
-        anis_fixN     = ((d.fixN.data(:,spec(1),test)-d.fixN.data(:,spec(1),base))- (d.fixN.data(:,spec(2),test)-d.fixN.data(:,spec(2),base)))-((d.fixN.data(:,unspec(1),test)-d.fixN.data(:,unspec(1),base))- (d.fixN.data(:,unspec(2),test)-d.fixN.data(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
-        anis_fixdur   = ((d.fixdur.m(:,spec(1),test)-d.fixdur.m(:,spec(1),base))- (d.fixdur.m(:,spec(2),test)-d.fixdur.m(:,spec(2),base)))-((d.fixdur.m(:,unspec(1),test)-d.fixdur.m(:,unspec(1),base))- (d.fixdur.m(:,unspec(2),test)-d.fixdur.m(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
-        anis_saccdist = ((d.saccadedist.m(:,spec(1),test)-d.saccadedist.m(:,spec(1),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base))...
-            -(d.saccadedist.m(:,unspec(2),test)-d.saccadedist.m(:,unspec(2),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base)));
-        anis_entr      = ((d.FDMentropy_ChSh.m(:,spec(1),test)-d.FDMentropy_ChSh.m(:,spec(1),base))- (d.FDMentropy_ChSh.m(:,spec(2),test)-d.FDMentropy_ChSh.m(:,spec(2),base)))-((d.FDMentropy_ChSh.m(:,unspec(1),test)-d.FDMentropy_ChSh.m(:,unspec(1),base))- (d.FDMentropy_ChSh.m(:,unspec(2),test)-d.FDMentropy_ChSh.m(:,unspec(2),base))); %ba
         
+        if zscore_wanted==1
+            d.fixN.data = zscore( d.fixN.data,0,2);
+            d.fixdur.m = zscore( d.fixdur.m,0,2);
+            d.saccadedist.m = zscore( d.saccadedist.m,0,2);
+            d.FDMentropy_ChSh.m = zscore( d.FDMentropy_ChSh.m,0,2);
+        end
+        if bc_wanted == 1 %baseline correction.
+            anis_fixN     = ((d.fixN.data(:,spec(1),test)-d.fixN.data(:,spec(1),base))- (d.fixN.data(:,spec(2),test)-d.fixN.data(:,spec(2),base)))-((d.fixN.data(:,unspec(1),test)-d.fixN.data(:,unspec(1),base))- (d.fixN.data(:,unspec(2),test)-d.fixN.data(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+            anis_fixdur   = ((d.fixdur.m(:,spec(1),test)-d.fixdur.m(:,spec(1),base))- (d.fixdur.m(:,spec(2),test)-d.fixdur.m(:,spec(2),base)))-((d.fixdur.m(:,unspec(1),test)-d.fixdur.m(:,unspec(1),base))- (d.fixdur.m(:,unspec(2),test)-d.fixdur.m(:,unspec(2),base))); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+            anis_saccdist = ((d.saccadedist.m(:,spec(1),test)-d.saccadedist.m(:,spec(1),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base))...
+                -(d.saccadedist.m(:,unspec(2),test)-d.saccadedist.m(:,unspec(2),base))-(d.saccadedist.m(:,spec(2),test)-d.saccadedist.m(:,spec(2),base)));
+            anis_entr      = ((d.FDMentropy_ChSh.m(:,spec(1),test)-d.FDMentropy_ChSh.m(:,spec(1),base))- (d.FDMentropy_ChSh.m(:,spec(2),test)-d.FDMentropy_ChSh.m(:,spec(2),base)))-((d.FDMentropy_ChSh.m(:,unspec(1),test)-d.FDMentropy_ChSh.m(:,unspec(1),base))- (d.FDMentropy_ChSh.m(:,unspec(2),test)-d.FDMentropy_ChSh.m(:,unspec(2),base))); %ba
+        else
+            anis_fixN     = (d.fixN.data(:,spec(1),test)- d.fixN.data(:,spec(2),test))-(d.fixN.data(:,unspec(1),test)-d.fixN.data(:,unspec(2),test)); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+            anis_fixdur   = (d.fixdur.m(:,spec(1),test)-d.fixdur.m(:,spec(2),test))-(d.fixdur.m(:,unspec(1),test)-d.fixdur.m(:,unspec(2),test)); %baseline corrected diff_CSPCSN - diff_plus90degminus90degrees
+            anis_saccdist = (d.saccadedist.m(:,spec(1),test)-d.saccadedist.m(:,spec(2),test))-(d.saccadedist.m(:,unspec(1),test)-d.saccadedist.m(:,spec(2),test));
+            anis_entr      = (d.FDMentropy_ChSh.m(:,spec(1),test)-d.FDMentropy_ChSh.m(:,spec(2),test))-(d.FDMentropy_ChSh.m(:,unspec(1),test))-(d.FDMentropy_ChSh.m(:,unspec(1),test)-d.FDMentropy_ChSh.m(:,unspec(2),test)); %ba
+            
+        end
         
         %% concatenate everything in the table
         t = table(subs(:),...
@@ -4976,14 +5343,15 @@ elseif strcmp(varargin{1},'GLM_fixfeatures')
     force    = 0;
     p        = Project;
     subs     = FPSA_FearGen('get_subjects');
-    
-    path2table = sprintf('%sdata/midlevel/table_fixfeatures_N%d.mat',path_project,length(subs));
+    zscore_wanted = 1;
+    bc_wanted = 0;
+    path2table = sprintf('%sdata/midlevel/table_fixfeatures_N%d_zscore%d_bc%d.mat',path_project,length(subs),zscore_wanted,bc_wanted);
     
     if ~exist(path2table) || force == 1
         t  = FPSA_FearGen('get_table_fixfeatures');
     else
         load(path2table);
-        load(strrep(path2table,'table','data'));
+        %         load(strrep(path2table,'table','data'));
     end
     
     mat = [t.anis_fixN t.anis_fixdur t.anis_saccdist t.anis_entr];
@@ -5001,10 +5369,7 @@ elseif strcmp(varargin{1},'GLM_fixfeatures')
     set(gca,'XTick',1:4,'YTick',1:4,'XTicklabel',{'fixN','fixDur','SaccDist','Entr'},'YTicklabel',{'fixN','fixDur','SaccDist','Entr'})
     axis image;box off
     
-    
-    
-    
-    model          = fitlm(t,'beta_diffdiff ~ 1 + anis_fixN + anis_fixdur + anis_saccdist + anis_entr');
+    model          = fitlm(t,'beta_diff_test ~ 1 + anis_fixN + anis_fixdur + anis_saccdist + anis_entr');
     
 elseif strcmp(varargin{1},'FDMentropy')
     % computes entropy of a fixation density map.
@@ -5047,81 +5412,251 @@ elseif strcmp(varargin{1},'FDMentropy_ChaoShen')
     varargout{3} = la;
     
 elseif strcmp(varargin{1},'compare_binary2Gauss_singlesub')
-    
+    %% all this is evolution trying out different binary function to give them the best shot.
+    %% RATINGS.
     subs = FPSA_FearGen('get_subjects');
-    path2modelfits = sprintf('%sdata/midlevel/Ratings_binary2Gauss_N%d_fits_3_10_11_12.mat',path_project,length(subs));
-    
-    if~exist(path2modelfits) || force == 1
-        
+    path2modelfits = sprintf('%sdata/midlevel/Ratings_binary2Gauss_N%d_fits_3_14.mat',path_project,length(subs));
+    nullrater = zeros(length(subs),3);
+    if ~exist(path2modelfits) || force == 1
         sc = 0;
         for sub = subs(:)'
             sc = sc+1;
             s = Subject(sub);
             for ph = 1:3
                 t = Tuning(s.get_rating(ph+1));
+                t.visualization = 0;
                 t.SingleSubjectFit(3);
+                params_Gauss(:,sc,ph) = t.fit_results.params;
                 LL_Gauss(sc,ph) = t.fit_results.Likelihood;
-                
                 LL_null(sc,ph)  = t.fit_results.null_Likelihood;
-                t.SingleSubjectFit(10);
-                LL_bin_miny(sc,ph)   = t.fit_results.Likelihood;
-                t.SingleSubjectFit(11);
-                LL_bin_meany(sc,ph)   = t.fit_results.Likelihood;
-                t.SingleSubjectFit(12);
-                LL_bin_freey(sc,ph)   = t.fit_results.Likelihood;
+                %                 t.SingleSubjectFit(10);
+                %                 LL_bin_miny(sc,ph)   = t.fit_results.Likelihood;
+                %                 t.SingleSubjectFit(11);
+                %                 LL_bin_meany(sc,ph)   = t.fit_results.Likelihood;
+                %                 t.SingleSubjectFit(12);
+                %                 LL_bin_freey(sc,ph)   = t.fit_results.Likelihood;
+                %                 params_bin_freey(:,sc,ph) = t.fit_results.params;
+                t.SingleSubjectFit(14);
+                LL_bin_freey14(sc,ph)   = t.fit_results.Likelihood;
+                params_bin_freey14(:,sc,ph) = t.fit_results.params;
+                
+            end
+            if std(t.y) == 0
+                nullrater(sc,ph) = 1;
             end
         end
-        
-        save(path2modelfits,'LL_Gauss','LL_null','LL_bin_miny','LL_bin_meany','LL_bin_freey')
+        try
+            save(path2modelfits,'params_Gauss','LL_Gauss','LL_null','LL_bin_freey14','params_bin_freey14','nullrater')
+        catch
+            keyboard
+        end
     else
         load(path2modelfits)
     end
     
-    t = Tuning(Subject(1).get_rating(4));
-    figure;
-    b = bar(-135:45:180,t.y_mean);
-    set(b,'FaceAlpha',.3,'EdgeColor','none')
-    t.visualization = 0;
-    t.SingleSubjectFit(3);
-    hold on;
-    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'r','LineWidth',2)
-    hold on
-    t.SingleSubjectFit(10)
-    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'g','LineWidth',2)
-    t.SingleSubjectFit(11);
-    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'c','LineWidth',2)
-    t.SingleSubjectFit(12);
-    plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'b','LineWidth',2)
-    legend('rating','Gauss','binary min(y)','binary mean(y)','binary free_y')
-    box off
+    %     t = Tuning(Subject(1).get_rating(4));
+    %     figure;
+    %     b = bar(-135:45:180,t.y_mean);
+    %     set(b,'FaceAlpha',.3,'EdgeColor','none')
+    %     t.visualization = 0;
+    %     t.SingleSubjectFit(3);
+    %     hold on;
+    %     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'r','LineWidth',2)
+    %     hold on
+    %     t.SingleSubjectFit(10)
+    %     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'g','LineWidth',2)
+    %     t.SingleSubjectFit(11);
+    %     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'c','LineWidth',2)
+    %     t.SingleSubjectFit(12);
+    %     plot(t.fit_results.x_HD,t.fit_results.y_fitted_HD,'b','LineWidth',2)
+    %     legend('rating','Gauss','binary min(y)','binary mean(y)','binary free_y')
+    %     box off
+    %
+    %     keyboard
+    %     %   %% which model wins on subject level?
+    %     df = t.fit_results.dof;
+    %     pval_Gauss_vs_miny   = (1-chi2cdf(-2*(LL_Gauss - LL_bin_miny),df) + eps);
+    %     pval_Gauss_vs_meany  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_meany),df) + eps);
+    %     pval_Gauss_vs_freey  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_freey),df) + eps);
+    %
+    %     N_Gauss_miny = sum(pval_Gauss_vs_miny<.05);
+    %     N_Gauss_meany = sum(pval_Gauss_vs_meany<.05);
+    %     N_Gauss_freey = sum(pval_Gauss_vs_freey<.05);
+    %
+    %     %is this sign. diff from chance?
+    %     BinomPval_Gaussminy  = binopdf(N_Gauss_miny,length(subs),.5); %.5 for chance level.
+    %     BinomPval_Gaussmeany = binopdf(N_Gauss_meany,length(subs),.5);
     
-    keyboard
-    %   %% which model wins on subject level?
-    df = t.fit_results.dof;
-    pval_Gauss_vs_miny   = (1-chi2cdf(-2*(LL_Gauss - LL_bin_miny),df) + eps);
-    pval_Gauss_vs_meany  = (1-chi2cdf(-2*(LL_Gauss - LL_bin_meany),df) + eps);
-    pval_miny_vs_null    = (1-chi2cdf(-2*(LL_bin_miny - LL_null),df) + eps);
-    pval_meany_vs_null   = (1-chi2cdf(-2*(LL_bin_meany - LL_null),df) + eps);
+    %     param_G = 2;
+    %     param_B = 3;
+    %     aic_gauss     =  2*LL_Gauss + 2*param_G; %number of params
+    %     aic_bin_freey =  2*LL_bin_freey + 2*param_B;
+    %     aic_bin_miny  =  2*LL_bin_miny + 2*(param_B-1);
+    %     aic_bin_meany =  2*LL_bin_meany + 2*(param_B-1);
+    %     gausswins_freeY =(aic_gauss<aic_bin_freey);
+    %     gausswins_minY  =(aic_gauss<aic_bin_miny);
+    %     gausswins_meanY =(aic_gauss<aic_bin_meany);
+    %     BinomPval_GaussfreeY  = binopdf(sum(gausswins_freeY),length(subs),.5); %.5 for chance level.
+    %     BinomPval_GaussmeanY = binopdf(sum(gausswins_meanY),length(subs),.5);
+    %     BinomPval_GaussminY = binopdf(sum(gausswins_minY),length(subs),.5);
     
-    N_Gauss_miny = sum(pval_Gauss_vs_miny<.05);
-    N_Gauss_meany = sum(pval_Gauss_vs_meany<.05);
+    %
+    %     %do the individual fits correlate?
+    %     [rho,pval] = corr(params_Gauss(:,1,3),params_bin_freey(:,1,3)) %%LK
+    %
+    %     %%what about a Gauss with free Y?
+    %     for ns=1:74
+    %         for ph = 1:3
+    %             t = Tuning(Subject(subs(ns)).get_rating(ph+1));
+    %             t.visualization = 0;
+    %             t.SingleSubjectFit(13);
+    %             params_GaussY(:,ns,ph) = t.fit_results.params;
+    %             LL_GaussY(ns,ph) = t.fit_results.Likelihood;
+    %         end
+    %     end
     
-    %is this sign. diff from chance?
-    BinomPval_Gaussminy  = binopdf(N_Gauss_miny,length(subs),.5); %.5 for chance level.
-    BinomPval_Gaussmeany = binopdf(N_Gauss_meany,length(subs),.5);
+    %     %% single sub example fig
+    %      figure
+    %      ns = 1;
+    %         t = Tuning(Subject(subs(1)).get_rating(4));
+    %         t.visualization = 0;
+    %         t.SingleSubjectFit(3);
+    %         b = bar(-135:45:180,t.y_mean);
+    %         set(b,'FaceAlpha',.3,'EdgeColor','none')
+    %         hold on
+    %         plot(t.x,t.y,'o','MarkerFaceColor',[.8 .8 .8])
+    %         plot(t.fit_results.x_HD,t.make_gaussian_fmri_zeromean(t.fit_results.x_HD,params_Gauss(1,ns,3),params_Gauss(2,ns,3))+mean(t.y_mean),'r','LineWidth',2)
+    %
+    %         hold on
+    % %         plot(t.fit_results.x_HD,t.make_gaussian_fmri_zeromean_freeY(t.fit_results.x_HD,params_GaussY(1,ns,3),params_GaussY(2,ns,3),params_GaussY(3,ns,3)),'m','LineWidth',2)
+    %         hold on
+    %         plot(t.fit_results.x_HD,t.boxcar_freeY(t.fit_results.x_HD,params_bin_freey(1,ns,3),params_bin_freey(2,ns,3),params_bin_freey(3,ns,3)),'b','LineWidth',2)
+    %         hold on;
+    %             legend('rating (M)','rating data','Gauss','binary')
+    %         box off
+    %         axis square
+    %         set(gca,'XTick',[0 180],'XTickLabel',{'CS+','CS-'});
+    %         title(sprintf('Sub No %02d',ns))
+    %         set(gca,'FontSize',14);
+    % set(gcf,'color','w')
+    %     %% all subs
+    %     fg = figure;
+    %     fg.Position = [0 769 1920 1124];
+    %
+    %     sc = 0;
+    %     for ns=1:40
+    %         sc = sc+1;
+    %         subplot(5,8,sc)
+    %         t = Tuning(Subject(subs(ns)).get_rating(4));
+    %         t.visualization = 0;
+    %         t.SingleSubjectFit(3);
+    %         b = bar(-135:45:180,t.y_mean);
+    %         set(b,'FaceAlpha',.3,'EdgeColor','none')
+    %         hold on
+    %         plot(t.x,t.y,'o','MarkerFaceColor',[.8 .8 .8])
+    %         plot(t.fit_results.x_HD,t.make_gaussian_fmri_zeromean(t.fit_results.x_HD,params_Gauss(1,ns,3),params_Gauss(2,ns,3))+mean(t.y_mean),'r','LineWidth',2)
+    %
+    %         hold on
+    %         plot(t.fit_results.x_HD,t.make_gaussian_fmri_zeromean_freeY(t.fit_results.x_HD,params_GaussY(1,ns,3),params_GaussY(2,ns,3),params_GaussY(3,ns,3)),'m','LineWidth',2)
+    %         hold on
+    %         plot(t.fit_results.x_HD,t.boxcar_freeY(t.fit_results.x_HD,params_bin_freey(1,ns,3),params_bin_freey(2,ns,3),params_bin_freey(3,ns,3)),'b','LineWidth',2)
+    %         hold on;
+    % %             legend('rating (M)','rating data','Gauss','Gauss free Y','binary free_y')
+    %         box off
+    %         axis square
+    %         set(gca,'XTick',[0 180],'XTickLabel',{'CS+','CS-'});
+    %         title(sprintf('Sub No %02d',ns))
+    %     end
+    %     set(gcf,'color','w');
+    %     saveas(gcf,[cd '\singlesub_GaussBox_sub1-40.svg'],'svg')
+    %% SCR.
+    p = Project;
+    subs = FPSA_FearGen('get_subjects');
+    scrsubs        = subs(ismember(subs,p.subjects(p.subjects_scr)));
+    path2modelfits = sprintf('%sdata/midlevel/SCR_binary2Gauss_N%d_fits_3_14_withparams.mat',path_project,length(scrsubs));
     
-    figure;
-    [fG,xiG] = ksdensity(LL_Gauss(:,3));plot(xiG,fG,'b','LineWidth',2);hold on;
-    [fMin,xiMin] = ksdensity(LL_bin_miny(:,3));plot(xiMin,fMin,'r','LineWidth',2);hold on;
-    [fMean,xiMean] = ksdensity(LL_bin_meany(:,3));plot(xiMean,fMean,'y','LineWidth',2);hold on;
-    legend('Gauss','binary from minY','binary from meanY')
-    box off
-    ylabel('ksdensity of LL')
-    xlabel('Log Likelihood (LL)')
-    set(gca,'FontSize',16)
-    kruskalwallis(LLmat)
-    pGmin = ranksum(LL_Gauss(:,3),LL_bin_miny(:,3));
-    pGmean = ranksum(LL_Gauss(:,3),LL_bin_meany(:,3));
+    scrpath        = sprintf('%sdata/midlevel/SCR_N%d.mat',path_project,length(scrsubs));
+    load(scrpath);
+    ind_run = {1:8,10:17,19:26};
+    %     if~exist(path2modelfits) || force == 1
+    
+    for sc = 1:length(scrsubs)
+        
+        s = Subject(scrsubs(sc));
+        pc = 0;
+        for ph = [1 3]
+            pc = pc+1;
+            data.y = out.y(sc,ind_run{ph});
+            data.x = -135:45:180;
+            data.ids = sc;
+            t = Tuning(data);
+            t.visualization = 0;
+            t.SingleSubjectFit(3);
+            params_Gauss_scr(:,sc,pc) = t.fit_results.params;
+            LL_Gauss_scr(sc,pc) = t.fit_results.Likelihood;
+            LL_null_scr(sc,pc)  = t.fit_results.null_Likelihood;
+            %                 t.SingleSubjectFit(12);
+            %                 LL_bin_freey_scr(sc,pc)   = t.fit_results.Likelihood;
+            %                 params_bin_freey_scr(:,sc,pc) = t.fit_results.params;
+            t.SingleSubjectFit(14);
+            LL_bin_freey14_scr(sc,pc)   = t.fit_results.Likelihood;
+            params_bin_freey14_scr(:,sc,pc) = t.fit_results.params;
+        end
+    end
+    %         save(path2modelfits,'LL_Gauss_scr','LL_null_scr','LL_bin_freey_scr','params_Gauss_scr','params_bin_freey_scr','params_bin_freey_unr_scr','LL_bin_freey_unr_scr')
+    
+    save(path2modelfits,'LL_Gauss_scr','LL_null_scr','LL_bin_freey14_scr','params_Gauss_scr','params_bin_freey14_scr')
+    %     else
+    %         load(path2modelfits)
+    %     end
+    %     param_G = 2;
+    %     param_B = 3;
+    %     aic_gauss_scr     =  2*LL_Gauss_scr + 2*param_G; %number of params
+    %     aic_bin_freey_scr =  2*LL_bin_freey_scr + 2*param_B;
+    %     gausswins_freeY_scr =(aic_gauss_scr<aic_bin_freey_scr);
+    %     BinomPval_GaussfreeY_scr  = binopdf(sum(gausswins_freeY_scr),length(scrsubs),.5); %.5 for chance level.
+    
+    
+    %
+    %     figure;
+    %     for ns =1:63
+    %         subplot(7,9,ns)
+    %      b = bar(-135:45:180,out.y(ns,19:26));
+    %         set(b,'FaceAlpha',.3,'EdgeColor','none')
+    %         hold on
+    %         plot(t.fit_results.x_HD,t.make_gaussian_fmri_zeromean(t.fit_results.x_HD,params_Gauss_scr(1,ns,2),params_Gauss_scr(2,ns,2))+mean(out.y(ns,19:26)),'r','LineWidth',2)
+    %
+    %         hold on
+    %         plot(t.fit_results.x_HD,t.boxcar_freeY(t.fit_results.x_HD,params_bin_freey_scr(1,ns,2),params_bin_freey_scr(2,ns,2),params_bin_freey_scr(3,ns,2)),'b','LineWidth',2)
+    %         hold on;
+    % %             legend('rating (M)','rating data','Gauss','Gauss free Y','binary free_y')
+    %         box off
+    %         axis square
+    %         set(gca,'XTick',[0 180],'XTickLabel',{'CS+','CS-'});
+    %         title(sprintf('Sub No %02d',ns))
+    %     end
+    
+    %% Rating %%LK clean up here
+    load('C:\Users\Lea\Documents\Experiments\project_FPSA_FearGen\data\midlevel\Ratings_binary2Gauss_N74_fits_3_14.mat')
+    param_G =2;
+    param_B =3;
+    aic_gauss     =  2*LL_Gauss + 2*param_G; %number of params
+    aic_bin_freey =  2*LL_bin_freey14 + 2*param_B;
+    
+    gausswins_freeY =sum((aic_gauss <aic_bin_freey));
+    BinomPval_GaussfreeY  = binopdf(gausswins_freeY,length(LL_Gauss),.5);
+    fprintf('RATE: Gauss wins in %d/%d/%d out of %d subs (p = %04.3f,%04.3f,%04.3f)',gausswins_freeY(1),gausswins_freeY(2),gausswins_freeY(3),length(LL_Gauss),BinomPval_GaussfreeY(1),BinomPval_GaussfreeY(2),BinomPval_GaussfreeY(3));
+    %% SCR
+    param_G =2;
+    param_B =3;
+    
+    load('C:\Users\Lea\Documents\Experiments\project_FPSA_FearGen\data\midlevel\SCR_binary2Gauss_N63_fits_3_14.mat')
+    aic_gauss_scr     =  2*LL_Gauss(:,[1 3]) + 2*param_G; %number of params
+    aic_bin_freey_scr =  2*LL_bin_freey14(:,[1 3]) + 2*param_B;
+    
+    gausswins_freeY_scr =sum((aic_gauss_scr<aic_bin_freey_scr));
+    BinomPval_GaussfreeY_scr  = binopdf(gausswins_freeY_scr,length(LL_Gauss),.5);
+    fprintf('SCR: Gauss wins in %d/%d out of %d subs (p = %04.3f,%04.3f)',gausswins_freeY_scr(1),gausswins_freeY_scr(2),length(LL_Gauss),BinomPval_GaussfreeY_scr(1),BinomPval_GaussfreeY_scr(2));
     
 elseif strcmp(varargin{1},'get_path_project');
     varargout{1} = path_project;
@@ -5143,4 +5678,4 @@ end
 % (4) Comparing the similarity and spatial structure of neural
 % representations: A pattern-component model
 % Diedrichsen Jm et al.
-% NeuroImage, 2011
+% NeuroI
