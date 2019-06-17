@@ -4194,7 +4194,7 @@ elseif strcmp(varargin{1},'figure_02B')
     %         end
     %     end
     keyboard
-elseif strcmp(varargin{1},'figure_05_fig_suppl_1');
+elseif strcmp(varargin{1},'figure_05_figure_supplement_1');
     
     [tabl, d] = FPSA_FearGen('get_table_fixfeatures');
     fs = 14;
@@ -4371,7 +4371,7 @@ elseif strcmp(varargin{1},'figure_05_fig_suppl_1');
     end
     set(fg1,'Color','w')
     print -dbitmap
-elseif strcmp(varargin{1},'figure_05_fig_suppl_2') %old SFig 3 fixation counts on ROIs
+elseif strcmp(varargin{1},'figure_05_figure_supplement_2') %old SFig 3 fixation counts on ROIs
     %% Produces the figure with fixation counts on 8 faces at different ROIs.
     %Draw the winning model on these count profiles (e.g. Gaussian or null
     %model).
@@ -5161,9 +5161,9 @@ elseif strcmp(varargin{1},'Figure_03_figure_supplement_2')%models_run1_run2_run3
     
     keyboard
     MT = table(unspec_base,unspec_test1,unspec_test2,unspec_test3,...
-        spec_base,spec_test1,spec_test2,spec_test3);
+    spec_base,spec_test1,spec_test2,spec_test3);
     csvwrite(strrep(filename,'.mat','.csv'),MT,1,0)
-    writetable(MT,strrep(filename,'.mat','.csv')) %for JASP etc.
+    writetable(MT,strrep(filename,'.mat','.csv')) %taken to JASP for rmANOVA.
     save(filename,'spec','unspec','MT');
     
 elseif strcmp(varargin{1},'Figure_03_figure_supplement_1') %%corr_with_rate_scr
@@ -5174,48 +5174,6 @@ elseif strcmp(varargin{1},'Figure_03_figure_supplement_1') %%corr_with_rate_scr
     [rhoS pvalS] = corr(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
     [rhoRspec pvalRspec] = corr(t.beta1_test,t.rating_test_parametric);
     [rhoSspec pvalSspec] = corr(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)));
-    %% both anisotropy as well as baseline-corrected-anisotropy
-    %     figure;
-    %     subplot(2,2,1);
-    %     hold on;
-    %     scatter(t.beta_diff_test,t.rating_test_parametric,'filled');
-    %     lsl = lsline;set(lsl,'LineWidth',2);
-    %     xlabel('Anisotropy (spec-unspec)')
-    %     ylabel('Rating Tuning Amplitude')
-    %     ylimmi = ylim;
-    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoR,pvalR));set(tt,'FontSize',14)
-    %     subplot(2,2,2);
-    %     hold on;
-    %     scatter(t.beta_diff_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
-    %     lsl = lsline;set(lsl,'LineWidth',2);
-    %     xlabel('Anisotropy (spec-unspec)')
-    %     ylabel('SCR Tuning Amplitude')
-    %     ylimmi = ylim;
-    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoS,pvalS));set(tt,'FontSize',14)
-    %     subplot(2,2,3);
-    %     hold on;
-    %     scatter(t.beta1_test,t.rating_test_parametric,'filled');
-    %     lsl = lsline;set(lsl,'LineWidth',2);
-    %     xlabel('spec')
-    %     ylabel('Rating Tuning Amplitude')
-    %     ylimmi = ylim;
-    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoRspec,pvalRspec));set(tt,'FontSize',14)
-    %     subplot(2,2,4);
-    %     hold on;
-    %     scatter(t.beta1_test(~isnan(t.scr_test_parametric)),t.scr_test_parametric(~isnan(t.scr_test_parametric)),'filled');
-    %     lsl = lsline;set(lsl,'LineWidth',2);
-    %     xlabel('spec')
-    %     ylabel('SCR Tuning Amplitude')
-    %     ylimmi = ylim;
-    %     tt=text(.5,ylimmi(2)*.9,sprintf('r = %04.2f,p = %04.2f',rhoSspec,pvalSspec));set(tt,'FontSize',14)
-    %     for ns = 1:4;
-    %         subplot(2,2,ns);
-    %         xL = get(gca, 'XLim');plot(xL, [0 0], 'k--')
-    %
-    %         yL = get(gca, 'YLim');plot([0 0],yL,  'k--')
-    %         set(gca,'FontSize',16)
-    %         axis square
-    %     end
     
     %% Figure_03_figure_supplement_1
     fs =  14;
