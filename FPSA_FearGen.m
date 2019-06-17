@@ -322,13 +322,10 @@ elseif strcmp(varargin{1},'plot_ROIs'); %simple routine to plot ROIs on a face
         %         h.AlphaData =rois(:,:,n)./2;
         contour(rois(:,:,n),'k-','linewidth',4);
         hold off;
-        if ispc
-            %             export_fig([homedir 'Dropbox\feargen_hiwi\manuscript\figures\' sprintf('ROI_%d.png',n)],'-r300')
-        else
-            SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
-        end
+       
+       % SaveFigure(sprintf(%s/data/midlevel/figures/ROIs.png',path_project));
+       
     end
-    %     SaveFigure('~/Dropbox/feargen_lea/manuscript/figures/ROIs.png');
 elseif strcmp(varargin{1},'get_fpsa_timewindowed') %% Computes FPSA matrices for different time-windows
     %%
     %Time windows are computed based on WINDOW_SIZE and WINDOW_OVERLAP.
@@ -2703,6 +2700,32 @@ elseif strcmp(varargin{1},'SVM_getData')
     filename = sprintf('SVM_FDM_unitized%d_runs1234_N74_allconds.mat',unitize_or_not);
     save([savepath filename],'D','labels')
     
+elseif strcmp(varargin{1},'SVM_getData_specunspec')
+    unitize_or_not = 1;
+    savepath = sprintf('%s/data/midlevel/SVM/revision/',path_project);
+    filename = sprintf('SVM_FDM_unitized%d_runs1234_N74_allconds.mat',unitize_or_not);
+    if exist(filename)
+        load(filename);
+        D0 = D;
+        labels0 = labels;
+    else
+        FPSA_FearGen('SVM_getData');
+    end
+    
+    CSPCSN = (ismember(labels.cond,[0 180]));
+    D = D(:,CSPCSN);labels.sub = labels.sub(CSPCSN);labels.cond = labels.cond(CSPCSN);labels.phase = labels.phase(CSPCSN);labels.run = labels.run(CSPCSN);labels.face = labels.face(CSPCSN);
+    filename = sprintf('SVM_FDM_unitized%d_runs1234_N74_CSPCSN.mat',unitize_or_not);
+    save(filename,'D','labels');
+    clear D
+    clear labels
+    D = D0;
+    labels = labels0;
+    orthconds = (ismember(labels.cond,[-90 90]));
+    D = D(:,orthconds);labels.sub = labels.sub(orthconds);labels.cond = labels.cond(orthconds);labels.phase = labels.phase(orthconds);labels.run = labels.run(orthconds);labels.face = labels.face(orthconds);
+    filename = sprintf('SVM_FDM_unitized%d_runs1234_N74_orthogonal.mat',unitize_or_not);
+    save(filename,'D','labels');
+    %this can be analysed using fpsa_decoding.py
+    
 elseif strcmp(varargin{1},'SVM_CSPCSN_hyperplane')
     %NEED HOLDOUT AS INPUT2
     
@@ -3616,7 +3639,7 @@ elseif strcmp(varargin{1},'figure_01A');
     
     subplot(2,1,2);
     subs = FPSA_FearGen('get_subjects');
-    mat = FPSA_FearGen('get_fpsa',1:100);
+    mat = FPSA_FearGen('get_fpsa_fair',{'fix',1:100},1:3);
     dissmat = squareform(mat.correlation(subs==exemplsub,:)); %get_rsa uses pdist, which is 1-r already, so no 1-squareform necessary.
     dissmat = dissmat(9:end,9:end);
     dissmat = CancelDiagonals(dissmat,NaN);
@@ -3643,15 +3666,15 @@ elseif strcmp(varargin{1},'figure_01A');
         y = ylim;
         rectangle('position',[x(1) y(1) diff(xlim) diff(ylim)],'edgecolor',colors(n,:),'linewidth',7);
     end
-elseif strcmp(varargin{1},'figure_01B');
+elseif strcmp(varargin{1},'figure_01BCDE'); %figure_01B %figure_01C %figure_01D %figure_01E
     %% this is the cartoon figure where hypotheses are presented;
-    figure
+    figure;
     set(gcf,'position',[1958         247        1443         740]);
     %few fun definition to write axis labels
     small_texth = @(h) evalc('h = text(4,9,''CS+'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);h = text(8,9,''CS-'');set(h,''HorizontalAlignment'',''center'',''fontsize'',6);hold on;plot([4 4],[ylim],''k--'',''color'',[0 0 0 .4]);plot([xlim],[4 4],''k--'',''color'',[0 0 0 .4])');
     small_textv = @(h) evalc('h = text(.5,4,''CS+'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);h = text(.5,8,''CS-'');set(h,''HorizontalAlignment'',''right'',''fontsize'',6);');
     params = {{[.5 .5] 0} {[4.5 4.5] 0} {[4.5 2.5] 0} {[4.5 4.5] 4.5}};
-    titles = {sprintf('Bottom-up\nSaliency') sprintf('Arousal') sprintf('Tuned\nExploration') sprintf('Univariate\nGeneralization')};
+    titles = {sprintf('Perceptual\nBaseline') sprintf('Perceptual\nExpansion') sprintf('Adversity\nGradient') sprintf('CS+\nAttraction')};
     width  = 2.3;
     d      = [-.8 -20 -20 -20];
     u      = [ .8  20  20  20];
@@ -3756,7 +3779,7 @@ elseif strcmp(varargin{1},'figure_01B');
         %         set(gca,'xtick',[4 8],'xticklabel',{'CS+' 'CS-'},'yticklabel','')
     end
     
-    %     SaveFigure(sprintf('~/Dropbox/feargen_lea/manuscript/figures/figure_01B.png'),'-r300');
+    %     SaveFigure(sprintf('%sdata/midlevel/figures/figure_01B.png',path_project),'-r300');
     
 elseif strcmp(varargin{1},'figure_02B')
     %% Barplots results for SCR, Ratings, ROI fixation counts.
@@ -4683,7 +4706,9 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     line([0 180],[8 8],'Color','k','LineWidth',1.5)
     text(30,8.5,'***','FontSize',20)
     
-elseif strcmp(varargin{1},'figure_03A')
+elseif strcmp(varargin{1},'figure_03AB') %figure_03A %figure_03B
+    %plots the dissimilarity matrices in baseline and generalization phase
+    %as well as MDS visualization
     %has to be called like this:
     %FPSA_FearGen_MSc('figure_03A',FPSA_FearGen_MSc('get_fpsa_fair',{'fix' 1:100},1:3))
     %i.e.
@@ -5097,8 +5122,8 @@ elseif strcmp(varargin{1},'behavior_correlation');
     colorbar;axis square;
     set(gca,'ytick',1:size(data,2),'yticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none');axis square;
     set(gca,'xtick',1:size(data,2),'xticklabel',['eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' 'eyel' 'eyer' 'nose' 'mouth' 'all' vnames],'ticklabelinterpreter','none','XTickLabelRotation',90);
-    %     SaveFigure('~/Dropbox/selim/Office/RSAofFDM/FigureCache/BehavioralCorrelation.png','-transparent')
-    
+  
+     %SaveFigure(sprintf('%sdata/midlevel/figures/BehavioralCorrelation.png',path_project),'-transparent');
     
     model = corrcov(getcorrmat([2 2],5,0,1));% - corrcov(getcorrmat([1 1],1,0,1))
     %
