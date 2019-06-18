@@ -4706,7 +4706,7 @@ elseif strcmp(varargin{1},'SFig_02_tuneduntuned')
     line([0 180],[8 8],'Color','k','LineWidth',1.5)
     text(30,8.5,'***','FontSize',20)
     
-elseif strcmp(varargin{1},'figure_03AB') %figure_03A %figure_03B
+elseif strcmp(varargin{1},'figure_03A') %figure_03A %figure_03B
     %plots the dissimilarity matrices in baseline and generalization phase
     %as well as MDS visualization
     %has to be called like this:
