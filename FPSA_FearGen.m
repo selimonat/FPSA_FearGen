@@ -733,63 +733,7 @@ elseif strcmp(varargin{1},'FPSA_model'); %% models FPSA matrices with mixed and 
     out.baseline.model_03_fixed          = fitlm(t,'FPSA_B ~ 1 + specific + unspecific + Gaussian');
     out.generalization.model_03_fixed    = fitlm(t,'FPSA_G ~ 1 + specific + unspecific + Gaussian');
     varargout{1}   = out;
-elseif strcmp(varargin{1},'FPSA_model_kfold')
-    subs = FPSA_FearGen('get_subjects');
-    t74          = FPSA_FearGen('runs',1:3,'FPSA_get_table',{'fix',1:100});
-    
-    options       = optimset('Display','none','maxfunevals',10000,'tolX',10^-12,'tolfun',10^-12,'MaxIter',10000,'Algorithm','interior-point');
-    %design matrices
-    dM{1} = [ones(28,1) table2array(t74(1:28,'circle'))];
-    dM{2} = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific'))];
-    dM{3} = [ones(28,1) table2array(t74(1:28,'specific')) table2array(t74(1:28,'unspecific')) table2array(t74(1:28,'Gaussian'))];
-    model_strings = {'FPSA_G ~ 1 + circle','FPSA_G ~ 1 + specific + unspecific ','FPSA_G ~ 1 + specific + unspecific + Gaussian'};
-    
-    for sc = 1:length(subs)
-        
-        FPSA_Gsub = table2array(t74(double(t74.subject)==sc,'FPSA_G'));
-        t = t74(~ismember(double(t74.subject),sc),:);
-        
-        for nm = 1:3 %model numbers
-            fprintf('Running Sub %02d, Model %d.\n',sc,nm)
-            model       = fitlm(t,model_strings{nm});
-            pred        = [model.Coefficients.Estimate'*dM{nm}']';
-            betas{nm}(sc,:) = model.Coefficients.Estimate;
-            
-            
-            % compute AIC with likelihood from normal distribution with optimized sd
-            likelihoodfun  = @(sd) sum(-log( normpdf( pred - FPSA_Gsub , 0,sd)));
-            L = 0;
-            U = [];
-            Init = 1;
-            [sd_osd(sc,nm), logL_osd(sc,nm),ExitF(sc,nm)]  = fmincon(likelihoodfun, Init, [],[],[],[],L,U,[],options);
-            aic_osd(sc,nm) = 2*logL_osd(sc,nm) + 2*(nm+1); %nm is the same as number of parameters, by chance.
-            
-            % compute AIC with likelihood from standard normal distribution
-            logL_ssd(sc,nm) =  sum(log( normpdf(pred - FPSA_Gsub, 0,1)));
-            aic_ssd(sc,nm) = -2*logL_ssd(sc,nm) + 2*nm;
-            
-            % compute AIC from RSS
-            RSS(sc,nm) = sum((pred - FPSA_Gsub).^2);
-            n = length(FPSA_Gsub);
-            aic_rss(sc,nm) = 2*nm + n*log(RSS(sc,nm));
-        end
-    end
-    %compute corrected AIC
-    for nm=1:3
-        aicc_osd = aic_osd + (2*(nm.^2) + 2*nm)./(n-nm-1); %number of paramters is again model_number
-        aicc_ssd = aic_ssd + (2*(nm.^2) + 2*nm)./(n-nm-1);
-        aicc_rss = aic_rss + (2*(nm.^2) + 2*nm)./(n-nm-1);
-    end
-    savepath = sprintf('%sdata/midlevel/CV_GLM_leaveoneout_3models.mat',path_project);
-    save(savepath,'aic_rss','aic_osd','aic_ssd','aicc_rss','aicc_osd','aicc_ssd');
-    %%
-    % compare models.
-    AIC = aic_rss; % decide on the appropriate one
-    N_winning    = sum(AIC(:,2)<AIC(:,1));
-    outcome_perc = mean(AIC(:,2)<AIC(:,1))*100;
-    fprintf('In %02d out of N = %02d subjects (%04.2f percent), model 02 won over model 01 (leave-one-out CV).\n',N_winning,sc,outcome_perc)
-    keyboard;
-    
+
 elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject FPSA matrices.
     %% same as FPSA_model, but on gathers a model parameter for single subjects.
     % Input a table if you like to model a custom FPSA matrix.
@@ -862,7 +806,8 @@ elseif strcmp(varargin{1},'FPSA_model_singlesubject');%% Models single-subject F
     varargout{2} = M;
     varargout{3} = MC;
     varargout{4} = LL;
-    
+
+
 elseif strcmp(varargin{1},'model2text'); %% spits text from a model object
     %% handy function to dump model output to a text file that let you easily
     %paste it to the manuscript ;-\
@@ -872,6 +817,43 @@ elseif strcmp(varargin{1},'model2text'); %% spits text from a model object
     fid   = fopen(sprintf('%s/data/midlevel/%s.txt',path_project,model.Formula),'w');
     fwrite(fid,a);
     fclose(fid);
+elseif strcmp(varargin{1},'prevalence')
+    %% prevalence
+    C          = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
+    beta1_base         = C.model_02.w1(:,1);
+    beta2_base         = C.model_02.w2(:,1);
+    beta1_test         = C.model_02.w1(:,2);
+    beta2_test         = C.model_02.w2(:,2);
+    beta1_diff         = C.model_02.w1(:,2)-C.model_02.w1(:,1);
+    beta2_diff         = C.model_02.w2(:,2)-C.model_02.w2(:,1);
+    beta_diff_test     = beta1_test - beta2_test;
+    beta_diffdiff      = (beta1_test - beta2_test) - (beta1_base - beta2_base);%how much does w1 increase more than w2 does? (Interaction)
+    
+    subs1 = FPSA_FearGen('current_subject_pool',1,'get_subjects');
+    subs0 = FPSA_FearGen('current_subject_pool',0,'get_subjects');
+    % all subs
+    sum(beta_diffdiff>0)
+    sum(beta_diffdiff>0)./length(subs0)
+    
+    binopdf(sum(beta_diffdiff>0),length(subs0),.5) %.5 for chance level.
+    
+    % learners only
+    ind = ismember(subs0,subs1);
+    sum(beta_diffdiff(ind)>0)
+    sum(beta_diffdiff(ind)>0)./length(subs1)
+    binopdf(sum(beta_diffdiff(ind)>0),length(subs1),.5) %.5 for chance level.
+    
+    %
+   
+    w_spec_test = beta1_test;
+    w_unspec_test = beta2_test;
+    w_spec_baseline = beta1_base;
+    w_unspec_baseline = beta2_base;
+    
+    
+    anis_TvB = (w_spec_test-w_unspec_test) - (w_spec_baseline-w_unspec_baseline);
+    sum(anis_TvB>0) 
+    fprintf('N = %d subjects out of %d show bigger aniso in Test than in Baseline.\n',sum(anis_TvB>0),length(subs0))
     
 elseif strcmp(varargin{1},'figure_03C');
     %% plots the main model comparison figure;
@@ -1637,7 +1619,19 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     %% Reporting Model fits:
     out      = FPSA_FearGen('FPSA_model',{'fix',1:100});
     %% on single subs:
-    C         = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
+    [C,~,MC]        = FPSA_FearGen('FPSA_model_singlesubject',{'fix',1:100});
+    
+    
+    for modnum = 1:3
+        for ph = 1:2
+            for ns = 1:nsubs
+                AIC(ns,ph,modnum) = MC(ns,ph,modnum).AIC;
+                BIC(ns,ph,modnum) = MC(ns,ph,modnum).BIC;
+            end
+        end
+    end
+
+
     %% print everything nicely
     clc
     %%
@@ -1660,7 +1654,10 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('Model parameters for single subjects:\n');
     [h p ci stats] = ttest(C.model_01.w1(:,1));
     fprintf(['M = %05.3f' char(177) '%05.3f, t(%d) = %05.3f, p = %06.5f\n'],mean(C.model_01.w1(:,1)),std(C.model_01.w1(:,1))./sqrt(nsubs),stats.df,stats.tstat,p)
-    
+    %perceptual model baseline
+    mean(BIC(:,1,1))
+    std(BIC(:,1,1))./sqrt(length(BIC))
+
     %% S2 Table, (generalization, group fit mixed effects):
     out.generalization.model_01_mixed;
     %
@@ -1673,11 +1670,20 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('Model parameters for single subjects:\n');
     [h p ci stats] = ttest(C.model_01.w1(:,2),C.model_01.w1(:,1));
     fprintf(['M = %05.3f' char(177) '%05.3f, t(%d) = %05.3f, p = %06.5f\n'],mean(C.model_01.w1(:,2)),std(C.model_01.w1(:,2))./sqrt(nsubs),stats.df,stats.tstat,p)
+        %perceptual model testphase
+    mean(BIC(:,2,1))
+    std(BIC(:,2,1))./sqrt(length(BIC))
+
     %% Model comparison indicated that this model performed better than the bottom-up model
     fprintf('bottom-up vs adversity tuning model:\n');
     bic_bottomup     = out.generalization.model_01_mixed.ModelCriterion.BIC;
     bic_adv_Cat_tuning   = out.generalization.model_02_mixed.ModelCriterion.BIC;
     fprintf('BIC_bottomup= %05.1f, BIC_advtune= %05.1f\n Rsquared adjusted: %03.2f\n',bic_bottomup,bic_adv_Cat_tuning,out.generalization.model_02_mixed.Rsquared.Adjusted)
+    %spec_unspec vs perceptual model testphase
+    diffBIC = BIC(:,2,2)-BIC(:,2,1);
+    mean(diffBIC)
+    std(diffBIC)./sqrt(length(BIC))
+    
     %% specific component stronger than unspecific component
     fprintf('Model parameters for single subjects:\n');
     [h p ci stats] = ttest(C.model_02.w1(:,2));
@@ -1711,6 +1717,11 @@ elseif strcmp(varargin{1},'numbers_fpsa_result')
     fprintf('Adversity categorization model better than adversity tuning model :\n');
     fprintf('Rsquared adjusted: %05.2f \nBIC_AdvCatTuning %05.1f \nBIC_AdvTuning: %05.1f \n',rsquared,bic_adv_Cat_tuning,bic_adv_Tuning)
     
+    %spec_unspec model vs CS+ specific testphase
+    diffBIC = BIC(:,2,2)-BIC(:,2,3);
+    mean(diffBIC)
+    std(diffBIC)./sqrt(length(BIC))
+
     %% the parameter estimates for the adversity component were not significantly different from zero neither in baseline or generalization phases
     w_gaussian = C.model_03.w3;
     fprintf('parameter estimates for single subjects not different from zero:\n');
