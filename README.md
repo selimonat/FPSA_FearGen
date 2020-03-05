@@ -1,9 +1,9 @@
 # About 
 With this repository you can reproduce all the analysis and figures presented in our paper:
 
-*Fear Generalization as Threat Prediction: Adaptive Changes in Facial Exploration Strategies revealed by Fixation-Pattern
-Similarity Analysis.*
-[Bioarxiv](https://www.biorxiv.org/content/early/2017/04/15/125682)
+*Fixation-pattern similarity analysis reveals adaptive changes in face-viewing strategies following aversive learning*
+Lea Kampermann, Niklas Wilming, Arjen Alink, Christian Büchel, Selim Onat
+[eLife](https://elifesciences.org/articles/44111)
 
 In this paper, we investigate how humans explore faces and focus how these exploration patterns change when faces are associated with an aversive outcome.
 
