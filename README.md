@@ -7,6 +7,8 @@ Lea Kampermann, Niklas Wilming, Arjen Alink, Christian Büchel, Selim Onat
 
 In this paper, we investigate how humans explore faces and focus how these exploration patterns change when faces are associated with an aversive outcome.
 
+The Read.Me below shows some code snippets on how to use the object-oriented FIXMAT toolbox to analyze and reproduce the figures in our paper.
+
 # Initial Setup
 
 You can download the data and the associated repositories, including this one from the Open Science Framework [here](https://osf.io/zud6h/files/).
